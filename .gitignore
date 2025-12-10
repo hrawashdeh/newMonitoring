@@ -1,0 +1,9 @@
+# Ignore all shell scripts
+*.sh
+
+# Ignore all plain secrets YAMLs
+*-plain.yaml
+
+# (Optional but recommended)
+.DS_Store
+.env

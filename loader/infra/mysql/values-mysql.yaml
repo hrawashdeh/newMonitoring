@@ -1,0 +1,17 @@
+auth:
+  existingSecret: loader-secrets
+
+  username: test_user
+  database: test_data
+
+  # These keys must match the names inside loader-secrets
+  rootPasswordKey: mysql-root-password
+  passwordKey: mysql-app-password
+
+architecture: standalone
+
+primary:
+  persistence:
+    enabled: true
+    size: 10Gi
+    storageClass: local-path

@@ -1,0 +1,16 @@
+auth:
+  existingSecret: loader-secrets
+
+  username: alerts_user
+  database: alerts_db
+
+  secretKeys:
+    # These keys must exist in loader-secrets
+    adminPasswordKey: postgres-admin-password
+    userPasswordKey: postgres-app-password
+
+primary:
+  persistence:
+    enabled: true
+    size: 10Gi
+    storageClass: local-path
