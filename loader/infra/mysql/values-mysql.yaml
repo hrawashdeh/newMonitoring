@@ -1,5 +1,5 @@
 auth:
-  existingSecret: loader-secrets
+  existingSecret: infra-secrets
 
   username: test_user
   database: test_data

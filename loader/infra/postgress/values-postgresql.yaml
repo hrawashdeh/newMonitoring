@@ -1,5 +1,5 @@
 auth:
-  existingSecret: loader-secrets
+  existingSecret: infra-secrets
 
   username: alerts_user
   database: alerts_db
