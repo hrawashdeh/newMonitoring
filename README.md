@@ -203,7 +203,15 @@ kubeseal --version
 
 ---
 
-## 4. Install Sealed Secrets Controller
+## 4. Enable Workloads on Single Node
+
+```bash
+kubectl taint nodes --all node-role.kubernetes.io/control-plane- || true
+```
+
+---
+
+## 5. Install Sealed Secrets Controller
 
 ```bash
 SEALED_NS="sealed-secrets"
@@ -221,7 +229,7 @@ kubectl rollout status deployment/sealed-secrets -n ${SEALED_NS} --timeout=180s
 
 ---
 
-## 5. Create Application Namespace
+## 6. Create Application Namespace
 
 ```bash
 NAMESPACE="monitoring-infra"
@@ -230,7 +238,7 @@ kubectl create namespace ${NAMESPACE} --dry-run=client -o yaml | kubectl apply -
 
 ---
 
-## 6. Create Plain Secret Locally and Seal It
+## 7. Create Plain Secret Locally and Seal It
 
 ```bash
 cd ./monitoring/infra
@@ -273,7 +281,7 @@ kubectl apply -f secrets/monitoring-secrets-sealed.yaml
 
 ---
 
-## 7. StorageClass (Linux Bare-Metal)
+## 8. StorageClass (Linux Bare-Metal)
 
 ```bash
 curl -fsSL https://raw.githubusercontent.com/rancher/local-path-provisioner/master/deploy/local-path-storage.yaml -o local-path-storage.yaml
@@ -283,7 +291,7 @@ kubectl get storageclass
 
 ---
 
-## 8. Install PostgreSQL via Helm
+## 9. Install PostgreSQL via Helm
 
 ```bash
 cd ./monitoring/infra
@@ -311,7 +319,7 @@ psql -h 127.0.0.1 -p 30432 -U app_user -d app_db
 
 ---
 
-## 9. Install MySQL via Helm
+## 10. Install MySQL via Helm
 
 ```bash
 cd ./monitoring/infra
@@ -328,13 +336,6 @@ kubectl get pods -n ${NAMESPACE}
 
 ---
 
-## 10. Enable Workloads on Single Node
-
-```bash
-kubectl taint nodes --all node-role.kubernetes.io/control-plane- || true
-```
-
----
 
 ## 11. Health Check
 
