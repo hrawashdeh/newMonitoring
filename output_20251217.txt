@@ -1,0 +1,3726 @@
+########## DIRECTORY TREE: /Volumes/Files/Projects/newLoader ##########
+/Volumes/Files/Projects/newLoader
+├── .DS_Store
+├── .git
+│   ├── COMMIT_EDITMSG
+│   ├── FETCH_HEAD
+│   ├── HEAD
+│   ├── ORIG_HEAD
+│   ├── config
+│   ├── description
+│   ├── hooks
+│   │   ├── applypatch-msg.sample
+│   │   ├── commit-msg.sample
+│   │   ├── fsmonitor-watchman.sample
+│   │   ├── post-update.sample
+│   │   ├── pre-applypatch.sample
+│   │   ├── pre-commit.sample
+│   │   ├── pre-merge-commit.sample
+│   │   ├── pre-push.sample
+│   │   ├── pre-rebase.sample
+│   │   ├── pre-receive.sample
+│   │   ├── prepare-commit-msg.sample
+│   │   ├── push-to-checkout.sample
+│   │   ├── sendemail-validate.sample
+│   │   └── update.sample
+│   ├── index
+│   ├── info
+│   │   └── exclude
+│   ├── logs
+│   │   ├── HEAD
+│   │   └── refs
+│   │       ├── heads
+│   │       │   └── main
+│   │       └── remotes
+│   │           └── origin
+│   │               └── main
+│   ├── objects
+│   │   ├── 02
+│   │   │   └── d7862a8f8b0a59299250f5e9f696e94f0081f7
+│   │   ├── 06
+│   │   │   └── 516624a4f389a2a0dd464b3c26c29cbebdffed
+│   │   ├── 0a
+│   │   │   └── d4c0459911a0e627a283718e36300516a33182
+│   │   ├── 0c
+│   │   │   └── 85bfd6d2f4e44467de713b827e43dab32d5d99
+│   │   ├── 13
+│   │   │   ├── 05e90c2b1f27667e4506cf26c6905e2ab75120
+│   │   │   └── b64c93e83c69951ff0ec89878bd9f8d52c00ac
+│   │   ├── 14
+│   │   │   └── 6dd0769e441e9e19429d589d5244a491162c51
+│   │   ├── 3e
+│   │   │   └── 23b48f48283c58872066168b03d668758798e3
+│   │   ├── 3f
+│   │   │   └── 3a0c3609e59621270f377fcbd2966085f8e74d
+│   │   ├── 4b
+│   │   │   └── 53b3b07ff98d22556a6dfa43b86cbfbe622c3f
+│   │   ├── 5e
+│   │   │   └── 2711002013ebc49221514539d3679aec7b4a48
+│   │   ├── 6d
+│   │   │   └── e676a8c5112ad8d91e90bd5551d4a60428b04a
+│   │   ├── 72
+│   │   │   └── d184e6e35c57e90bc2686347fdc79db8401c91
+│   │   ├── 8c
+│   │   │   └── ff732b12186cdb983bff94d0dc2964fe1479a5
+│   │   ├── 8f
+│   │   │   ├── 262bf1327abd1c6aac506dc86f81b7bc8c0ce7
+│   │   │   └── d2ca76a5bbf8fcf9356f1ee8b342a354f5d77f
+│   │   ├── 94
+│   │   │   └── e75796819ace6e7cca726dfd44ca2055d8406e
+│   │   ├── 95
+│   │   │   └── c628205bfaa29df3a39a4ffad7757621860cd3
+│   │   ├── 98
+│   │   │   └── 7fd3656ae124cb709563a90e3ede5d27312626
+│   │   ├── a8
+│   │   │   └── c75d100da7f5f90e03fe48970b5f3845f25b30
+│   │   ├── ac
+│   │   │   └── c75a2852288d313696636d9888dcbb2cc741a8
+│   │   ├── b0
+│   │   │   └── 34fd77deeaec913e0b411e8cb8d486b86d1c9b
+│   │   ├── b4
+│   │   │   └── c5c9fad9677fc946c2908e423a9a5c1fc1ce14
+│   │   ├── b5
+│   │   │   └── ef479dacfbe63302ffb1b67cbb6af4e42ed14c
+│   │   ├── b9
+│   │   │   └── ac84ab6fb51d7843ee2d85f94126793aae8f82
+│   │   ├── bd
+│   │   │   └── 5ca93ee8f0d27d6a46d9dd07c2227a7f74f156
+│   │   ├── c9
+│   │   │   └── 9330ab608924015cdc20a68f43d7a38293392f
+│   │   ├── cb
+│   │   │   └── 442292b94c6784f9df7008570e4b4c555d1a8f
+│   │   ├── ce
+│   │   │   └── c908ed0860d2653dc91064e13bffd5949f7d8f
+│   │   ├── e1
+│   │   │   └── e3bdce211591f92d1d277bf4a8ebc23e9f2c7b
+│   │   ├── e7
+│   │   │   └── d8479ed075ebf28028d9fe837619b8ea8c06a5
+│   │   ├── ec
+│   │   │   └── 37a138ad3df1cbbe6c123e48980c08dd1c92a4
+│   │   ├── f8
+│   │   │   └── 3c36d3f4ba2c7e0ca1bdb357ca28507d5e8347
+│   │   ├── info
+│   │   └── pack
+│   └── refs
+│       ├── heads
+│       │   └── main
+│       ├── remotes
+│       │   └── origin
+│       │       └── main
+│       └── tags
+├── .gitignore
+├── README.md
+├── infra
+│   ├── .DS_Store
+│   ├── local-path-storage.yaml
+│   ├── mysql
+│   │   ├── mysql-nodeport.yaml
+│   │   └── mysql-statefulset.yaml
+│   ├── postgress
+│   │   ├── postgres-nodeport.yaml
+│   │   └── values-postgresql.yaml
+│   ├── prometheus
+│   │   ├── AlertManager-nodeport.yaml
+│   │   ├── Prometheus-nodeport.yaml
+│   │   ├── grafana-nodeport.yaml
+│   │   └── values-kps.yaml
+│   ├── redis
+│   │   ├── redis-nodeport.yaml
+│   │   └── values-redis.yaml
+│   ├── secrets
+│   │   ├── local-path-storage.yaml
+│   │   ├── monitoring-secrets-plain.yaml
+│   │   └── monitoring-secrets-sealed.yaml
+│   └── unistalKubeObjects.sh
+├── kube
+│   ├── install.sh
+│   └── unistall.sh
+├── output_20251217.txt
+├── printProject.sh
+└── services
+    ├── .DS_Store
+    ├── dataGenerator
+    │   ├── .DS_Store
+    │   ├── .idea
+    │   │   ├── .gitignore
+    │   │   ├── compiler.xml
+    │   │   ├── encodings.xml
+    │   │   ├── jarRepositories.xml
+    │   │   ├── misc.xml
+    │   │   ├── stat.log
+    │   │   ├── vcs.xml
+    │   │   └── workspace.xml
+    │   ├── Dockerfile
+    │   ├── README.md
+    │   ├── k8s_manifist
+    │   │   ├── data-generator-config.yaml
+    │   │   └── data-generator-deployment.yaml
+    │   ├── pom.xml
+    │   ├── src
+    │   │   ├── .DS_Store
+    │   │   └── main
+    │   │       ├── .DS_Store
+    │   │       ├── java
+    │   │       │   └── com
+    │   │       │       └── loader
+    │   │       │           └── datagenerator
+    │   │       │               ├── DataGeneratorApplication.java
+    │   │       │               ├── model
+    │   │       │               │   ├── ColumnConfig.java
+    │   │       │               │   ├── DataGeneratorConfig.java
+    │   │       │               │   ├── DowntimeConfig.java
+    │   │       │               │   └── TableConfig.java
+    │   │       │               ├── runner
+    │   │       │               │   ├── ScheduledDataGenerator.java
+    │   │       │               │   └── SchemaInitializer.java
+    │   │       │               └── service
+    │   │       │                   └── DataGeneratorService.java
+    │   │       └── resources
+    │   │           ├── .DS_Store
+    │   │           └── application.yaml
+    │   └── target
+    │       ├── classes
+    │       │   ├── META-INF
+    │       │   │   └── spring-configuration-metadata.json
+    │       │   ├── application.yaml
+    │       │   └── com
+    │       │       └── loader
+    │       │           └── datagenerator
+    │       │               ├── DataGeneratorApplication.class
+    │       │               ├── model
+    │       │               │   ├── ColumnConfig$ColumnType.class
+    │       │               │   ├── ColumnConfig.class
+    │       │               │   ├── DataGeneratorConfig$MysqlConfig.class
+    │       │               │   ├── DataGeneratorConfig.class
+    │       │               │   ├── DowntimeConfig.class
+    │       │               │   ├── TableConfig$RecordRateConfig.class
+    │       │               │   └── TableConfig.class
+    │       │               ├── runner
+    │       │               │   ├── ScheduledDataGenerator.class
+    │       │               │   ├── SchemaInitializer$1.class
+    │       │               │   └── SchemaInitializer.class
+    │       │               └── service
+    │       │                   ├── DataGeneratorService$1.class
+    │       │                   └── DataGeneratorService.class
+    │       ├── data-generator-0.0.1-SNAPSHOT.jar
+    │       ├── data-generator-0.0.1-SNAPSHOT.jar.original
+    │       ├── generated-sources
+    │       │   └── annotations
+    │       ├── maven-archiver
+    │       │   └── pom.properties
+    │       └── maven-status
+    │           └── maven-compiler-plugin
+    │               └── compile
+    │                   └── default-compile
+    │                       ├── createdFiles.lst
+    │                       └── inputFiles.lst
+    └── secrets
+        ├── app-secrets-plain.yaml
+        └── app-secrets-sealed.yaml
+
+86 directories, 132 files
+
+########## FILE CONTENTS ##########
+
+# infra/.DS_Store
+[SKIPPED: non-text or binary file]
+######################################################################################################################################################
+#### end of file .DS_Store ####
+#### end of file .DS_Store ####
+
+# infra/redis/redis-nodeport.yaml
+apiVersion: v1
+kind: Service
+metadata:
+  name: redis-nodeport
+  namespace: monitoring-infra
+  labels:
+    app.kubernetes.io/name: redis
+    app.kubernetes.io/instance: redis
+    app.kubernetes.io/component: master
+    app.kubernetes.io/part-of: monitoring-infra
+spec:
+  type: NodePort
+  selector:
+    app.kubernetes.io/name: redis
+    app.kubernetes.io/instance: redis
+    app.kubernetes.io/component: master
+  ports:
+    - name: redis
+      protocol: TCP
+      port: 6379
+      targetPort: 6379
+      nodePort: 30379
+
+######################################################################################################################################################
+#### end of file redis-nodeport.yaml ####
+#### end of file redis-nodeport.yaml ####
+
+# infra/redis/values-redis.yaml
+auth:
+  enabled: true
+  existingSecret: infra-secrets
+  existingSecretPasswordKey: redis-password
+
+master:
+  persistence:
+    enabled: true
+    size: 5Gi
+
+replica:
+  replicaCount: 0
+
+
+######################################################################################################################################################
+#### end of file values-redis.yaml ####
+#### end of file values-redis.yaml ####
+
+# infra/secrets/monitoring-secrets-plain.yaml
+apiVersion: v1
+kind: Secret
+metadata:
+  name: infra-secrets
+  namespace: monitoring-infra
+type: Opaque
+stringData:
+  # PostgreSQL (Bitnami chart keys + helper vars)
+  postgres-admin-password: "HaAirK101348qAdmin"
+  postgres-app-password: "HaAirK101348App"
+
+  # MySQL (Bitnami chart keys + helper vars)
+  mysql-root-password: "HaAirK101348qRoot"
+  mysql-password: "HaAirK101348qAppD"
+  MYSQL_APP_USER: "test_user"
+  MYSQL_APP_DB: "test_data"
+
+  #REDIS Keys
+  redis-password: "HaAirK101348qRed"
+  REDIS_PORT: "6379"
+
+  #Grafana Keys
+  GRAFANA_ADMIN_USER: "admin"
+  GRAFANA_ADMIN_PASSWORD: "HaAirK101348qGrf"
+
+  # Alertmanager (optional auth, future-proof)
+  ALERTMANAGER_BASIC_AUTH_USER: "alertmanager"
+  ALERTMANAGER_BASIC_AUTH_PASSWORD: "HaAirK101348qAmgr"
+
+######################################################################################################################################################
+#### end of file monitoring-secrets-plain.yaml ####
+#### end of file monitoring-secrets-plain.yaml ####
+
+# infra/secrets/local-path-storage.yaml
+apiVersion: v1
+kind: Namespace
+metadata:
+  name: local-path-storage
+
+---
+apiVersion: v1
+kind: ServiceAccount
+metadata:
+  name: local-path-provisioner-service-account
+  namespace: local-path-storage
+
+---
+apiVersion: rbac.authorization.k8s.io/v1
+kind: Role
+metadata:
+  name: local-path-provisioner-role
+  namespace: local-path-storage
+rules:
+  - apiGroups: [""]
+    resources: ["pods"]
+    verbs: ["get", "list", "watch", "create", "patch", "update", "delete"]
+
+---
+apiVersion: rbac.authorization.k8s.io/v1
+kind: ClusterRole
+metadata:
+  name: local-path-provisioner-role
+rules:
+  - apiGroups: [""]
+    resources: ["nodes", "persistentvolumeclaims", "configmaps", "pods", "pods/log"]
+    verbs: ["get", "list", "watch"]
+  - apiGroups: [""]
+    resources: ["persistentvolumes"]
+    verbs: ["get", "list", "watch", "create", "patch", "update", "delete"]
+  - apiGroups: [""]
+    resources: ["events"]
+    verbs: ["create", "patch"]
+  - apiGroups: ["storage.k8s.io"]
+    resources: ["storageclasses"]
+    verbs: ["get", "list", "watch"]
+
+---
+apiVersion: rbac.authorization.k8s.io/v1
+kind: RoleBinding
+metadata:
+  name: local-path-provisioner-bind
+  namespace: local-path-storage
+roleRef:
+  apiGroup: rbac.authorization.k8s.io
+  kind: Role
+  name: local-path-provisioner-role
+subjects:
+  - kind: ServiceAccount
+    name: local-path-provisioner-service-account
+    namespace: local-path-storage
+
+---
+apiVersion: rbac.authorization.k8s.io/v1
+kind: ClusterRoleBinding
+metadata:
+  name: local-path-provisioner-bind
+roleRef:
+  apiGroup: rbac.authorization.k8s.io
+  kind: ClusterRole
+  name: local-path-provisioner-role
+subjects:
+  - kind: ServiceAccount
+    name: local-path-provisioner-service-account
+    namespace: local-path-storage
+
+---
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  name: local-path-provisioner
+  namespace: local-path-storage
+spec:
+  replicas: 1
+  selector:
+    matchLabels:
+      app: local-path-provisioner
+  template:
+    metadata:
+      labels:
+        app: local-path-provisioner
+    spec:
+      serviceAccountName: local-path-provisioner-service-account
+      containers:
+        - name: local-path-provisioner
+          image: rancher/local-path-provisioner:v0.0.32
+          imagePullPolicy: IfNotPresent
+          command:
+            - local-path-provisioner
+            - --debug
+            - start
+            - --config
+            - /etc/config/config.json
+          volumeMounts:
+            - name: config-volume
+              mountPath: /etc/config/
+          env:
+            - name: POD_NAMESPACE
+              valueFrom:
+                fieldRef:
+                  fieldPath: metadata.namespace
+            - name: CONFIG_MOUNT_PATH
+              value: /etc/config/
+      volumes:
+        - name: config-volume
+          configMap:
+            name: local-path-config
+
+---
+apiVersion: storage.k8s.io/v1
+kind: StorageClass
+metadata:
+  name: local-path
+provisioner: rancher.io/local-path
+volumeBindingMode: WaitForFirstConsumer
+reclaimPolicy: Delete
+
+---
+kind: ConfigMap
+apiVersion: v1
+metadata:
+  name: local-path-config
+  namespace: local-path-storage
+data:
+  config.json: |-
+    {
+            "nodePathMap":[
+            {
+                    "node":"DEFAULT_PATH_FOR_NON_LISTED_NODES",
+                    "paths":["/opt/local-path-provisioner"]
+            }
+            ]
+    }
+  setup: |-
+    #!/bin/sh
+    set -eu
+    mkdir -m 0777 -p "$VOL_DIR"
+  teardown: |-
+    #!/bin/sh
+    set -eu
+    rm -rf "$VOL_DIR"
+  helperPod.yaml: |-
+    apiVersion: v1
+    kind: Pod
+    metadata:
+      name: helper-pod
+    spec:
+      priorityClassName: system-node-critical
+      tolerations:
+        - key: node.kubernetes.io/disk-pressure
+          operator: Exists
+          effect: NoSchedule
+      containers:
+      - name: helper-pod
+        image: busybox
+        imagePullPolicy: IfNotPresent
+
+######################################################################################################################################################
+#### end of file local-path-storage.yaml ####
+#### end of file local-path-storage.yaml ####
+
+# infra/secrets/monitoring-secrets-sealed.yaml
+apiVersion: bitnami.com/v1alpha1
+kind: SealedSecret
+metadata:
+  creationTimestamp: null
+  name: infra-secrets
+  namespace: monitoring-infra
+spec:
+  encryptedData:
+    ALERTMANAGER_BASIC_AUTH_PASSWORD: AgC6/Xfrq+IukJUNYUH0nSZQNTGjnPqsL1qIqT9740G2YZzfRWuN7/JMUuVuV9miYvFEs5q+XShRBwG3K5nkr/RFD6PAJ7CI7JaHBi+dWbiWi7kF6QpukwLRZ5GB3UiYlHIcZ1bPh3Q0BR91J+Mu9MlmpMEoKQPFl3JKEgKTY8Y3CNn5pTtfzMNExAFm/v1ABEIXDkEHtBtKzte2IbXQDihg77eWyfLD/RCyyQICVbKaPhlc9cFKclTcRaWoLWYUzERPVVM38t8wi+uli8opWjAdr94j42oDhHGeVrM2Z2jx26vRoPJxqRLY1ut+U4W10R4Km6cPNZG8kOn4gysHZOg8DqhKV8OAY6sDdR2Xbop7/88IIZcZq8WDsV6TeRVMEnEM/7gTvWdNqS8qZ0gAZCQb9Ah48fehxPaGx9ixf53FbDtjQmPalMGOt800nx9rU53hsPVY6FaBXNCrFYbF3ulcgu4tcNGClgeP/5cfBCwo4ELUXrMkq3Yj+WBJbmmOGnmSu3QnzV3I8FWaLJFIFWfiN0brVPz42vY/YBjAfBzOqmD74kCZxMhDfFE3NR9LX/7dyYD1Ac1ikPyCMi4SYgr+GyxKlkXow7HzjKZD+ELzKp1I4+0UErLT7NGJSkq0cPinVOpn1DI9K4X4poga8Q9jNl//pVmZmZwPcunS1dv7V5Bpst5tuJJFcWRn1kuZnRnm3sNaCUw4pbdfje2U0dGREA==
+    ALERTMANAGER_BASIC_AUTH_USER: AgB64MnIAWuqMG1qL9steCwK+15ccQEu63HpQJplm+mSi67xrPgMPnRrd1Mk/Rugr+d4eYyOyICeSlxfz5nBNWLCCe3F4sQktVhVbLAy7g3VHjWGJcafu11a1EVCxFPMY7NcH7hc+X9jlcQCijAmVVUdWd3Nkt31yKv341+UivvL/bac1+JiRspZq+6oji2/QncfPv+8G/gtdV1V1NZLZqAO02/+zjFqiXvjUbMWj//y0X0LHgvjajKe9i3fsoVEcKmgd01Hm2BP4c/SCMziJZ9ZDGg8Wdf5c5ou26qT/c6Scdhfd7+MJewxc8FQ58XpmbQ77KqvyEMf98KUtdRKJylGkPPFEjmP4jhm7c4KKcrLvyOR2wQNpGCbbZ7zEcS8oum/PB00XDXOQRNfD+M8hnJrC+TCyuokWmjOtpG7Oa87HY02ut0JW13uKtM/vDaLKcC+UfEf7428SiwrFuJZnuofPAEW4ggGKHSXKbxp8d2/dqaM5YcaotSe6lEEQ+HhlAP27/ex9LmfaV3kjB5yP2xnI9PWcGzBcmaOS1dg1RH4yI8m7QepJVgDWxeybexrcYXD3LkoFzrchuqEmEAYoxkzmRXIM5p2qBDSPWSID7k06thmenSmBxa+MOplTmzoHAx0eOel/kUjYZ6yb0O7upMBgpz5rz8q0ywfxds5Ef0ICtdAPRvT95gr91kGqaqiw/Kyea+AD3YbAZM9mZI=
+    GRAFANA_ADMIN_PASSWORD: AgBBhSSqk770J58LvPZ3o8WyvbEshlv6FxnBZZn4I5pgU1eZxxRO7iNOT68XC6RmmsGrmqnfK9E2CR28x+d9HwkLAp5SuzcShxd+uIjLAAko4ZnACFc47XRVmt0tdoVkC/JPdxcjK+PABgZCLRgyav8QT9aEaTF2KSaoxY5mR2V9cPPB+YuNUpAmJJz1EeCrNj7ZnTfoIf+owKNFRdaQaz9WKa4WHIda6x6LWrB0j1qyiC2UvibDxbOt4/yo89HVLy2cX7zaEfyPRhH8RKxK6gNu7F0ucGLr1os1H9ceBCyECfBDAO6Uv4ofyxaiVOtfWJS/e1Mz4Vn76HxLNsrMBl6WAHKgVleBuuZpR+BA6nYGVolIyL8UQtAXdM/kO7qBzayKDJ4p22bj5urLNQcvQiJATwUOkdtNOs4U3rS3XoWWQd7HXbHALBYnmK05qo12GLgRlQnuvwCt1JhSvhsYgnm/u/swLB2CMy2qEju7yI2k04FHQGb+UQGdjEqf6ZJjRHB3XjW9EHqE453rjyADihaIrr55RqSgP+I8GQfz+NzTa6+BNWvsAA71J884KEgN5LXt8/pcFUTgPdOEmg/OuWOAIb79JLerVbBpocYOqM9n7cKqAgwe9CYmDUofoDkSeQWW5g4yA1hpt+zbjxsr/NBHJXkke+NT99TfuTKqufzm5F1zn/X/QTItJ/+ya5oGTO6DzXVEuRopqIZ0vr0ZBhcG
+    GRAFANA_ADMIN_USER: AgA+2/PNbmHoOerrD1XgPQHiKx2KdZz9+B+D0v0ifSaLIrYD8Gmo6OxDzTZsxOAJyQBfeGjqQRSfPbCvTW7WY0MC3EvoFm4SBwJlXQYzx/8CNDIqs7yLpbNY7tsmk4pmDOXr3PNqyKBK7fEJwgOWOji9RGxE1RguyIJ+o93SbN+1sMmi7NHfMgAJkZLX200qMjpwihK/Q/GQe3PtaJtWAh7SvzPBI4V5IT/1Ni0ZsHwbFa8/jtDIKr2qzvCqELJvEY2bjtAtA7aoJBi+zUnXKpcYPrqDmai8tDJ/Qy9TyaFuMfQSXp+iMvMbRLTf0ipnI4oEFHA03n7K8eVGdGrEIAPcFRf7wv276/PntlkG0LiC3bMaJ66bQ9TFSFD62v2B3+Ilw/s2vrz75xDM9/gs610FX9C3UzA2QQ6LsL2NYaeI0OJVZ/y6FUbHosdn8gctg6rrmV4ZseqwCKsAlJVanWaYJklzAZY9cV5iRa2/2BZMKjOCXkLp7RyqFSNkp8wjPGkeYS2/nsQzyuWYp+VXqqPFBeXepwuoUGr0/0QrurZdyKfcnsZVTFZbQfBnzn+KjmQlR0TFUUSYwMbMgf5zk6MqwQ2mxVktl4SAmxhRrp9OGctE7UEDh+/Y/WoFC/cLhoyno6jmC+VKG0n5y1YjdvPhBSPQJvDh4lxa0SOBKQBy2MzvFpqbi10583N8flbDi7Eoi1C3TQ==
+    MYSQL_APP_DB: AgBlzk5uGHURJsBUupaZ+Wd0XsPJIWupkZNkQZW8TItKaL9Z+Cc89I8N6nhYLl4tIYBymYvoazO6kf7Dne1fnt22DvptCkUQMybw+Zxg6mxL0+NzU7kM+oyaVlIaFzdPeO/52myhDpGeyvTuNBRCqzdEBR5EcK32MClvtLJXPFIaZb0IV7sXcL5uRubbZBvrMz76uuOSRe5qR+DU7DRUlJlRtGyt5vUsR566JffU+NBZ5qMtsFk24m57wcmfnsy0G0b8Gy6ItWebAePiMs566cRjqX2SpIoP/1h7gZBU/7SwrZTeFBNbimOotxre6Ky+5EAlzbv/9ccJtV+YM7BQqXZ6lKcQzsw3ywwKcx/Gz2EGB0MfoTVWU4o83aPIMyjA09c5q40KGyFoDIwKh4bTwXSXbfCHLlNLAgWOMawEX3UvCU1w21jHmCY0mhwzLbH8CghZ893KOc2OeJEaH6v6+78FTYhGB5QwJ0hVNMb6CHiarJnp32+L1DceEBCM/DIfSEJnUpffulWWfBq2heihVhgSOzLa9sO5NkTQoI4sTghxvY8lKu3UipNwxjGnLku7A7bLUAL0dKOqmXUbBSVMzmwzYotYiCyY/RjeAP+J021JViDmsw0J+FM3pxmzEG3aJp0WZK1Y430FGTqS2lOY3rXs3efoWrS/IHPmrUzMABHrOdzUMOCM6TbLXxFlOzK4HZvRHrq7p1lRs60=
+    MYSQL_APP_USER: AgB1ILDHGdDTG8IpTjg0O6MJSXAlQFY8kek/6otNDA/OQxo9tOq271JirqQUcMSvZIo0nhgVsPdFP2cfVnYKyGLXHF40gENKBiVEuU4ZD/zxn5PUMvFCuVcAiJ5vkkjgzgvnEZqQwBvqdlcvTpTqPBAiQW0prd68ySkqDKULgr1QMdty8GaHBU4XeoPEgO8BRxuNw5vkKULC9eQnOfznWFDlBCMmXjvuzePAqJknVZgHd1V9/Ky1Xd8hQE2lpRiKHXrvY23HCUO4IkzIB5Pg9m8AK/qjFNQprU48NZCqiVMw+EhnCI9rNFTcIPi5p0wWef8ocwz5PGG2Ji/Iwy+5/n9U9g+c2QQq+UvuvAtOtanHEEgGO1wyMec5c0mZA0162I7o2bKWf+70jM22D1sPfjZYWQjejHVNpdnWjRPjqW0kWLO1xpAP6htQomSC3nYxVuFJ2Yq2714vaSVmncnKY9i+jHtFrVzG2MnA0nMTQBgKHm8y2diI4eb3GCmspM9KfRjWS1PngSk9kYOfv9QIJliXN1yJ1mM64Tvl6z4a/5jaysz5nAsUhQqaFREUQSR8PVUFedq8Ehi/+CfVUqlNSCAiawZB3n2RMOaXgmO109suQT3vFvfXLTR90AYqTlTzdkjUdObh14lZNZwU8ssGaqHKeGbr8IaBwlcCIAVAvBhfr1qnL3MWtEkvDeU/ph62o0pBq+pjNye6D58=
+    REDIS_PORT: AgCM9Cw99c5/CeukIlqZYVRPtL84OYRSVr5cHOvWr7wyem9KkeKmEzKHo86jxFIfkR9BJzaG8nOtCeqTzUe4gEPWV4X53ZPGf2CRzUPXTgx8P0PrD/Gg2ShpjYw0Cw4GXjaz7k7tGT4tFiNlMCKQDMy1a818SE2LaFHrVrsjJZUQ4tEcAnwB7kRGEjL5crku8Zse0ovVECh2s+J/UPpd0Ay4xTb525N4lOKj0cr4l3p43gQwqq++L+jRft8S2ezP8clTFUIS3lZ9ZiznQja5rkW/tbme7JeqrLPyqLEiyMF6b+neUrvHQXtbl5SOiVfKpNorrVeBgxPPSWL0l8bxsB7bWllw2Hll1+DCWTfMnc4MAqgoJ39N+lyhyo8aOoalvXVuQZlLsU0UNxvlD30oQyvZX2xnm+ZQWCXH4GKR86Debw5RCquBWvPCZSLHgmrXWzcfbF4m0elQfJcr/n77KByTSTAlQ5H4p4nM1bA/jOvzP/NFAhIJOiYbfShCMYMeT3rF2HaaEDGwp95nRm2+NvQrSDqkcVx7/zegqPRg8+hGiF8KphCU8DDG8vKtwGtgJQNh6U5vmHS4JW1V3SHpqogGcq0NoShzTHvP/cbKiiT/Q04bIucp75Uu2IkXNsSDnfcAEFu2FPsLPTAHhgC4MqY3lVkLv3iNzEoMekgh+JsWyAFTVz+F1FdLDfhlSx5CFQzxHcls
+    mysql-password: AgBFALFXG6UGZ7NXCWkrvwC/RxWm5v3q0HnVStAgVxSeKlxaXmdepspnfsIkOeH5ycLb68HR2llypzOZqlxvXpLvqmSy8nONWUMdYg722W0ZASX1BmE1rOVuoY4wvDhzkJ+uQvVcBLprA5w1VfsAGRmAt3IfIL6C9xAwOtKIccJxESar0rEfxs+NG0lRpyZVX2g7F5wyd6QmekrEjTjhhlpyrgaN9yuBIcE7aE9EZdb6IoqSvKZ+sadm/hOv/lITxPPOvAkTphILRTKvKjis1adpziXbqHJJ7jlv7xNhlHGoRHx+bzJUsscihRp6HtlvXzw5sgN1GPiwcDkzvIuDNSk3hnZxn8bFVq9qQI4JNvXxiqRKCeFPxmAYBgwkd+wJu+IgZ9V/I66i1GoH4aTXawfzq4cQa53waWtzCrgxS0La+080zzYo4bH+60KXTNhZs22X7jwGVCTfvOvkmBNViFUwDyK7g2XRuKaWqW9kDJA5nDKYVY9TG6JUPrlEAG5tt8wouENrQMCPtdJynQb/Mi61d9RChFcTEFWXRq4SuDGPxCDK3CQCt2ZgwMNpiEEwrg8nfCmsAJ6YtSPCXKPK/ZvI70hPe8UsD44+N/Ja6fEf5JyBDvnuxBsiU72L0Vx8cFWzPul1PbRYC9yClFVviB6mswVrGJcpi+aSM1ZhB0VBZbjk18C59eUV2wHSH89D5Zrf7gR4F2120chlw7wqodLOkA==
+    mysql-root-password: AgB8wZn1tdddiSNgT/qFou7b5ctWYLMfFnMfohv6tbXe8F8W0BMumOtGb+WoZVtpPafQ2cVTaHuJd1tQNSfnwAQ9zbQDWArBB8FKg413G3YVXAEfeXXuvlUC0zyNabYt0NlzVAkYVEfRhS5gcuWXTbrGAxBFwHJ9qQbj76Dzx4mGk5/9HwTK3h7BjAd30Mv9ZwhMS/2j/OBixMmTe3tBqBGQcVcd1sEP84EMXtb4bcd9e2F08Po3UtOqsR/bxXzx9V/SRA8Ng2n05nHH0fBCFqke/qV4OQPIvh/ZtEKxkWSz3nay8+VcLVCB9IJZ6GxdFw4g7JX5F1bZ7ctLaPFFDqWv7BUDhWik1jJpthG8aTYHO3XNoY2lPajtCX8CUCgkP1Ic2+ESYxhx3/+B2TvKa3ZrO6sHfm3xzBVU8WH++hkEwkmxpyxD5XlbxQW2Se+x3Azxa9q9lpzYieMIvddragPM6oXM8ZOo6GylinWmOlnCWW8Htf2uwhqBcD7aEbskO2Ar+N9b2XJGqr2iDhQMdxA1fBaRQKWJT6bCNM1RUpVBwMiAj5VBG4Ig7GYuYuUhKbw8H69s6K0xoBg2P2WeCvBfIYL61yqUkUtbz9yHJDThDhykUiCz7x3H+XanAq3uVSQyIXvZHZE1sQzoahzb/WGvl1JIKu5EaAE+UlN1BU4RzHM6c9eh5PsV3jwXiUBvzmK87LWDvTUsZp7722rdlQ4pHw==
+    postgres-admin-password: AgAfm8tY7zsid++QICVVQuYyKjrQE2JFuiEQUCKW+k/L267WnX15aDjASNxkt/LkzAvw4+X+kX587AsRXYecY/feuSGicxwytWFHtNOxhGMJ2EqHXjN4LNXCDgm0Pvovrkjdx8dZFP4vCeYGfbL6QjKwj36Nei7VoGlMTviSg7QA9HH2FfOX+H9IRwg8A9eTLdqDT+xZ1aRbmJHlL8aq5Waq435+kmIuIJIT39yiT7YrSnolwFr5P2zXzU/7hagbITQ2B8dV4fO3113S7yStHZq4t2U9dcJxNhZcgLReFCkVAtq+SD5ubYrdB0/WGsl+33mGjV++K9tfEdkHYpNBP9AXKuksQ78AMSU63uJCgpkV30hathZiU+hnKG7P7oeEs547GjssMUWTUhNce3kY7uZfb94I9+9kdnqQ70QWzPZrYEIlevUzbMaJLyTj/2riJOvzXMnhm0Zd84eWEdJUI5EWB8vIqwlqGgQIER+ltlpgwAsgHGN4O2uNOoaOmQJ+eNXX9NhtNUe4Vniypg1wnz929kc380nfvx5tcXHw9VaSTsfhEqZHe3MPbEjrVEU1j8GQmqsJPHV/eLVnpxC9PXcdMK2OYGFsXf9yaG5pt6dHsl6+TMmdlBG8J6feCnKK3ijFigow5j2xjDCKhvJ3oHEv4hYScCphkOGV5JdPlXK6T7GMYLTf9gd/hQiTTn7nhmYI3N7eolWivrnyxqq7gwuMQSQ=
+    postgres-app-password: AgCdYtATL5t5cTfjoPldKzTgh3M70oCHcU6XYgGMELVAcCziHStN1qXT3NOY8FXdLzdqqtL66mbNekWS65HmWlncJlM+tpVmJDkzpk9nzPpQ+nzbEucS1cc86RKRaC7LyZO+vbO0BFOkd+u1QZEHVzEv7vw/0clcBMbUfGIJCo+Ps7nYnfo21Gdo78mh+4bimF/RP4D+vGiUvLEFv6aN7LDx4HkMLM/yeU+JGLvjQPdo7IZYTweiv1wspqKpk69MtYxnfN0ShBolH2xP1UmQhQJiGaI2pdSZxL+aoZ9eGz7Go64a8sMn2MApQQlnUqkW6J1chnPaUT9pKDe3JvxAA+rChy+wvGPrBWG7kI2HVBXzkgNBcQCiV/B741VhaxRtG25vGaQG9ELPs98M3T+Ac0rsCZTdYXdG3ZtWyvPIqI7hnip5Pq9ogTxaCoy4iWkpNhfaJJb9RnXK5PBnycWiN2Pp3y/UHHFGE8tWGN5v5P5J+muIw4dJziee0oO0BzpJpw2vzTSkn/HbOTLB1WJhBH891hG7VngaOQmv22xli9ycaXadwhU0bF72TOscmBWAhnZxGHiH8+rkkvcblEQScODdXyTJsT/L2yweUNnz8TSKoDinXI+ttUX+mtZGpB3TZUh5AroIYMlLsSMVfCoYdIgu0Cl+8mQXprpAA7w3EZDl/SwQYh7rhWAIUn+NRXVaQD3fNT/MUbkgHP9YXwxGZWI=
+    redis-password: AgA5V0DaZhlevVXITkJ4+CmoyjF6mp8TF7XazOp7PnSdwVaIkytwpaQeHoxUc6WtxOR1ZARWBOQp6sRm4L4Pnr8BV/Xj0g0GtUE+CGt+UXmr0KB7yvJHBg8brKHQS0fhAms5ONKpIdt6jCd1KPn0qmXIYeN0WMqGfsOAZDUXSCdwTwQlOkusLfS914R+jxfG+9I8f9jv/vTKsD4U8uMK0984gotYjnSA2PYmxqkJED/pcwSlpq2gN9ZTPaYdY8vOu6lGaXLB698pvswUtA+VSkm6Cq22EelxtuxCsVygEfFVUJgEt9h/fcrLn3tJzqobbmB3zE2Wr6ANLZ3erllopfhENeYNEo2c7+0SICZwwGdVciLf5Av+n7ax2pXxdJsHPcD+kLW5ZP9mCTIr3OmjmL0ge0NeGogx6d8ahTRhAj5o9B/4s5hzH4evXf8ohtd4sqvu91FJuXPHMuM764BkEU3uQ2P3r36KFecqR+1PJR0MmxKejZe1EHtzCNewTlLPojhIY3Di6rer20sgp1/jY4sVt/Rhr5ySbZL5ub6lbAE9pLFhcF9I5FYWAqgJhYCB2ZtheZYvsmBT8H9g7jiTgKXuVE+IgQBr6pVw/tcTO9ilhMJhtXLiBJhC9gOykf7kYXoaD5YSzn4eVWPzpH5F31I0zOMH/yQzyo/0FJo4QhfRbzEq69DnU/yyAdqWezaFvjJR6bx1r7DLLLJAqIPz6wKj
+  template:
+    metadata:
+      creationTimestamp: null
+      name: infra-secrets
+      namespace: monitoring-infra
+    type: Opaque
+---
+
+######################################################################################################################################################
+#### end of file monitoring-secrets-sealed.yaml ####
+#### end of file monitoring-secrets-sealed.yaml ####
+
+# infra/postgress/values-postgresql.yaml
+auth:
+  existingSecret: infra-secrets
+
+  username: alerts_user
+  database: alerts_db
+
+  secretKeys:
+    # These keys must exist in loader-secrets
+    adminPasswordKey: postgres-admin-password
+    userPasswordKey: postgres-app-password
+
+primary:
+  persistence:
+    enabled: true
+    size: 10Gi
+    storageClass: local-path
+
+######################################################################################################################################################
+#### end of file values-postgresql.yaml ####
+#### end of file values-postgresql.yaml ####
+
+# infra/postgress/postgres-nodeport.yaml
+apiVersion: v1
+kind: Service
+metadata:
+  name: postgres-nodeport
+  namespace: monitoring-infra
+spec:
+  type: NodePort
+  selector:
+    app.kubernetes.io/name: postgresql
+    app.kubernetes.io/instance: postgres
+    app.kubernetes.io/component: primary
+  ports:
+    - name: tcp-postgres
+      port: 5432
+      targetPort: 5432
+      nodePort: 30432
+
+######################################################################################################################################################
+#### end of file postgres-nodeport.yaml ####
+#### end of file postgres-nodeport.yaml ####
+
+# infra/local-path-storage.yaml
+apiVersion: v1
+kind: Namespace
+metadata:
+  name: local-path-storage
+
+---
+apiVersion: v1
+kind: ServiceAccount
+metadata:
+  name: local-path-provisioner-service-account
+  namespace: local-path-storage
+
+---
+apiVersion: rbac.authorization.k8s.io/v1
+kind: Role
+metadata:
+  name: local-path-provisioner-role
+  namespace: local-path-storage
+rules:
+  - apiGroups: [""]
+    resources: ["pods"]
+    verbs: ["get", "list", "watch", "create", "patch", "update", "delete"]
+
+---
+apiVersion: rbac.authorization.k8s.io/v1
+kind: ClusterRole
+metadata:
+  name: local-path-provisioner-role
+rules:
+  - apiGroups: [""]
+    resources: ["nodes", "persistentvolumeclaims", "configmaps", "pods", "pods/log"]
+    verbs: ["get", "list", "watch"]
+  - apiGroups: [""]
+    resources: ["persistentvolumes"]
+    verbs: ["get", "list", "watch", "create", "patch", "update", "delete"]
+  - apiGroups: [""]
+    resources: ["events"]
+    verbs: ["create", "patch"]
+  - apiGroups: ["storage.k8s.io"]
+    resources: ["storageclasses"]
+    verbs: ["get", "list", "watch"]
+
+---
+apiVersion: rbac.authorization.k8s.io/v1
+kind: RoleBinding
+metadata:
+  name: local-path-provisioner-bind
+  namespace: local-path-storage
+roleRef:
+  apiGroup: rbac.authorization.k8s.io
+  kind: Role
+  name: local-path-provisioner-role
+subjects:
+  - kind: ServiceAccount
+    name: local-path-provisioner-service-account
+    namespace: local-path-storage
+
+---
+apiVersion: rbac.authorization.k8s.io/v1
+kind: ClusterRoleBinding
+metadata:
+  name: local-path-provisioner-bind
+roleRef:
+  apiGroup: rbac.authorization.k8s.io
+  kind: ClusterRole
+  name: local-path-provisioner-role
+subjects:
+  - kind: ServiceAccount
+    name: local-path-provisioner-service-account
+    namespace: local-path-storage
+
+---
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  name: local-path-provisioner
+  namespace: local-path-storage
+spec:
+  replicas: 1
+  selector:
+    matchLabels:
+      app: local-path-provisioner
+  template:
+    metadata:
+      labels:
+        app: local-path-provisioner
+    spec:
+      serviceAccountName: local-path-provisioner-service-account
+      containers:
+        - name: local-path-provisioner
+          image: rancher/local-path-provisioner:v0.0.32
+          imagePullPolicy: IfNotPresent
+          command:
+            - local-path-provisioner
+            - --debug
+            - start
+            - --config
+            - /etc/config/config.json
+          volumeMounts:
+            - name: config-volume
+              mountPath: /etc/config/
+          env:
+            - name: POD_NAMESPACE
+              valueFrom:
+                fieldRef:
+                  fieldPath: metadata.namespace
+            - name: CONFIG_MOUNT_PATH
+              value: /etc/config/
+      volumes:
+        - name: config-volume
+          configMap:
+            name: local-path-config
+
+---
+apiVersion: storage.k8s.io/v1
+kind: StorageClass
+metadata:
+  name: local-path
+provisioner: rancher.io/local-path
+volumeBindingMode: WaitForFirstConsumer
+reclaimPolicy: Delete
+
+---
+kind: ConfigMap
+apiVersion: v1
+metadata:
+  name: local-path-config
+  namespace: local-path-storage
+data:
+  config.json: |-
+    {
+            "nodePathMap":[
+            {
+                    "node":"DEFAULT_PATH_FOR_NON_LISTED_NODES",
+                    "paths":["/opt/local-path-provisioner"]
+            }
+            ]
+    }
+  setup: |-
+    #!/bin/sh
+    set -eu
+    mkdir -m 0777 -p "$VOL_DIR"
+  teardown: |-
+    #!/bin/sh
+    set -eu
+    rm -rf "$VOL_DIR"
+  helperPod.yaml: |-
+    apiVersion: v1
+    kind: Pod
+    metadata:
+      name: helper-pod
+    spec:
+      priorityClassName: system-node-critical
+      tolerations:
+        - key: node.kubernetes.io/disk-pressure
+          operator: Exists
+          effect: NoSchedule
+      containers:
+      - name: helper-pod
+        image: busybox
+        imagePullPolicy: IfNotPresent
+
+######################################################################################################################################################
+#### end of file local-path-storage.yaml ####
+#### end of file local-path-storage.yaml ####
+
+# infra/unistalKubeObjects.sh
+#!/bin/bash
+set -euo pipefail
+
+###############################################################################
+# Variables – must match the install script
+###############################################################################
+NAMESPACE="loader-infra"
+POSTGRES_RELEASE="postgres"
+
+SEALED_NS="sealed-secrets"
+SEALED_RELEASE="sealed-secrets"
+
+###############################################################################
+# Helper
+###############################################################################
+run() {
+  echo
+  echo ">>> $*"
+  eval "$@"
+}
+
+echo "This script will:"
+echo "  - Uninstall Helm release '${POSTGRES_RELEASE}' in namespace '${NAMESPACE}' (if exists)"
+echo "  - Delete namespace '${NAMESPACE}'"
+echo "  - Uninstall Sealed Secrets controller '${SEALED_RELEASE}' in '${SEALED_NS}' (optional section)"
+echo "  - Delete local YAML files: postgres-auth-plain.yaml, postgres-auth-sealed.yaml,"
+echo "    values-postgresql.yaml, postgres-nodeport.yaml, local-path-storage.yaml (if present)"
+echo
+
+###############################################################################
+# 1. Uninstall PostgreSQL Helm release (if exists)
+###############################################################################
+if helm status "${POSTGRES_RELEASE}" -n "${NAMESPACE}" >/dev/null 2>&1; then
+  run "helm uninstall ${POSTGRES_RELEASE} -n ${NAMESPACE}"
+else
+  echo "Helm release '${POSTGRES_RELEASE}' not found in namespace '${NAMESPACE}', skipping."
+fi
+
+###############################################################################
+# 2. Delete application namespace (loader-infra)
+###############################################################################
+run "kubectl delete namespace ${NAMESPACE} --ignore-not-found"
+
+###############################################################################
+# 3. OPTIONAL: Uninstall Sealed Secrets controller and namespace
+#    Comment this block out if you want to keep Sealed Secrets for other uses.
+###############################################################################
+if helm status "${SEALED_RELEASE}" -n "${SEALED_NS}" >/dev/null 2>&1; then
+  run "helm uninstall ${SEALED_RELEASE} -n ${SEALED_NS}"
+else
+  echo "Helm release '${SEALED_RELEASE}' not found in namespace '${SEALED_NS}', skipping."
+fi
+
+run "kubectl delete namespace ${SEALED_NS} --ignore-not-found"
+
+# If you also want to remove the CRD, uncomment:
+# run 'kubectl delete crd sealedsecrets.bitnami.com --ignore-not-found'
+
+###############################################################################
+# 4. OPTIONAL: Remove local-path provisioner (only if you are sure!)
+#    If you used this cluster ONLY for your tests, you can remove it.
+#    Otherwise, better leave it as-is.
+###############################################################################
+if [ -f "local-path-storage.yaml" ]; then
+  echo
+  echo "Removing local-path-storage objects from file local-path-storage.yaml"
+  run "kubectl delete -f local-path-storage.yaml --ignore-not-found"
+else
+  echo "local-path-storage.yaml not found in current directory, skipping local-path cleanup."
+fi
+
+###############################################################################
+# 5. Delete local YAML files created by the install script
+###############################################################################
+run "rm -f postgres-auth-plain.yaml postgres-auth-sealed.yaml values-postgresql.yaml postgres-nodeport.yaml"
+
+echo
+echo "======================================================================"
+echo "Cleanup completed."
+echo
+echo "To rebuild everything:"
+echo "  1) Run your install script again (the one that installs:"
+echo "     - Sealed Secrets controller"
+echo "     - postgres-auth sealed secret"
+echo "     - Bitnami PostgreSQL"
+echo "     - NodePort service on 30432"
+echo "  2) Verify with:"
+echo "       kubectl get pods -n ${NAMESPACE}"
+echo "       kubectl get svc  -n ${NAMESPACE}"
+echo "======================================================================"
+
+######################################################################################################################################################
+#### end of file unistalKubeObjects.sh ####
+#### end of file unistalKubeObjects.sh ####
+
+# infra/mysql/mysql-statefulset.yaml
+apiVersion: v1
+kind: Service
+metadata:
+  name: mysql
+  namespace: monitoring-infra
+  labels:
+    app.kubernetes.io/name: mysql
+    app.kubernetes.io/instance: infra
+spec:
+  ports:
+    - port: 3306
+      name: mysql
+      protocol: TCP
+      targetPort: 3306
+  clusterIP: None          # Headless service for StatefulSet
+  selector:
+    app.kubernetes.io/name: mysql
+    app.kubernetes.io/instance: infra
+---
+apiVersion: apps/v1
+kind: StatefulSet
+metadata:
+  name: mysql
+  namespace: monitoring-infra
+  labels:
+    app.kubernetes.io/name: mysql
+    app.kubernetes.io/instance: infra
+spec:
+  serviceName: mysql
+  replicas: 1
+  selector:
+    matchLabels:
+      app.kubernetes.io/name: mysql
+      app.kubernetes.io/instance: infra
+  template:
+    metadata:
+      labels:
+        app: mysql
+        app.kubernetes.io/name: mysql
+        app.kubernetes.io/instance: infra
+        app.kubernetes.io/component: primary
+        app.kubernetes.io/part-of: monitoring-infra
+    spec:
+      containers:
+        - name: mysql
+          image: mysql:8.0
+          imagePullPolicy: IfNotPresent
+          ports:
+            - containerPort: 3306
+              name: mysql
+              protocol: TCP
+          env:
+            - name: MYSQL_ROOT_PASSWORD
+              valueFrom:
+                secretKeyRef:
+                  name: infra-secrets
+                  key: mysql-root-password
+
+            - name: MYSQL_USER
+              valueFrom:
+                secretKeyRef:
+                  name: infra-secrets
+                  key: MYSQL_APP_USER
+
+            - name: MYSQL_PASSWORD
+              valueFrom:
+                secretKeyRef:
+                  name: infra-secrets
+                  key: mysql-password
+
+            - name: MYSQL_DATABASE
+              valueFrom:
+                secretKeyRef:
+                  name: infra-secrets
+                  key: MYSQL_APP_DB
+
+          volumeMounts:
+            - name: mysql-data
+              mountPath: /var/lib/mysql
+
+          livenessProbe:
+            exec:
+              command: ["sh","-c",'mysqladmin ping -h 127.0.0.1 -uroot -p"$MYSQL_ROOT_PASSWORD"']
+            initialDelaySeconds: 30
+            periodSeconds: 10
+            timeoutSeconds: 5
+
+          readinessProbe:
+            exec:
+              command: ["sh","-c",'mysqladmin ping -h 127.0.0.1 -uroot -p"$MYSQL_ROOT_PASSWORD"']
+            initialDelaySeconds: 10
+            periodSeconds: 5
+            timeoutSeconds: 3
+
+  volumeClaimTemplates:
+    - metadata:
+        name: mysql-data
+      spec:
+        accessModes: ["ReadWriteOnce"]
+        resources:
+          requests:
+            storage: 10Gi
+
+
+######################################################################################################################################################
+#### end of file mysql-statefulset.yaml ####
+#### end of file mysql-statefulset.yaml ####
+
+# infra/mysql/mysql-nodeport.yaml
+apiVersion: v1
+kind: Service
+metadata:
+  name: mysql-nodeport
+  namespace: monitoring-infra
+  labels:
+    app.kubernetes.io/name: mysql
+    app.kubernetes.io/instance: infra
+    app.kubernetes.io/component: primary
+    app.kubernetes.io/part-of: monitoring-infra
+spec:
+  type: NodePort
+  selector:
+    app.kubernetes.io/name: mysql
+    app.kubernetes.io/instance: infra
+    app.kubernetes.io/component: primary
+    app.kubernetes.io/part-of: monitoring-infra
+  ports:
+    - name: mysql
+      protocol: TCP
+      port: 3306
+      targetPort: 3306
+      nodePort: 30306
+
+
+
+######################################################################################################################################################
+#### end of file mysql-nodeport.yaml ####
+#### end of file mysql-nodeport.yaml ####
+
+# infra/prometheus/values-kps.yaml
+grafana:
+  enabled: true
+  service:
+    type: ClusterIP
+  persistence:
+    enabled: true
+    size: 5Gi
+
+prometheus:
+  service:
+    type: ClusterIP
+  prometheusSpec:
+    retention: 7d
+    storageSpec:
+      volumeClaimTemplate:
+        spec:
+          accessModes: ["ReadWriteOnce"]
+          resources:
+            requests:
+              storage: 10Gi
+
+alertmanager:
+  enabled: true
+
+######################################################################################################################################################
+#### end of file values-kps.yaml ####
+#### end of file values-kps.yaml ####
+
+# infra/prometheus/AlertManager-nodeport.yaml
+apiVersion: v1
+kind: Service
+metadata:
+  name: alertmanager-nodeport
+  namespace: monitoring-infra
+  labels:
+    app: alertmanager
+spec:
+  type: NodePort
+  selector:
+    app.kubernetes.io/name: alertmanager
+    app.kubernetes.io/instance: monitoring-kube-prometheus-alertmanager
+  ports:
+    - name: http-web
+      port: 9093
+      targetPort: 9093
+      nodePort: 30903
+
+
+######################################################################################################################################################
+#### end of file AlertManager-nodeport.yaml ####
+#### end of file AlertManager-nodeport.yaml ####
+
+# infra/prometheus/grafana-nodeport.yaml
+apiVersion: v1
+kind: Service
+metadata:
+  name: grafana-nodeport
+  namespace: monitoring-infra
+  labels:
+    app: grafana
+spec:
+  type: NodePort
+  selector:
+    app.kubernetes.io/name: grafana
+    app.kubernetes.io/instance: monitoring
+  ports:
+    - name: http
+      port: 80
+      targetPort: 3000
+      nodePort: 30300
+
+######################################################################################################################################################
+#### end of file grafana-nodeport.yaml ####
+#### end of file grafana-nodeport.yaml ####
+
+# infra/prometheus/Prometheus-nodeport.yaml
+apiVersion: v1
+kind: Service
+metadata:
+  name: prometheus-nodeport
+  namespace: monitoring-infra
+  labels:
+    app: prometheus
+spec:
+  type: NodePort
+  selector:
+    app.kubernetes.io/name: prometheus
+    app.kubernetes.io/instance: monitoring-kube-prometheus-prometheus
+  ports:
+    - name: http-web
+      port: 9090
+      targetPort: 9090
+      nodePort: 30900
+
+
+######################################################################################################################################################
+#### end of file Prometheus-nodeport.yaml ####
+#### end of file Prometheus-nodeport.yaml ####
+
+# .DS_Store
+[SKIPPED: non-text or binary file]
+######################################################################################################################################################
+#### end of file .DS_Store ####
+#### end of file .DS_Store ####
+
+# printProject.sh
+#!/usr/bin/env bash
+set -euo pipefail
+
+###############################################################################
+# Dump directory tree and all file contents into a single output file
+###############################################################################
+
+# Resolve script directory
+SCRIPT_DIR="$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)"
+ROOT_DIR="$SCRIPT_DIR"
+
+DATE_STR="$(date +%Y%m%d)"
+OUT_FILE="${SCRIPT_DIR}/output_${DATE_STR}.txt"
+
+# Create / overwrite output file
+: > "$OUT_FILE"
+
+# Separator line: "###" repeated 50 times (single line)
+SEP_LINE="$(printf '###%.0s' {1..50})"
+
+###############################################################################
+# Directory tree
+###############################################################################
+{
+  echo "########## DIRECTORY TREE: ${ROOT_DIR} ##########"
+  if command -v tree >/dev/null 2>&1; then
+    tree -a "$ROOT_DIR"
+  else
+    echo "(tree command not found — using find)"
+    find "$ROOT_DIR"
+  fi
+  echo
+  echo "########## FILE CONTENTS ##########"
+  echo
+} >> "$OUT_FILE"
+
+###############################################################################
+# Dump files
+###############################################################################
+while IFS= read -r -d '' f; do
+  fname="$(basename "$f")"
+
+  # Exclude any file starting with "output"
+  [[ "$fname" == output* ]] && continue
+
+  rel_path="${f#"$ROOT_DIR"/}"
+
+  # Skip binary files if 'file' command exists
+  if command -v file >/dev/null 2>&1; then
+    if ! file -b --mime "$f" | grep -qiE 'charset=(us-ascii|utf-8|utf-16|iso-8859|windows-1252)'; then
+      {
+        echo "# ${rel_path}"
+        echo "[SKIPPED: non-text or binary file]"
+        echo "$SEP_LINE"
+        echo "#### end of file ${fname} ####"
+        echo "#### end of file ${fname} ####"
+        echo
+      } >> "$OUT_FILE"
+      continue
+    fi
+  fi
+
+  {
+    echo "# ${rel_path}"
+    cat "$f"
+    echo
+    echo "$SEP_LINE"
+    echo "#### end of file ${fname} ####"
+    echo "#### end of file ${fname} ####"
+    echo
+  } >> "$OUT_FILE"
+
+done < <(
+  find "$ROOT_DIR" \
+    -type d \( -name .git -o -name node_modules -o -name .venv -o -name dist -o -name build \) -prune -false \
+    -o -type f -print0
+)
+
+echo "Done."
+echo "Root directory : $ROOT_DIR"
+echo "Output file    : $OUT_FILE"
+
+######################################################################################################################################################
+#### end of file printProject.sh ####
+#### end of file printProject.sh ####
+
+# README.md
+# Monitronig Project – Local Kubernetes & Database Infrastructure (Dev Setup)
+
+This document provides **raw shell commands only** to install and operate a local Kubernetes-based database infrastructure for development.
+
+It covers:
+- Single-node Kubernetes cluster for development
+- Stable API endpoint via `127.0.0.1` (no Wi‑Fi IP dependency)
+- `kubectl`, `kubeadm`, `helm`, `kubeseal`
+- Sealed Secrets controller
+- PostgreSQL via Bitnami Helm chart
+- MySQL via Bitnami Helm chart
+
+> **Important:**
+> - This repository intentionally contains **no `.sh` files**.
+> - All steps below are provided as **direct shell commands**.
+> - Plain secrets must **never** be committed.
+
+---
+
+## 0. Project Files
+
+All commands assume this root path on your machine is already synchronized with git repo:
+
+```bash
+./
+├── kube
+│   ├── install.sh #(ignored)
+│   └── unistall.sh#(ignored)
+├── monitoring
+│   ├── infra
+│   │   ├── 00_setup_sealed_secret.sh #(ignored)
+│   │   ├── 01_install_postgress.sh #(ignored)
+│   │   ├── 02_install_mysql.sh  #(ignored)
+│   │   ├── mysql
+│   │   │   └── values-mysql.yaml 
+│   │   ├── postgress
+│   │   │   ├── postgres-nodeport.yaml
+│   │   │   └── values-postgresql.yaml
+│   │   ├── secrets
+│   │   │   ├── monitoring-secrets-plain.yaml #(ignored)
+│   │   │   └── monitoring-secrets-sealed.yaml
+│   │   └── unistalKubeObjects.sh #(ignored)
+│   └── services (in progress)
+```
+
+
+---
+
+## 1. Linux – Kubernetes Cluster with Static API (`127.0.0.1`)
+
+> Skip this section if you already have a working cluster (e.g., on macOS via Docker Desktop).
+
+### 1.1 Reset Existing Cluster (if needed)
+
+```bash
+sudo kubeadm reset -f
+sudo systemctl stop kubelet
+sudo systemctl stop containerd || true
+sudo rm -rf /etc/cni/net.d
+sudo ip link delete cni0 2>/dev/null || true
+sudo ip link delete flannel.1 2>/dev/null || true
+sudo rm -rf /var/lib/etcd
+sudo rm -rf /etc/kubernetes
+```
+
+---
+
+### 1.2 Install and Configure containerd
+
+```bash
+sudo apt update
+sudo apt install -y containerd
+sudo mkdir -p /etc/containerd
+containerd config default | sudo tee /etc/containerd/config.toml >/dev/null
+sudo sed -i 's/SystemdCgroup = false/SystemdCgroup = true/' /etc/containerd/config.toml
+sudo systemctl restart containerd
+sudo systemctl enable containerd
+```
+
+---
+
+### 1.3 Kernel Modules & Sysctl
+
+```bash
+cat <<EOF | sudo tee /etc/modules-load.d/k8s.conf
+overlay
+br_netfilter
+EOF
+
+sudo modprobe overlay
+sudo modprobe br_netfilter
+
+cat <<EOF | sudo tee /etc/sysctl.d/k8s.conf
+net.bridge.bridge-nf-call-iptables  = 1
+net.bridge.bridge-nf-call-ip6tables = 1
+net.ipv4.ip_forward                 = 1
+EOF
+
+sudo sysctl --system
+```
+
+---
+
+### 1.4 Disable Swap
+
+```bash
+sudo swapoff -a
+sudo sed -i '/ swap / s/^\(.*\)$/#\1/g' /etc/fstab
+```
+
+---
+
+### 1.5 Install kubeadm, kubelet, kubectl
+
+```bash
+sudo mkdir -p /etc/apt/keyrings
+
+curl -fsSL https://pkgs.k8s.io/core:/stable:/v1.30/deb/Release.key | \
+  sudo gpg --dearmor -o /etc/apt/keyrings/kubernetes-apt-keyring.gpg
+
+echo "deb [signed-by=/etc/apt/keyrings/kubernetes-apt-keyring.gpg] https://pkgs.k8s.io/core:/stable:/v1.30/deb/ /" | \
+  sudo tee /etc/apt/sources.list.d/kubernetes.list
+
+sudo apt update
+sudo apt install -y kubelet kubeadm kubectl
+sudo apt-mark hold kubelet kubeadm kubectl
+```
+
+---
+
+### 1.6 Initialize Cluster with Stable API
+
+```bash
+sudo kubeadm init \
+  --control-plane-endpoint=127.0.0.1:6443 \
+  --apiserver-advertise-address=0.0.0.0 \
+  --pod-network-cidr=192.168.0.0/16 \
+  --cri-socket=unix:///var/run/containerd/containerd.sock
+```
+
+After success:
+
+```bash
+mkdir -p $HOME/.kube
+sudo cp /etc/kubernetes/admin.conf $HOME/.kube/config
+sudo chown "$(id -u):$(id -g)" $HOME/.kube/config
+```
+
+Verify:
+
+```bash
+kubectl get nodes
+grep server: ~/.kube/config
+```
+
+---
+
+## 2. macOS – Tools Only
+
+On macOS you typically use Docker Desktop or another local Kubernetes distribution.
+
+```bash
+brew install kubectl helm
+```
+
+Verify:
+
+```bash
+kubectl get nodes
+```
+
+---
+
+## 3. Install Helm and kubeseal (Linux & macOS)
+
+### Helm
+
+Linux:
+
+```bash
+curl -fsSL https://raw.githubusercontent.com/helm/helm/main/scripts/get-helm-3 | bash
+```
+
+macOS:
+
+```bash
+brew install helm
+```
+
+---
+
+### kubeseal
+
+```bash
+KUBESEAL_VERSION="0.19.1"
+curl -sSL https://github.com/bitnami-labs/sealed-secrets/releases/download/v${KUBESEAL_VERSION}/kubeseal-${KUBESEAL_VERSION}-$(uname | tr '[:upper:]' '[:lower:]')-amd64.tar.gz -o kubeseal.tar.gz
+
+tar -xzf kubeseal.tar.gz
+sudo install -m 0755 kubeseal /usr/local/bin/kubeseal
+rm -f kubeseal kubeseal.tar.gz
+kubeseal --version
+```
+
+---
+
+## 4. Enable Workloads on Single Node
+
+```bash
+kubectl taint nodes --all node-role.kubernetes.io/control-plane- || true
+```
+
+---
+## 5. Set ProjectRoot
+
+```bash
+PROJECT_ROOT="/Volumes/Files/Projects/newLoader"
+echo "**** Switching to Project Root"
+echo "⚠️  please verify project root in path  your environment"
+echo ${PROJECT_ROOT}
+cd ${PROJECT_ROOT}
+
+````
+
+## 6. Install Sealed Secrets Controller
+
+```bash
+cd ${PROJECT_ROOT}
+SEALED_NS="sealed-secrets"
+helm repo add sealed-secrets https://bitnami-labs.github.io/sealed-secrets
+helm repo update
+
+kubectl create namespace ${SEALED_NS} --dry-run=client -o yaml | kubectl apply -f -
+
+helm upgrade --install sealed-secrets sealed-secrets/sealed-secrets \
+  --namespace ${SEALED_NS} \
+  --set fullnameOverride=sealed-secrets
+
+kubectl rollout status deployment/sealed-secrets -n ${SEALED_NS} --timeout=180s
+```
+
+---
+
+## 7. Create Application Namespace
+
+```bash
+cd ${PROJECT_ROOT}
+NAMESPACE="monitoring-infra"
+kubectl create namespace ${NAMESPACE} --dry-run=client -o yaml | kubectl apply -f -
+```
+
+---
+
+## 8. Create Plain Secret Locally and Seal It
+
+```bash
+
+cd ${PROJECT_ROOT}/infra
+mkdir -p secrets
+```
+
+```bash
+cat > secrets/monitoring-secrets-plain.yaml <<EOF
+apiVersion: v1
+kind: Secret
+metadata:
+  name: monitoring-secrets
+  namespace: ${NAMESPACE}
+type: Opaque
+stringData:
+  #postgres infra keys
+  postgres-admin-password: "someVal"
+  postgres-app-password:   "someVal"
+
+  #mysql infra keys
+  mysql-root-password:     "someVal"
+  mysql-password:          "CHANGE_ME"
+  mysql-replication-password: "someVal"
+  MYSQL_APP_USER: "someVal"
+  MYSQL_APP_DB:   "someVal"
+EOF
+```
+
+```bash
+kubeseal \
+  --controller-name=sealed-secrets \
+  --controller-namespace=${SEALED_NS} \
+  --namespace ${NAMESPACE} \
+  --format yaml \
+  < secrets/monitoring-secrets-plain.yaml \
+  > secrets/monitoring-secrets-sealed.yaml
+
+kubectl apply -f secrets/monitoring-secrets-sealed.yaml
+```
+
+---
+
+## 9. StorageClass (Linux Bare-Metal)
+
+```bash
+curl -fsSL https://raw.githubusercontent.com/rancher/local-path-provisioner/master/deploy/local-path-storage.yaml -o local-path-storage.yaml
+kubectl apply -f local-path-storage.yaml
+kubectl get storageclass
+```
+
+---
+
+## 10. Install PostgreSQL via Helm
+
+```bash
+cd ./monitoring/infra
+helm repo add bitnami https://charts.bitnami.com/bitnami
+helm repo update
+
+helm upgrade --install postgres bitnami/postgresql \
+  -n ${NAMESPACE} \
+  -f postgress/values-postgresql.yaml
+```
+
+```bash
+kubectl rollout status statefulset/postgres-postgresql -n ${NAMESPACE} --timeout=300s
+kubectl get pods -n ${NAMESPACE}
+```
+
+```bash
+kubectl apply -f postgress/postgres-nodeport.yaml
+kubectl get svc -n ${NAMESPACE}
+```
+
+```bash
+psql -h 127.0.0.1 -p 30432 -U alerts_user -d alerts_db
+```
+
+---
+
+## 11. Install MySQL via statful set
+
+```bash
+cd ./monitoring/infra
+
+k apply -f ./mysql/mysql-statefulset.yaml
+
+#helm upgrade --install mysql bitnami/mysql \
+#  -n ${NAMESPACE} \
+#  -f mysql/values-mysql.yaml
+```
+
+```bash
+kubectl rollout status statefulset/mysql -n ${NAMESPACE} --timeout=300s
+kubectl get pods -n ${NAMESPACE}
+```
+
+```bash
+k apply -f ./${PROJECT_ROOT}/infra/mysql/mysql-nodeport.yaml
+
+mysql -h 127.0.0.1 -P 30306 -u test_user -p
+
+
+```
+---
+## 12. install redis via helm
+
+```bash
+helm repo add bitnami https://charts.bitnami.com/bitnami
+helm repo update
+
+helm upgrade --install redis bitnami/redis \
+  -n monitoring-infra \
+  -f redis/values-redis.yaml
+
+```
+#### Wait:
+```bash
+kubectl rollout status statefulset/redis-master -n monitoring-infra --timeout=300s
+```
+
+#### expose service
+```bash
+kubectl apply -f ./${PROJECT_ROOT}/infra/redis/redis-nodeport.yaml
+```
+
+#### Test Access
+
+```bash
+redis-cli -a "$(kubectl get secret infra-secrets -n monitoring-infra -o jsonpath='{.data.redis-password}' | base64 -d)"
+
+
+```
+
+## 13. Install prometheus via helm
+### - add and update helm repo
+
+```bash
+# Add repo
+helm repo add prometheus-community https://prometheus-community.github.io/helm-charts
+helm repo update
+
+```
+
+### - install helm
+
+```bash
+helm upgrade --install monitoring prometheus-community/kube-prometheus-stack \
+  -n monitoring-infra \
+  -f values-kps.yaml
+
+```
+
+### - verify pods status helm
+```bash
+kubectl get pods -n monitoring-infra
+kubectl get svc -n monitoring-infra | egrep 'grafana|prometheus|alertmanager'
+```
+## 11. Health Check
+
+```bash
+kubectl get nodes -o wide
+kubectl get pods -A
+kubectl get svc -n ${NAMESPACE}
+kubectl get secret -n ${NAMESPACE}
+```
+
+---
+
+## ✅ Result
+
+- Encrypted secrets only
+- PostgreSQL + MySQL deployed via Helm
+- Stable Kubernetes API on `127.0.0.1`
+- No plaintext secrets in Git
+- No shell scripts tracked in the repository
+
+######################################################################################################################################################
+#### end of file README.md ####
+#### end of file README.md ####
+
+# .gitignore
+# Ignore all shell scripts
+*.sh
+
+# Ignore all plain secrets YAMLs
+*-plain.yaml
+
+# (Optional but recommended)
+.DS_Store
+.env
+
+######################################################################################################################################################
+#### end of file .gitignore ####
+#### end of file .gitignore ####
+
+# kube/unistall.sh
+#!/bin/bash
+set -euo pipefail
+
+echo ">>> Stopping kubelet (if running) ..."
+sudo systemctl stop kubelet 2>/dev/null || true
+
+echo ">>> Resetting kubeadm cluster state ..."
+sudo kubeadm reset -f || true
+
+echo ">>> Cleaning CNI configuration ..."
+sudo rm -rf /etc/cni/net.d
+sudo ip link delete cni0 2>/dev/null || true
+sudo ip link delete flannel.1 2>/dev/null || true
+
+echo ">>> Cleaning Kubernetes data directories ..."
+sudo rm -rf /etc/kubernetes
+sudo rm -rf /var/lib/etcd
+sudo rm -rf /var/lib/kubelet/pki
+
+echo ">>> Flushing iptables rules (nat, mangle, filter) ..."
+sudo iptables -F || true
+sudo iptables -t nat -F || true
+sudo iptables -t mangle -F || true
+sudo iptables -X || true
+
+echo ">>> Removing old kubeconfig for current user ..."
+rm -rf "$HOME/.kube" || true
+
+echo
+echo "======================================================================"
+echo "Cluster reset complete."
+echo "You can now run 01_install_k8s_single_node.sh to create a fresh cluster."
+echo "======================================================================"
+
+######################################################################################################################################################
+#### end of file unistall.sh ####
+#### end of file unistall.sh ####
+
+# kube/install.sh
+#!/bin/bash
+set -euo pipefail
+
+###############################################################################
+# Config
+###############################################################################
+APISERVER_ADDRESS="127.0.0.1"     # Avoid WiFi IP; always loopback
+POD_CIDR="10.244.0.0/16"          # Flannel default
+K8S_VERSION="1.30"                # Minor version; apt will pick a 1.30.x
+FLANNEL_MANIFEST="https://raw.githubusercontent.com/flannel-io/flannel/master/Documentation/kube-flannel.yml"
+
+###############################################################################
+# Helper
+###############################################################################
+run() {
+  echo
+  echo ">>> $*"
+  eval "$@"
+}
+
+###############################################################################
+# 0. Basic sanity
+###############################################################################
+if ! command -v curl >/dev/null 2>&1; then
+  echo "curl is required. Installing curl ..."
+  sudo apt update
+  sudo apt install -y curl
+fi
+
+echo ">>> Disabling swap (required by Kubernetes) ..."
+sudo swapoff -a
+sudo sed -i.bak '/ swap / s/^\(.*\)$/#\1/' /etc/fstab || true
+
+###############################################################################
+# 1. Kernel modules & sysctl for Kubernetes networking
+###############################################################################
+echo ">>> Loading kernel modules: overlay, br_netfilter ..."
+cat <<EOF | sudo tee /etc/modules-load.d/k8s.conf
+overlay
+br_netfilter
+EOF
+
+sudo modprobe overlay
+sudo modprobe br_netfilter
+
+echo ">>> Setting sysctl params for Kubernetes networking ..."
+cat <<EOF | sudo tee /etc/sysctl.d/99-k8s.conf
+net.bridge.bridge-nf-call-iptables  = 1
+net.bridge.bridge-nf-call-ip6tables = 1
+net.ipv4.ip_forward                 = 1
+EOF
+
+sudo sysctl --system
+
+###############################################################################
+# 2. Install & configure containerd
+###############################################################################
+if ! command -v containerd >/dev/null 2>&1; then
+  echo ">>> Installing containerd ..."
+  sudo apt update
+  sudo apt install -y containerd
+fi
+
+echo ">>> Configuring containerd (SystemdCgroup = true) ..."
+sudo mkdir -p /etc/containerd
+if [ ! -f /etc/containerd/config.toml ]; then
+  sudo containerd config default | sudo tee /etc/containerd/config.toml >/dev/null
+fi
+
+# Set SystemdCgroup = true
+sudo sed -i 's/SystemdCgroup = false/SystemdCgroup = true/' /etc/containerd/config.toml
+
+echo ">>> Restarting containerd ..."
+sudo systemctl daemon-reload
+sudo systemctl enable containerd
+sudo systemctl restart containerd
+
+###############################################################################
+# 3. Install Kubernetes packages (kubeadm, kubelet, kubectl)
+###############################################################################
+if ! command -v kubeadm >/dev/null 2>&1; then
+  echo ">>> Installing Kubernetes packages kubeadm, kubelet, kubectl ..."
+
+  sudo apt update
+  sudo apt install -y apt-transport-https ca-certificates gpg
+
+  sudo mkdir -p /etc/apt/keyrings
+  curl -fsSL https://pkgs.k8s.io/core:/stable:/v${K8S_VERSION}/deb/Release.key | \
+    sudo gpg --dearmor -o /etc/apt/keyrings/kubernetes-apt-keyring.gpg
+
+  echo "deb [signed-by=/etc/apt/keyrings/kubernetes-apt-keyring.gpg] \
+https://pkgs.k8s.io/core:/stable:/v${K8S_VERSION}/deb/ /" | \
+    sudo tee /etc/apt/sources.list.d/kubernetes.list
+
+  sudo apt update
+  sudo apt install -y kubelet kubeadm kubectl
+  sudo apt-mark hold kubelet kubeadm kubectl
+else
+  echo "kubeadm/kubelet/kubectl already installed."
+fi
+
+###############################################################################
+# 4. kubeadm init with fixed API server IP (127.0.0.1) and flannel CIDR
+###############################################################################
+echo ">>> Running kubeadm init with apiserver ${APISERVER_ADDRESS} and pod CIDR ${POD_CIDR} ..."
+
+sudo kubeadm init \
+  --pod-network-cidr="${POD_CIDR}" \
+  --apiserver-advertise-address="${APISERVER_ADDRESS}" \
+  --control-plane-endpoint="${APISERVER_ADDRESS}:6443" \
+  --cri-socket=unix:///var/run/containerd/containerd.sock
+
+###############################################################################
+# 5. Setup kubeconfig for current user
+###############################################################################
+echo ">>> Configuring kubeconfig for user: $USER ..."
+mkdir -p "$HOME/.kube"
+sudo cp /etc/kubernetes/admin.conf "$HOME/.kube/config"
+sudo chown "$(id -u):$(id -g)" "$HOME/.kube/config"
+
+echo ">>> Verifying kubeconfig server points to 127.0.0.1 ..."
+grep server: "$HOME/.kube/config" || true
+
+###############################################################################
+# 6. Install Flannel CNI
+###############################################################################
+echo ">>> Installing flannel CNI ..."
+run "kubectl apply -f ${FLANNEL_MANIFEST}"
+
+echo ">>> Waiting for flannel DaemonSet to be ready ..."
+run "kubectl -n kube-flannel rollout status daemonset/kube-flannel-ds --timeout=300s"
+
+###############################################################################
+# 7. Allow scheduling on control-plane node
+###############################################################################
+echo ">>> Removing control-plane taint so workloads can run on this node ..."
+run "kubectl taint nodes --all node-role.kubernetes.io/control-plane- || true"
+run "kubectl taint nodes --all node-role.kubernetes.io/master- || true"
+
+###############################################################################
+# 8. Summary
+###############################################################################
+echo
+echo "======================================================================"
+echo "Kubernetes single-node dev cluster is ready."
+echo
+echo "API server URL      : https://${APISERVER_ADDRESS}:6443"
+echo "Pod network (CIDR)  : ${POD_CIDR}"
+echo "Container runtime   : containerd"
+echo "CNI                 : flannel"
+echo
+echo "kubeconfig          : $HOME/.kube/config"
+echo "Check node status   : kubectl get nodes -o wide"
+echo "Check system pods   : kubectl get pods -A"
+echo
+echo "Because we use 127.0.0.1, changing WiFi / IP will NOT break kubectl."
+echo "======================================================================"
+
+######################################################################################################################################################
+#### end of file install.sh ####
+#### end of file install.sh ####
+
+# services/.DS_Store
+[SKIPPED: non-text or binary file]
+######################################################################################################################################################
+#### end of file .DS_Store ####
+#### end of file .DS_Store ####
+
+# services/secrets/app-secrets-plain.yaml
+apiVersion: v1
+kind: Secret
+metadata:
+  name: app-secrets
+  namespace: monitoring-app
+type: Opaque
+stringData:
+  #Env
+  ENV_PROFILE: "DEV"
+
+  # MYSQL Credentials
+  MYSQL_APP_USER: "test_user"
+  MYSQL_APP_DB: "test_data"
+  MYSQL_HOST: "mysql.loader-infra.svc.cluster.local"
+  MYSQL_PORT: "3306"
+  MYSQL_APP_PASSWORD: "HaAirK101348qAppD"
+
+######################################################################################################################################################
+#### end of file app-secrets-plain.yaml ####
+#### end of file app-secrets-plain.yaml ####
+
+# services/secrets/app-secrets-sealed.yaml
+apiVersion: bitnami.com/v1alpha1
+kind: SealedSecret
+metadata:
+  creationTimestamp: null
+  name: app-secrets
+  namespace: monitoring-app
+spec:
+  encryptedData:
+    ENV_PROFILE: AgAIBoYYinnJ3rRVfxZWvO56t+W9RAJvI17o/zmEOkILBXZaRMyrMht+FElB21v07XQygysZHvQDt8n7P2e9kKO1wborwMHSwM0Lf2XV/P2rEKrOOemU1/1RrfjPziFxZzRXz1sAg+PgLzqkM6Fglr5UzfU1lg9LNKbvl+z5GDMRFr1UC29T89czduhPhMFPqyNV5JKrALFZUDS8SfSE/9dfrb3dI2TEK/cCMLd5cWJUA43qmHj367Gp93M0Zc+CyiOvnOl0fJ4bpwA+9YkrnYD271tc3oweFmVPL+mV6eycJKXroq4nMVfuCVJ6Oa4r9pQ7snC7/pyBNNEJo2dXhTBB+bx592h8wmyimLUKE42wLhF/SbJ6FcERP6Z/lodD+dAGu3T6yZlMyf4sU1WpDHSA5Ke2UpSKyR4nyKAo65a7ynOTjlFzH6HMb1yO80UHkXFsHpSMosh7/JSl0SEphvX9j7S1gk38gRjwYDrTvnZmsaCVvXQWtX+O5COcWMZ89y3DAuea37oLybapOo/c9akzvH3/5sfdaDTGzdhMKq2OVu1XtictVXIT/ebTCvfYpI01tdtf2/K9Q1uw6JsIkvhrCQpCQG6m7oSbXqN/fxHGG0Jiln6YmOK+70xJABXO7CaJlYYck1lGs7VoOjtdKKv2HtMLMqJjSgocZlTCflP02NGeSJrxRPDyiOkpP6xgxCXQVWw=
+    MYSQL_APP_DB: AgCmxB272BqXT9Skx0ppjFVO2T5Z+J9jyc9T1rEe3i5VI9D3MJtpyR/safdpQXUPKKbVTlKRN2PQfHyRcR+t9jo9VgqU7HcculDAoO6CmP9FpEVBd15DUPWvaiFrQ4tqgJkljvsH56NtDbG6fZeozmDo41Ssxn5HjxilxiUQsQTkX4KPqk9HNDuRHlGw2At9UgxNJSmDWh161a4efKavJ/dlJEJUKvlLiwKSO9XcE2FQxWTKQc3AXKLlwZsEyspRlgX7RTSbCDAOA8JLkh00uGXd1O0hsJ/vsTGznKqjRcFm3a06a4R7IdjuVcV6sFCNwsYfr1mB6B9FPoTqqD270p7OwUXi3as7tyhO2JXIpZQ+86mvDofwVPTH4YNmDK++nz4sNhi7bHt0REHRdIG+IUaQzGSleyY9mhvkYR1Z+S0MOHDUVERURkQ13y4fQd2phparYe+UDbwYJFLU1sQPTndYIKtVUSJ1v3GdfIvFNINDCuDt0H687Ir6BWxNAkv/OQU/nr2qZUJw0hLTr1IRD/DEOjck94JNqm414/SZ/US7XbfXCfBEZ5RDbPnfKn9E0HTGS2zs5rUtDCjwYoI7KXJaM+0fckqSbPTPpsLmi9bvPvArvHnVk46mCdk0Tok2Ys8Fx316rw+eILGbnJElOfEX2raktZhSR1RTtArDrufOO5UE1VWVQ5qB10P6aiXeH/tMH+4gVqokDKk=
+    MYSQL_APP_PASSWORD: AgDGLxViLZr/9CAojgh//jfFCoSyC2pDrUifG9M5Dz33GPxW0BtEdeIyKyg1684CIilTknZV48yIl3I1akit4VvhY6lpoNlKwj9XdQaqXjhFR0U7jhC/1Ne2vhkkGYrohlEFfx3VgJFHjnlmyMp2ZKbVqyEThE6iDUfTH9A5VOXHbmblrHZQoBX4woJD0R2EqZx8LlP5opi0oXAiHmQOpl5kYSdx8rXz0WsyHVmxbEldLLluTxnyULFQoGuYrwILbYbv2xOwffAoJCogSg1C+E3AlhCNUsaMk3AwnSaMIvNdfktD3eroDMDQ8wVhaskXeghdbfRhlo64jEsprQcZwTOcP93ShckAKW5wu53NtJDHQmoCatS0x7MyxCRWwrZcBilJP38Pr9icyRcw5Jh1hTnj5ntcT9pzoaZ9VfNYgQadSelJdQW76sQscKFwwyBH+3lOWuRk4TjCG+jZJLX3wGov3kP4+E9QaEkIJyVe3MsogCZH9bi9c95x0Vk38EyQ0N83+iWuci/4gx45bGLZd4KP02wWv8+V+TzdPivgJfG6bmfEQUvICOi375xeA+++EZ+rI2pSouIftGNk2gIWSWk7zIeUqY9ORnA9FAyethSYZKytGMYetPaeMAToDhqdtngAHFiDngHc7QQDQMXX1HlcZe/n9XlfGThEf2fQ2SykORN2j0/ooctN9YE981/0eP0S5JJJJNI8p4eaLlXFr0IUfg==
+    MYSQL_APP_USER: AgAgbUkc4jqTQSZhYPFzMmb5i1a72i2dgvbhclnvaqpO3xZs8mHct60uaG3bA1I6Hz/3XJNfwqm7luWQHR/F+e7wm58wsrAQqLfRNvnPkvMAUcNCeykMN5Te/HQFJKVGbOe2NUAl5A1tF4PEPwOB5ih/YdhyBi/Hk/vVcxVlWH+5tvhGUi71NZCDpqNNRGZd6AP3tHNprJM1Lf0dE8RSTerfOFGnb8ZR65lSm8lCTodh8saqt0mkpXZgWT4QQxY45pz+XUIr8g56mFnKJus5C2xu6xqQq1/Urb5IiDOS6gv56pP3VpjfVI17G5CLZMymRNEB5EiinCbHsT1xRgUkbj0zCwtM+BdB0JpA3nYuiux3OwUl0KJOe8kd7yD4x75G1z3i+8elyiFBB7f/40+3MWWYAVs4Bo01gwA6gpBNTkxjd4kkIi4N+BuzYHAU+WVJQ0H2NoroYpIiGTnJXU220scr2HwvQ1MsG5OSNeLHuuf4xUQpu572xe5gbrUH79nOBMIrQksCy/8q4rO9Yr9Fj5xdVZlO75vP9SxFw9XTVMh/16J3jfr4OnBISCNFDfUSYLbhz0WweR7/LXKfDMIEbZT8B4uM3NnV335S7FgSCgR/dq/bouLe0xEJ9zrKo7cQPdpzJLvTvEPrwhFthYF5vUlPzYhM8KmdZoqvngqWAE1J3kUbUaxUDJlUbIWAjrqMrAzODWAlLAfaiNY=
+    MYSQL_HOST: AgATamuyLwUHsrayboyILvkKdL2NiS13tgZsV/DO7nWh1mhLJTGfuMhG+4OPuB2xo1+3AvHHLMERHMDzjGO9NhQz4NwYz7jV2yLg+udY3F1OV7TSSxu/6+D/U6GniyC2gQu9jOuVHXBpwwrY0IUNmuQXUGvZWGINeviysgK3b5joa8PWZVFMLPFBhn0WxMso/esUa//lKabi4pgO3VwCMj8hTId6t8wnbzcDoInWZhm0gkyO61FYKgH4p34L8THnuS/N9LJWgN+P4i1uwjgHNUisteLUN2NSbCz+ONOSI+Ik9NXUl2aWSaX7ds/xCXas/YcZZo2Yi/ILkwkfp+KGncconfSPQaia9OoDw1sfWzWU6S1SpyGGKb7qupl4D0trY9bVPkLkFqHicU/LYUIRxTURFl43S6MV1pG1h5um7DdtScEsIeVDViNoOksgkGd04W8oEH4mxNnxGVUvOrRiUO/JQ1gRGqPE+k+j+t2t5dNKTH7k/S3c+DVkGsXzMDLXufnbWCHHKg3/w/vogCG8xwl80n2q6SC19BKCtddbCAlA4yqbAP0wXC//E+IKJCIWpUxMKlBxCtuF3kJA69a/D6Gut8NefqXVkKIj1kJWZKe1pPKEIGhHICvX7Tw5tZrhY4ubR6qeCaaAaTmfLNvf+Jc+6lZoof9SSYj0oPK90J8jjRCPtxy2RfMY2tnp2LlYbYFt7CR3MURcO37Svs7aIW7ckfX3S5kZ7EG/OY7JXR0iikABPTU=
+    MYSQL_PORT: AgAl6dnTN8vr1leePr+sv5hT/bYiln+fWw1YVQUh7m9khXMMozkGEDy8kwB1KllzsViye2kvxpD9q2mphxJW5j9QAwatlkG7k6t06wrxp2TgLbQn4h7bwWEemHyf/7tf9gtL0MPnlpai4JJjBr446QvPm1GlwUnMugchEgh9IKSplgvP3fzkofqTd1KahMJysJ56HOeO7W9HS8WdaXwvSh4oluF7oH+T8VpBtNwpC9EnzG49qDP/H7pg6hcTZCdr+8BR2c1wvp5hcmZnu1TytJdbTcYwqC3xCmOX/x88UnviNu/rvo1LUjnTYaspmrUiYRdZTuoS5JJcQmRSyNd6Bv6rAovEHnln//mw+SMNEF/73jkw+uDoNBIgz7vqdzo8z9hAYlxh23vvtivFFhqT699bc1GPtoOZiuUCvWuFYWYUoIn4Fgj7uQ4Qgr2jL/MNXZUGJdR1Ns3shVViwsEzevDrzea7//NwavRE+kE7F0DfaMqs9r28YX75V6Sdsjg2vgsl++0KmOHEpNHvX9Zzav5CbLXvGVdqlV3lWe8Dyt38Lo0AgxtKfKLQvWS+ojJrj/9vVt4bhGJ4DDX6YYLNgRNYrQOFxx626eTE8ixTACvEFIsx4FDuz7YQaKfp12QVJ8A/a7J4kiiOIQqYQItwcGf/8ziMXzgwrxufrZaa2scEMbHvY1NyQWc3uVQh0l7pDczgqWOL
+  template:
+    metadata:
+      creationTimestamp: null
+      name: app-secrets
+      namespace: monitoring-app
+    type: Opaque
+---
+
+######################################################################################################################################################
+#### end of file app-secrets-sealed.yaml ####
+#### end of file app-secrets-sealed.yaml ####
+
+# services/dataGenerator/.DS_Store
+[SKIPPED: non-text or binary file]
+######################################################################################################################################################
+#### end of file .DS_Store ####
+#### end of file .DS_Store ####
+
+# services/dataGenerator/Dockerfile
+# Stage 1: Build
+FROM maven:3.9-eclipse-temurin-17 AS build
+WORKDIR /app
+
+# Copy POM and download dependencies
+COPY pom.xml .
+RUN mvn dependency:go-offline -B
+
+# Copy source code and build
+COPY src ./src
+RUN mvn clean package -DskipTests
+
+# Stage 2: Runtime
+FROM eclipse-temurin:17-jre
+WORKDIR /app
+
+# Create non-root user
+RUN groupadd -r spring && useradd -r -g spring spring
+USER spring:spring
+
+# Copy JAR from build stage
+COPY --from=build /app/target/*.jar app.jar
+
+# Expose actuator port
+EXPOSE 8080
+
+# Run with dev profile
+ENTRYPOINT ["java", "-Dspring.profiles.active=dev", "-jar", "app.jar"]
+
+######################################################################################################################################################
+#### end of file Dockerfile ####
+#### end of file Dockerfile ####
+
+# services/dataGenerator/target/data-generator-0.0.1-SNAPSHOT.jar
+[SKIPPED: non-text or binary file]
+######################################################################################################################################################
+#### end of file data-generator-0.0.1-SNAPSHOT.jar ####
+#### end of file data-generator-0.0.1-SNAPSHOT.jar ####
+
+# services/dataGenerator/target/classes/META-INF/spring-configuration-metadata.json
+{
+  "groups": [
+    {
+      "name": "data-generator",
+      "type": "com.loader.datagenerator.model.DataGeneratorConfig",
+      "sourceType": "com.loader.datagenerator.model.DataGeneratorConfig"
+    },
+    {
+      "name": "data-generator.mysql",
+      "type": "com.loader.datagenerator.model.DataGeneratorConfig$MysqlConfig",
+      "sourceType": "com.loader.datagenerator.model.DataGeneratorConfig"
+    }
+  ],
+  "properties": [
+    {
+      "name": "data-generator.downtime",
+      "type": "java.util.List<com.loader.datagenerator.model.DowntimeConfig>",
+      "sourceType": "com.loader.datagenerator.model.DataGeneratorConfig"
+    },
+    {
+      "name": "data-generator.mysql.database",
+      "type": "java.lang.String",
+      "sourceType": "com.loader.datagenerator.model.DataGeneratorConfig$MysqlConfig"
+    },
+    {
+      "name": "data-generator.mysql.host",
+      "type": "java.lang.String",
+      "sourceType": "com.loader.datagenerator.model.DataGeneratorConfig$MysqlConfig"
+    },
+    {
+      "name": "data-generator.mysql.password",
+      "type": "java.lang.String",
+      "sourceType": "com.loader.datagenerator.model.DataGeneratorConfig$MysqlConfig"
+    },
+    {
+      "name": "data-generator.mysql.port",
+      "type": "java.lang.Integer",
+      "sourceType": "com.loader.datagenerator.model.DataGeneratorConfig$MysqlConfig"
+    },
+    {
+      "name": "data-generator.mysql.user",
+      "type": "java.lang.String",
+      "sourceType": "com.loader.datagenerator.model.DataGeneratorConfig$MysqlConfig"
+    },
+    {
+      "name": "data-generator.tables",
+      "type": "java.util.List<com.loader.datagenerator.model.TableConfig>",
+      "sourceType": "com.loader.datagenerator.model.DataGeneratorConfig"
+    }
+  ],
+  "hints": [],
+  "ignored": {
+    "properties": []
+  }
+}
+######################################################################################################################################################
+#### end of file spring-configuration-metadata.json ####
+#### end of file spring-configuration-metadata.json ####
+
+# services/dataGenerator/target/classes/com/loader/datagenerator/runner/ScheduledDataGenerator.class
+[SKIPPED: non-text or binary file]
+######################################################################################################################################################
+#### end of file ScheduledDataGenerator.class ####
+#### end of file ScheduledDataGenerator.class ####
+
+# services/dataGenerator/target/classes/com/loader/datagenerator/runner/SchemaInitializer.class
+[SKIPPED: non-text or binary file]
+######################################################################################################################################################
+#### end of file SchemaInitializer.class ####
+#### end of file SchemaInitializer.class ####
+
+# services/dataGenerator/target/classes/com/loader/datagenerator/runner/SchemaInitializer$1.class
+[SKIPPED: non-text or binary file]
+######################################################################################################################################################
+#### end of file SchemaInitializer$1.class ####
+#### end of file SchemaInitializer$1.class ####
+
+# services/dataGenerator/target/classes/com/loader/datagenerator/model/TableConfig.class
+[SKIPPED: non-text or binary file]
+######################################################################################################################################################
+#### end of file TableConfig.class ####
+#### end of file TableConfig.class ####
+
+# services/dataGenerator/target/classes/com/loader/datagenerator/model/ColumnConfig.class
+[SKIPPED: non-text or binary file]
+######################################################################################################################################################
+#### end of file ColumnConfig.class ####
+#### end of file ColumnConfig.class ####
+
+# services/dataGenerator/target/classes/com/loader/datagenerator/model/DowntimeConfig.class
+[SKIPPED: non-text or binary file]
+######################################################################################################################################################
+#### end of file DowntimeConfig.class ####
+#### end of file DowntimeConfig.class ####
+
+# services/dataGenerator/target/classes/com/loader/datagenerator/model/DataGeneratorConfig.class
+[SKIPPED: non-text or binary file]
+######################################################################################################################################################
+#### end of file DataGeneratorConfig.class ####
+#### end of file DataGeneratorConfig.class ####
+
+# services/dataGenerator/target/classes/com/loader/datagenerator/model/ColumnConfig$ColumnType.class
+[SKIPPED: non-text or binary file]
+######################################################################################################################################################
+#### end of file ColumnConfig$ColumnType.class ####
+#### end of file ColumnConfig$ColumnType.class ####
+
+# services/dataGenerator/target/classes/com/loader/datagenerator/model/DataGeneratorConfig$MysqlConfig.class
+[SKIPPED: non-text or binary file]
+######################################################################################################################################################
+#### end of file DataGeneratorConfig$MysqlConfig.class ####
+#### end of file DataGeneratorConfig$MysqlConfig.class ####
+
+# services/dataGenerator/target/classes/com/loader/datagenerator/model/TableConfig$RecordRateConfig.class
+[SKIPPED: non-text or binary file]
+######################################################################################################################################################
+#### end of file TableConfig$RecordRateConfig.class ####
+#### end of file TableConfig$RecordRateConfig.class ####
+
+# services/dataGenerator/target/classes/com/loader/datagenerator/service/DataGeneratorService.class
+[SKIPPED: non-text or binary file]
+######################################################################################################################################################
+#### end of file DataGeneratorService.class ####
+#### end of file DataGeneratorService.class ####
+
+# services/dataGenerator/target/classes/com/loader/datagenerator/service/DataGeneratorService$1.class
+[SKIPPED: non-text or binary file]
+######################################################################################################################################################
+#### end of file DataGeneratorService$1.class ####
+#### end of file DataGeneratorService$1.class ####
+
+# services/dataGenerator/target/classes/com/loader/datagenerator/DataGeneratorApplication.class
+[SKIPPED: non-text or binary file]
+######################################################################################################################################################
+#### end of file DataGeneratorApplication.class ####
+#### end of file DataGeneratorApplication.class ####
+
+# services/dataGenerator/target/classes/application.yaml
+spring:
+  application:
+    name: data-generator
+
+  profiles:
+    active: ${SPRING_PROFILES_ACTIVE:dev}
+
+  # MySQL DataSource Configuration
+  datasource:
+    url: jdbc:mysql://${MYSQL_HOST:localhost}:${MYSQL_PORT:3306}/${MYSQL_DATABASE:testdata}?createDatabaseIfNotExist=true
+    username: ${MYSQL_USER:testuser}
+    password: ${MYSQL_PASSWORD:testuser_password_dev}
+    driver-class-name: com.mysql.cj.jdbc.Driver
+
+    # HikariCP settings
+    hikari:
+      maximum-pool-size: 10
+      minimum-idle: 2
+      connection-timeout: 30000
+      idle-timeout: 600000
+      max-lifetime: 1800000
+
+# Logging Configuration
+logging:
+  level:
+    root: INFO
+    com.loader.datagenerator: DEBUG
+    org.springframework.jdbc: DEBUG
+    org.springframework.jdbc.core.JdbcTemplate: TRACE
+    org.springframework.scheduling: DEBUG
+    com.zaxxer.hikari: DEBUG
+    com.zaxxer.hikari.HikariConfig: DEBUG
+
+# Data Generator Configuration (loaded from external config)
+data-generator:
+  mysql:
+    host: ${MYSQL_HOST:localhost}
+    port: ${MYSQL_PORT:3306}
+    database: ${MYSQL_DATABASE:testdata}
+    user: ${MYSQL_USER:testuser}
+    password: ${MYSQL_PASSWORD:testuser_password_dev}
+
+  # Tables configuration - will be overridden by config file
+  tables: []
+
+  # Downtime configuration - will be overridden by config file
+  downtime: []
+
+# Management endpoints
+management:
+  endpoints:
+    web:
+      exposure:
+        include: health,info,metrics
+  endpoint:
+    health:
+      show-details: always
+
+######################################################################################################################################################
+#### end of file application.yaml ####
+#### end of file application.yaml ####
+
+# services/dataGenerator/target/maven-status/maven-compiler-plugin/compile/default-compile/inputFiles.lst
+/Volumes/Files/Projects/newLoader/services/dataGenerator/src/main/java/com/loader/datagenerator/DataGeneratorApplication.java
+/Volumes/Files/Projects/newLoader/services/dataGenerator/src/main/java/com/loader/datagenerator/model/ColumnConfig.java
+/Volumes/Files/Projects/newLoader/services/dataGenerator/src/main/java/com/loader/datagenerator/model/DataGeneratorConfig.java
+/Volumes/Files/Projects/newLoader/services/dataGenerator/src/main/java/com/loader/datagenerator/model/DowntimeConfig.java
+/Volumes/Files/Projects/newLoader/services/dataGenerator/src/main/java/com/loader/datagenerator/model/TableConfig.java
+/Volumes/Files/Projects/newLoader/services/dataGenerator/src/main/java/com/loader/datagenerator/runner/ScheduledDataGenerator.java
+/Volumes/Files/Projects/newLoader/services/dataGenerator/src/main/java/com/loader/datagenerator/runner/SchemaInitializer.java
+/Volumes/Files/Projects/newLoader/services/dataGenerator/src/main/java/com/loader/datagenerator/service/DataGeneratorService.java
+
+######################################################################################################################################################
+#### end of file inputFiles.lst ####
+#### end of file inputFiles.lst ####
+
+# services/dataGenerator/target/maven-status/maven-compiler-plugin/compile/default-compile/createdFiles.lst
+com/loader/datagenerator/runner/SchemaInitializer.class
+META-INF/spring-configuration-metadata.json
+com/loader/datagenerator/model/ColumnConfig.class
+com/loader/datagenerator/DataGeneratorApplication.class
+com/loader/datagenerator/runner/ScheduledDataGenerator.class
+com/loader/datagenerator/model/TableConfig$RecordRateConfig.class
+com/loader/datagenerator/service/DataGeneratorService.class
+com/loader/datagenerator/model/TableConfig.class
+com/loader/datagenerator/model/DowntimeConfig.class
+com/loader/datagenerator/model/DataGeneratorConfig.class
+com/loader/datagenerator/service/DataGeneratorService$1.class
+com/loader/datagenerator/model/ColumnConfig$ColumnType.class
+com/loader/datagenerator/runner/SchemaInitializer$1.class
+com/loader/datagenerator/model/DataGeneratorConfig$MysqlConfig.class
+
+######################################################################################################################################################
+#### end of file createdFiles.lst ####
+#### end of file createdFiles.lst ####
+
+# services/dataGenerator/target/maven-archiver/pom.properties
+artifactId=data-generator
+groupId=com.loader
+version=0.0.1-SNAPSHOT
+
+######################################################################################################################################################
+#### end of file pom.properties ####
+#### end of file pom.properties ####
+
+# services/dataGenerator/target/data-generator-0.0.1-SNAPSHOT.jar.original
+[SKIPPED: non-text or binary file]
+######################################################################################################################################################
+#### end of file data-generator-0.0.1-SNAPSHOT.jar.original ####
+#### end of file data-generator-0.0.1-SNAPSHOT.jar.original ####
+
+# services/dataGenerator/pom.xml
+<?xml version="1.0" encoding="UTF-8"?>
+<project xmlns="http://maven.apache.org/POM/4.0.0"
+         xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance"
+         xsi:schemaLocation="http://maven.apache.org/POM/4.0.0
+         http://maven.apache.org/xsd/maven-4.0.0.xsd">
+    <modelVersion>4.0.0</modelVersion>
+
+    <parent>
+        <groupId>org.springframework.boot</groupId>
+        <artifactId>spring-boot-starter-parent</artifactId>
+        <version>3.5.6</version>
+        <relativePath/>
+    </parent>
+
+    <groupId>com.loader</groupId>
+    <artifactId>data-generator</artifactId>
+    <version>0.0.1-SNAPSHOT</version>
+    <name>Test Data Generator</name>
+    <description>DEV-ONLY: Generates random test data for MySQL database</description>
+
+    <properties>
+        <java.version>17</java.version>
+    </properties>
+
+    <dependencies>
+        <!-- Spring Boot Web Starter (includes embedded Tomcat for actuator endpoints) -->
+        <dependency>
+            <groupId>org.springframework.boot</groupId>
+            <artifactId>spring-boot-starter-web</artifactId>
+        </dependency>
+
+        <!-- Spring Boot JDBC -->
+        <dependency>
+            <groupId>org.springframework.boot</groupId>
+            <artifactId>spring-boot-starter-jdbc</artifactId>
+        </dependency>
+
+        <!-- Spring Boot Actuator -->
+        <dependency>
+            <groupId>org.springframework.boot</groupId>
+            <artifactId>spring-boot-starter-actuator</artifactId>
+        </dependency>
+
+        <!-- MySQL Connector -->
+        <dependency>
+            <groupId>com.mysql</groupId>
+            <artifactId>mysql-connector-j</artifactId>
+            <scope>runtime</scope>
+        </dependency>
+
+        <!-- Configuration Processor -->
+        <dependency>
+            <groupId>org.springframework.boot</groupId>
+            <artifactId>spring-boot-configuration-processor</artifactId>
+            <optional>true</optional>
+        </dependency>
+
+        <!-- Lombok -->
+        <dependency>
+            <groupId>org.projectlombok</groupId>
+            <artifactId>lombok</artifactId>
+            <optional>true</optional>
+        </dependency>
+
+        <!-- Test Dependencies -->
+        <dependency>
+            <groupId>org.springframework.boot</groupId>
+            <artifactId>spring-boot-starter-test</artifactId>
+            <scope>test</scope>
+        </dependency>
+    </dependencies>
+
+    <build>
+        <plugins>
+            <plugin>
+                <groupId>org.springframework.boot</groupId>
+                <artifactId>spring-boot-maven-plugin</artifactId>
+                <configuration>
+                    <excludes>
+                        <exclude>
+                            <groupId>org.projectlombok</groupId>
+                            <artifactId>lombok</artifactId>
+                        </exclude>
+                    </excludes>
+                    <image>
+                        <name>data-generator:${project.version}</name>
+                    </image>
+                </configuration>
+            </plugin>
+        </plugins>
+    </build>
+</project>
+
+######################################################################################################################################################
+#### end of file pom.xml ####
+#### end of file pom.xml ####
+
+# services/dataGenerator/k8s_manifist/data-generator-deployment.yaml
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  name: data-generator
+  namespace: monitoring-app
+  labels:
+    app: data-generator
+    component: test-utility
+    environment: dev
+spec:
+  replicas: 1
+  selector:
+    matchLabels:
+      app: data-generator
+  template:
+    metadata:
+      labels:
+        app: data-generator
+        component: test-utility
+        environment: dev
+    spec:
+      containers:
+      - name: data-generator
+        image: data-generator:0.0.1-SNAPSHOT
+        imagePullPolicy: IfNotPresent
+
+        ports:
+          - name: http
+            containerPort: 8080
+            protocol: TCP
+
+        env:
+        # Spring Profile
+        - name: SPRING_PROFILES_ACTIVE
+          value: "dev"
+
+        # MySQL Connection (from secret)
+        - name: MYSQL_HOST
+          valueFrom:
+            secretKeyRef:
+              name: app-secrets
+              key: MYSQL_HOST
+        - name: MYSQL_PORT
+          valueFrom:
+            secretKeyRef:
+              name: app-secrets
+              key: MYSQL_PORT
+        - name: MYSQL_DATABASE
+          valueFrom:
+            secretKeyRef:
+              name: app-secrets
+              key: MYSQL_APP_DB
+        - name: MYSQL_USER
+          valueFrom:
+            secretKeyRef:
+              name: app-secrets
+              key: MYSQL_APP_USER
+        - name: MYSQL_PASSWORD
+          valueFrom:
+            secretKeyRef:
+              name: app-secrets
+              key: MYSQL_APP_PASSWORD
+
+        resources:
+          requests:
+            memory: "256Mi"
+            cpu: "100m"
+          limits:
+            memory: "512Mi"
+            cpu: "500m"
+
+        livenessProbe:
+          httpGet:
+            path: /actuator/health
+            port: 8080
+          initialDelaySeconds: 30
+          periodSeconds: 30
+          timeoutSeconds: 5
+          failureThreshold: 3
+
+        readinessProbe:
+          httpGet:
+            path: /actuator/health
+            port: 8080
+          initialDelaySeconds: 20
+          periodSeconds: 10
+          timeoutSeconds: 5
+          failureThreshold: 3
+
+        
+---
+apiVersion: v1
+kind: Service
+metadata:
+  name: data-generator
+  namespace: monitoring-app
+  labels:
+    app: data-generator
+spec:
+  type: ClusterIP
+  selector:
+    app: data-generator
+  ports:
+    - name: http
+      port: 8080
+      targetPort: 8080
+      protocol: TCP
+
+######################################################################################################################################################
+#### end of file data-generator-deployment.yaml ####
+#### end of file data-generator-deployment.yaml ####
+
+# services/dataGenerator/k8s_manifist/data-generator-config.yaml
+# Test Data Generator Configuration
+# DEV-ONLY: Defines tables, columns, data types, and generation rules
+
+data-generator:
+  mysql:
+    host: ${MYSQL_HOST:mysql.loader-infra.svc.cluster.local}
+    port: ${MYSQL_PORT:3306}
+    database: ${MYSQL_DATABASE:testdata}
+    user: ${MYSQL_USER:testuser}
+    password: ${MYSQL_PASSWORD:testuser_password_dev}
+
+  # Table definitions
+  tables:
+    # Example 1: Sales transactions
+    - name: sales_data
+      recordsPerMinute:
+        min: 10
+        max: 50
+      columns:
+        - name: transaction_id
+          type: integer
+          range: [1000, 999999]
+
+        - name: amount
+          type: float
+          range: [10.0, 5000.0]
+          precision: 2
+
+        - name: product
+          type: list
+          values: ["Laptop", "Phone", "Tablet", "Monitor", "Keyboard", "Mouse", "Headphones", "Speaker"]
+
+        - name: description
+          type: random_text
+          minLength: 10
+          maxLength: 100
+
+        - name: timestamp
+          type: timestamp
+
+    # Example 2: User activity
+    - name: user_activity
+      recordsPerMinute:
+        min: 20
+        max: 100
+      columns:
+        - name: user_id
+          type: integer
+          range: [1, 10000]
+
+        - name: action
+          type: list
+          values: ["login", "logout", "view", "purchase", "add_to_cart", "search"]
+
+        - name: session_duration
+          type: integer
+          range: [1, 3600]
+
+        - name: timestamp
+          type: timestamp
+
+    # Example 3: Sensor readings
+    - name: sensor_readings
+      recordsPerMinute:
+        min: 5
+        max: 20
+      columns:
+        - name: sensor_id
+          type: integer
+          range: [1, 100]
+
+        - name: temperature
+          type: float
+          range: [-20.0, 50.0]
+          precision: 1
+
+        - name: humidity
+          type: float
+          range: [0.0, 100.0]
+          precision: 1
+
+        - name: pressure
+          type: float
+          range: [900.0, 1100.0]
+          precision: 2
+
+        - name: location
+          type: list
+          values: ["Building-A", "Building-B", "Building-C", "Warehouse", "Lab"]
+
+        - name: timestamp
+          type: timestamp
+
+  # Downtime simulation periods (optional)
+  downtime:
+    - start: "02:00"
+      end: "02:15"
+      reason: "Simulated nightly maintenance"
+
+    - start: "14:30"
+      end: "14:45"
+      reason: "Simulated network issue"
+
+######################################################################################################################################################
+#### end of file data-generator-config.yaml ####
+#### end of file data-generator-config.yaml ####
+
+# services/dataGenerator/README.md
+# Test Data Generator
+
+**DEV-ONLY**: Spring Boot service that generates random test data and inserts it into MySQL database to simulate production data for testing the ETL loader service.
+
+## Features
+
+- ✅ **Configurable Table Schemas** - Define tables, columns, and data types via YAML
+- ✅ **Random Data Generation** - Supports integer, float, list, random text, and timestamp types
+- ✅ **Configurable Insertion Rate** - Define min/max records per minute
+- ✅ **Downtime Simulation** - Schedule periods where data generation stops
+- ✅ **JDBC-Based** - Direct database insertion for performance
+- ✅ **Auto Schema Creation** - Tables created automatically from config
+- ✅ **Spring Profile Gated** - Only runs with `dev` profile
+
+## Architecture
+
+```
+┌─────────────────────────┐
+│  data-generator-service │
+│  (Spring Boot + JDBC)   │
+│                         │
+│  @Scheduled(60s)        │
+│  - Reads config         │
+│  - Generates random data│
+│  - Inserts via JDBC     │
+│  - Checks downtime      │
+└───────────┬─────────────┘
+            │
+            │ JDBC Insert
+            ▼
+┌─────────────────────────┐
+│  MySQL Database         │
+│  (loader-infra)         │
+│                         │
+│  Database: testdata     │
+│  Tables:                │
+│  - sales_data           │
+│  - user_activity        │
+│  - sensor_readings      │
+└─────────────────────────┘
+```
+
+## Configuration Format
+
+### Table Definition
+
+```yaml
+data-generator:
+  tables:
+    - name: sales_data
+      recordsPerMinute:
+        min: 10      # Minimum records per minute
+        max: 50      # Maximum records per minute
+      columns:
+        - name: transaction_id
+          type: integer
+          range: [1000, 999999]
+
+        - name: amount
+          type: float
+          range: [10.0, 5000.0]
+          precision: 2
+
+        - name: product
+          type: list
+          values: ["Laptop", "Phone", "Tablet"]
+
+        - name: description
+          type: random_text
+          minLength: 10
+          maxLength: 100
+
+        - name: timestamp
+          type: timestamp
+```
+
+### Column Types
+
+| Type | Description | Required Fields | Example |
+|------|-------------|----------------|---------|
+| `integer` | Random integer | `range: [min, max]` | `range: [1, 1000]` |
+| `float` | Random float | `range: [min, max]`, `precision` (optional) | `range: [0.0, 100.0]`, `precision: 2` |
+| `list` | Random selection | `values: [...]` | `values: ["A", "B", "C"]` |
+| `random_text` | Random string | `minLength`, `maxLength` | `minLength: 10`, `maxLength: 50` |
+| `timestamp` | Current timestamp | None | - |
+
+### Downtime Simulation
+
+```yaml
+data-generator:
+  downtime:
+    - start: "02:00"      # HH:mm format
+      end: "02:15"
+      reason: "Simulated nightly maintenance"
+
+    - start: "14:30"
+      end: "14:45"
+      reason: "Simulated network issue"
+```
+
+During downtime periods, data generation is paused.
+
+## Quick Start
+
+### 1. Deploy MySQL
+
+```bash
+cd deployment/scripts
+./deploy-mysql.sh
+```
+
+### 2. Build Docker Image
+
+```bash
+cd data-generator
+
+# Option A: Spring Boot buildpacks (recommended)
+mvn spring-boot:build-image -Dspring-boot.build-image.imageName=data-generator:0.0.1-SNAPSHOT
+
+# Option B: Dockerfile
+docker build -t data-generator:0.0.1-SNAPSHOT .
+```
+
+### 3. Deploy Data Generator
+
+```bash
+cd deployment/scripts
+./deploy-data-generator.sh
+```
+
+### All-in-One Deployment
+
+```bash
+cd deployment/scripts
+./deploy-test-infrastructure.sh
+```
+
+## Monitoring
+
+### View Logs
+
+```bash
+kubectl logs -n loader-services -l app=data-generator -f
+```
+
+### Check Health
+
+```bash
+kubectl port-forward -n loader-services svc/data-generator 8080:8080
+curl http://localhost:8080/actuator/health
+```
+
+### Query Generated Data
+
+```bash
+kubectl run mysql-client --rm -it --restart=Never --image=mysql:8.0 -n loader-infra -- \
+  mysql -h mysql.loader-infra.svc.cluster.local -u testuser -ptestuser_password_dev testdata
+
+# In MySQL shell:
+SELECT COUNT(*) FROM sales_data;
+SELECT * FROM sales_data ORDER BY timestamp DESC LIMIT 10;
+SELECT COUNT(*) FROM user_activity;
+SELECT COUNT(*) FROM sensor_readings;
+```
+
+## Customizing Configuration
+
+### Edit ConfigMap
+
+```bash
+# Edit the ConfigMap
+kubectl edit configmap data-generator-config -n loader-services
+
+# Or apply from file
+kubectl apply -f deployment/k8s/configmaps/data-generator-config.yaml
+
+# Restart pods to pick up changes
+kubectl rollout restart deployment/data-generator -n loader-services
+```
+
+### Add New Table
+
+1. Edit `deployment/k8s/configmaps/data-generator-config.yaml`
+2. Add new table definition:
+
+```yaml
+- name: my_new_table
+  recordsPerMinute:
+    min: 5
+    max: 20
+  columns:
+    - name: id
+      type: integer
+      range: [1, 10000]
+    - name: value
+      type: float
+      range: [0.0, 100.0]
+      precision: 2
+```
+
+3. Apply and restart:
+
+```bash
+kubectl apply -f deployment/k8s/configmaps/data-generator-config.yaml
+kubectl rollout restart deployment/data-generator -n loader-services
+```
+
+## Troubleshooting
+
+### Data Generator Not Starting
+
+```bash
+# Check pod status
+kubectl get pods -n loader-services -l app=data-generator
+
+# View logs
+kubectl logs -n loader-services -l app=data-generator
+
+# Common issues:
+# - MySQL not ready: Wait for MySQL to be healthy
+# - Secret missing: Ensure mysql-secret exists in loader-infra namespace
+# - Config invalid: Check ConfigMap YAML syntax
+```
+
+### No Data Being Generated
+
+```bash
+# Check logs for errors
+kubectl logs -n loader-services -l app=data-generator -f
+
+# Check if in downtime period
+# Look for log: "Currently in downtime period: ..."
+
+# Verify MySQL connection
+kubectl exec -it deployment/data-generator -n loader-services -- \
+  curl http://localhost:8080/actuator/health
+```
+
+### MySQL Connection Failed
+
+```bash
+# Verify MySQL is running
+kubectl get pods -n loader-infra -l app.kubernetes.io/name=mysql
+
+# Test MySQL connection
+kubectl run mysql-client --rm -it --restart=Never --image=mysql:8.0 -n loader-infra -- \
+  mysql -h mysql.loader-infra.svc.cluster.local -u testuser -ptestuser_password_dev -e "SELECT 1"
+
+# Check secret
+kubectl get secret mysql-secret -n loader-infra -o yaml
+```
+
+## Development
+
+### Run Locally
+
+```bash
+# Start MySQL (Docker or K8s port-forward)
+kubectl port-forward -n loader-infra svc/mysql 3306:3306
+
+# Set environment variables
+export SPRING_PROFILES_ACTIVE=dev
+export MYSQL_HOST=localhost
+export MYSQL_PORT=3306
+export MYSQL_DATABASE=testdata
+export MYSQL_USER=testuser
+export MYSQL_PASSWORD=testuser_password_dev
+
+# Run application
+mvn spring-boot:run
+```
+
+### Run Tests
+
+```bash
+mvn test
+```
+
+### Build JAR
+
+```bash
+mvn clean package -DskipTests
+java -jar target/data-generator-0.0.1-SNAPSHOT.jar
+```
+
+## Performance Tuning
+
+### Adjust Insertion Rate
+
+```yaml
+# High volume
+recordsPerMinute:
+  min: 100
+  max: 500
+
+# Low volume
+recordsPerMinute:
+  min: 1
+  max: 10
+```
+
+### Adjust Scheduling Interval
+
+Edit `ScheduledDataGenerator.java`:
+
+```java
+@Scheduled(fixedRate = 30000)  // Every 30 seconds
+@Scheduled(fixedRate = 120000) // Every 2 minutes
+```
+
+### Resource Limits
+
+Edit `deployment/k8s/deployments/data-generator-deployment.yaml`:
+
+```yaml
+resources:
+  requests:
+    memory: "512Mi"
+    cpu: "200m"
+  limits:
+    memory: "1Gi"
+    cpu: "1000m"
+```
+
+## Security Notes
+
+⚠️ **DEV-ONLY**: This service is designed for development and testing environments only.
+
+- Uses `@Profile("dev")` - will not start in production
+- Hardcoded credentials in dev config (acceptable for local testing)
+- For staging/production testing:
+  - Use proper secret management (Kubernetes secrets, Vault)
+  - Rotate credentials regularly
+  - Use encrypted connections (TLS/SSL)
+
+## Integration with Loader Service
+
+The loader service can read from these MySQL tables:
+
+1. Add MySQL source to `source_databases` table
+2. Configure loader SQL to query test tables
+3. Monitor signals_history for ETL metrics
+
+Example loader configuration:
+
+```sql
+-- In loader service database
+INSERT INTO source_databases (name, db_type, host, port, pass_word)
+VALUES ('test-mysql', 'MYSQL', 'mysql.loader-infra.svc.cluster.local', 3306, 'testuser_password_dev');
+
+INSERT INTO loader (loader_code, loader_sql, source_database_id, interval_minutes)
+VALUES ('SALES_TEST', 'SELECT * FROM sales_data WHERE timestamp > ?', 1, 5);
+```
+
+## Files
+
+```
+data-generator/
+├── src/
+│   └── main/
+│       ├── java/com/loader/datagenerator/
+│       │   ├── DataGeneratorApplication.java        # Main application
+│       │   ├── model/
+│       │   │   ├── DataGeneratorConfig.java        # Config root
+│       │   │   ├── TableConfig.java                # Table definition
+│       │   │   ├── ColumnConfig.java               # Column definition
+│       │   │   └── DowntimeConfig.java             # Downtime periods
+│       │   ├── service/
+│       │   │   └── DataGeneratorService.java       # Core logic
+│       │   └── runner/
+│       │       ├── SchemaInitializer.java          # Create tables
+│       │       └── ScheduledDataGenerator.java     # Scheduled execution
+│       └── resources/
+│           ├── application.yaml                     # Spring config
+│           └── data-generator-config.yaml          # Sample config
+├── Dockerfile                                       # Container build
+├── pom.xml                                         # Maven dependencies
+└── README.md                                       # This file
+```
+
+## License
+
+Same as parent project.
+
+######################################################################################################################################################
+#### end of file README.md ####
+#### end of file README.md ####
+
+# services/dataGenerator/.idea/stat.log
+{"ts":1765967168459,"action":"PROJECT_OPENED","tags":{"PROJECT_NAME":"dataGenerator"}}
+{"ts":1765967168588,"action":"FILE_OPENED","file":"/README.md","tags":{"FILE_LINE_OF_CODE":"384"}}
+{"ts":1765967261717,"action":"IDE_DEACTIVATED"}
+{"ts":1765967681679,"action":"IDE_ACTIVATED"}
+{"ts":1765967690119,"action":"PROJECT_CLOSED","tags":{"PROJECT_NAME":"dataGenerator"}}
+
+######################################################################################################################################################
+#### end of file stat.log ####
+#### end of file stat.log ####
+
+# services/dataGenerator/.idea/encodings.xml
+<?xml version="1.0" encoding="UTF-8"?>
+<project version="4">
+  <component name="Encoding">
+    <file url="file://$PROJECT_DIR$/src/main/java" charset="UTF-8" />
+  </component>
+</project>
+######################################################################################################################################################
+#### end of file encodings.xml ####
+#### end of file encodings.xml ####
+
+# services/dataGenerator/.idea/jarRepositories.xml
+<?xml version="1.0" encoding="UTF-8"?>
+<project version="4">
+  <component name="RemoteRepositoriesConfiguration">
+    <remote-repository>
+      <option name="id" value="central" />
+      <option name="name" value="Central Repository" />
+      <option name="url" value="https://repo.maven.apache.org/maven2" />
+    </remote-repository>
+    <remote-repository>
+      <option name="id" value="central" />
+      <option name="name" value="Maven Central repository" />
+      <option name="url" value="https://repo1.maven.org/maven2" />
+    </remote-repository>
+    <remote-repository>
+      <option name="id" value="jboss.community" />
+      <option name="name" value="JBoss Community repository" />
+      <option name="url" value="https://repository.jboss.org/nexus/content/repositories/public/" />
+    </remote-repository>
+  </component>
+</project>
+######################################################################################################################################################
+#### end of file jarRepositories.xml ####
+#### end of file jarRepositories.xml ####
+
+# services/dataGenerator/.idea/vcs.xml
+<?xml version="1.0" encoding="UTF-8"?>
+<project version="4">
+  <component name="VcsDirectoryMappings">
+    <mapping directory="$PROJECT_DIR$/../.." vcs="Git" />
+  </component>
+</project>
+######################################################################################################################################################
+#### end of file vcs.xml ####
+#### end of file vcs.xml ####
+
+# services/dataGenerator/.idea/.gitignore
+# Default ignored files
+/shelf/
+/workspace.xml
+# Editor-based HTTP Client requests
+/httpRequests/
+# Datasource local storage ignored files
+/dataSources/
+/dataSources.local.xml
+
+######################################################################################################################################################
+#### end of file .gitignore ####
+#### end of file .gitignore ####
+
+# services/dataGenerator/.idea/workspace.xml
+<?xml version="1.0" encoding="UTF-8"?>
+<project version="4">
+  <component name="AutoImportSettings">
+    <option name="autoReloadType" value="SELECTIVE" />
+  </component>
+  <component name="ChangeListManager">
+    <list default="true" id="0495c818-8a9d-4e15-bead-eef57ea7cb2a" name="Changes" comment="">
+      <change beforePath="$PROJECT_DIR$/../../README.md" beforeDir="false" afterPath="$PROJECT_DIR$/../../README.md" afterDir="false" />
+      <change beforePath="$PROJECT_DIR$/../../infra/mysql/values-mysql.yaml" beforeDir="false" />
+      <change beforePath="$PROJECT_DIR$/../../infra/secrets/monitoring-secrets-sealed.yaml" beforeDir="false" afterPath="$PROJECT_DIR$/../../infra/secrets/monitoring-secrets-sealed.yaml" afterDir="false" />
+    </list>
+    <option name="SHOW_DIALOG" value="false" />
+    <option name="HIGHLIGHT_CONFLICTS" value="true" />
+    <option name="HIGHLIGHT_NON_ACTIVE_CHANGELIST" value="false" />
+    <option name="LAST_RESOLUTION" value="IGNORE" />
+  </component>
+  <component name="Git.Settings">
+    <option name="RECENT_GIT_ROOT_PATH" value="$PROJECT_DIR$/../.." />
+  </component>
+  <component name="GitHubPullRequestSearchHistory"><![CDATA[{
+  "lastFilter": {
+    "state": "OPEN",
+    "assignee": "hrawashdeh"
+  }
+}]]></component>
+  <component name="GithubPullRequestsUISettings"><![CDATA[{
+  "selectedUrlAndAccountId": {
+    "url": "https://github.com/hrawashdeh/newMonitoring.git",
+    "accountId": "cf0b02f8-3d61-4d1f-aa0d-c6209cc2ae6b"
+  }
+}]]></component>
+  <component name="ProjectColorInfo"><![CDATA[{
+  "associatedIndex": 8
+}]]></component>
+  <component name="ProjectId" id="36y7t2KFUI4buPoa7HyvYiXrgve" />
+  <component name="ProjectViewState">
+    <option name="hideEmptyMiddlePackages" value="true" />
+    <option name="showLibraryContents" value="true" />
+  </component>
+  <component name="PropertiesComponent"><![CDATA[{
+  "keyToString": {
+    "RunOnceActivity.ShowReadmeOnStart": "true",
+    "git-widget-placeholder": "main",
+    "kotlin-language-version-configured": "true",
+    "last_opened_file_path": "/Volumes/Files/Projects/newLoader/services/dataGenerator",
+    "node.js.detected.package.eslint": "true",
+    "node.js.detected.package.tslint": "true",
+    "node.js.selected.package.eslint": "(autodetect)",
+    "node.js.selected.package.tslint": "(autodetect)",
+    "nodejs_package_manager_path": "npm",
+    "vue.rearranger.settings.migration": "true"
+  }
+}]]></component>
+  <component name="RunManager">
+    <configuration default="true" type="JetRunConfigurationType">
+      <module name="dataGenerator" />
+      <method v="2">
+        <option name="Make" enabled="true" />
+      </method>
+    </configuration>
+    <configuration name="DataGeneratorApplication" type="SpringBootApplicationConfigurationType" factoryName="Spring Boot" nameIsGenerated="true">
+      <module name="data-generator" />
+      <option name="SPRING_BOOT_MAIN_CLASS" value="com.loader.datagenerator.DataGeneratorApplication" />
+      <method v="2">
+        <option name="Make" enabled="true" />
+      </method>
+    </configuration>
+  </component>
+  <component name="SharedIndexes">
+    <attachedChunks>
+      <set>
+        <option value="bundled-jdk-9823dce3aa75-28b599e66164-intellij.indexing.shared.core-IU-242.23339.11" />
+        <option value="bundled-js-predefined-d6986cc7102b-5c90d61e3bab-JavaScript-IU-242.23339.11" />
+      </set>
+    </attachedChunks>
+  </component>
+  <component name="SpellCheckerSettings" RuntimeDictionaries="0" Folders="0" CustomDictionaries="0" DefaultDictionary="application-level" UseSingleDictionary="true" transferred="true" />
+  <component name="TaskManager">
+    <task active="true" id="Default" summary="Default task">
+      <changelist id="0495c818-8a9d-4e15-bead-eef57ea7cb2a" name="Changes" comment="" />
+      <created>1765967168460</created>
+      <option name="number" value="Default" />
+      <option name="presentableId" value="Default" />
+      <updated>1765967168460</updated>
+      <workItem from="1765967169508" duration="520000" />
+    </task>
+    <servers />
+  </component>
+  <component name="TypeScriptGeneratedFilesManager">
+    <option name="version" value="3" />
+  </component>
+</project>
+######################################################################################################################################################
+#### end of file workspace.xml ####
+#### end of file workspace.xml ####
+
+# services/dataGenerator/.idea/misc.xml
+<?xml version="1.0" encoding="UTF-8"?>
+<project version="4">
+  <component name="ExternalStorageConfigurationManager" enabled="true" />
+  <component name="MavenProjectsManager">
+    <option name="originalFiles">
+      <list>
+        <option value="$PROJECT_DIR$/pom.xml" />
+      </list>
+    </option>
+  </component>
+  <component name="ProjectRootManager" version="2" languageLevel="JDK_23" default="true" project-jdk-name="23" project-jdk-type="JavaSDK" />
+</project>
+######################################################################################################################################################
+#### end of file misc.xml ####
+#### end of file misc.xml ####
+
+# services/dataGenerator/.idea/compiler.xml
+<?xml version="1.0" encoding="UTF-8"?>
+<project version="4">
+  <component name="CompilerConfiguration">
+    <annotationProcessing>
+      <profile name="Maven default annotation processors profile" enabled="true">
+        <sourceOutputDir name="target/generated-sources/annotations" />
+        <sourceTestOutputDir name="target/generated-test-sources/test-annotations" />
+        <outputRelativeToContentRoot value="true" />
+        <module name="data-generator" />
+      </profile>
+    </annotationProcessing>
+  </component>
+  <component name="JavacSettings">
+    <option name="ADDITIONAL_OPTIONS_OVERRIDE">
+      <module name="data-generator" options="-parameters" />
+    </option>
+  </component>
+</project>
+######################################################################################################################################################
+#### end of file compiler.xml ####
+#### end of file compiler.xml ####
+
+# services/dataGenerator/src/.DS_Store
+[SKIPPED: non-text or binary file]
+######################################################################################################################################################
+#### end of file .DS_Store ####
+#### end of file .DS_Store ####
+
+# services/dataGenerator/src/main/.DS_Store
+[SKIPPED: non-text or binary file]
+######################################################################################################################################################
+#### end of file .DS_Store ####
+#### end of file .DS_Store ####
+
+# services/dataGenerator/src/main/resources/.DS_Store
+[SKIPPED: non-text or binary file]
+######################################################################################################################################################
+#### end of file .DS_Store ####
+#### end of file .DS_Store ####
+
+# services/dataGenerator/src/main/resources/application.yaml
+spring:
+  application:
+    name: data-generator
+
+  profiles:
+    active: ${SPRING_PROFILES_ACTIVE:dev}
+
+  # MySQL DataSource Configuration
+  datasource:
+    url: jdbc:mysql://${MYSQL_HOST:localhost}:${MYSQL_PORT:3306}/${MYSQL_DATABASE:testdata}?createDatabaseIfNotExist=true
+    username: ${MYSQL_USER:testuser}
+    password: ${MYSQL_PASSWORD:testuser_password_dev}
+    driver-class-name: com.mysql.cj.jdbc.Driver
+
+    # HikariCP settings
+    hikari:
+      maximum-pool-size: 10
+      minimum-idle: 2
+      connection-timeout: 30000
+      idle-timeout: 600000
+      max-lifetime: 1800000
+
+# Logging Configuration
+logging:
+  level:
+    root: INFO
+    com.loader.datagenerator: DEBUG
+    org.springframework.jdbc: DEBUG
+    org.springframework.jdbc.core.JdbcTemplate: TRACE
+    org.springframework.scheduling: DEBUG
+    com.zaxxer.hikari: DEBUG
+    com.zaxxer.hikari.HikariConfig: DEBUG
+
+# Data Generator Configuration (loaded from external config)
+data-generator:
+  mysql:
+    host: ${MYSQL_HOST:localhost}
+    port: ${MYSQL_PORT:3306}
+    database: ${MYSQL_DATABASE:testdata}
+    user: ${MYSQL_USER:testuser}
+    password: ${MYSQL_PASSWORD:testuser_password_dev}
+
+  # Tables configuration - will be overridden by config file
+  tables: []
+
+  # Downtime configuration - will be overridden by config file
+  downtime: []
+
+# Management endpoints
+management:
+  endpoints:
+    web:
+      exposure:
+        include: health,info,metrics
+  endpoint:
+    health:
+      show-details: always
+
+######################################################################################################################################################
+#### end of file application.yaml ####
+#### end of file application.yaml ####
+
+# services/dataGenerator/src/main/java/com/loader/datagenerator/runner/SchemaInitializer.java
+package com.loader.datagenerator.runner;
+
+import com.loader.datagenerator.model.ColumnConfig;
+import com.loader.datagenerator.model.DataGeneratorConfig;
+import com.loader.datagenerator.model.TableConfig;
+import lombok.RequiredArgsConstructor;
+import lombok.extern.slf4j.Slf4j;
+import org.springframework.boot.ApplicationArguments;
+import org.springframework.boot.ApplicationRunner;
+import org.springframework.context.annotation.Profile;
+import org.springframework.stereotype.Component;
+
+import javax.sql.DataSource;
+import java.sql.Connection;
+import java.sql.Statement;
+
+/**
+ * Creates tables in MySQL based on configuration on startup
+ *
+ * <p>DEV-ONLY: Automatically creates table schemas from YAML configuration.</p>
+ */
+@Slf4j
+@Component
+@Profile("dev")
+@RequiredArgsConstructor
+public class SchemaInitializer implements ApplicationRunner {
+
+    private final DataSource dataSource;
+    private final DataGeneratorConfig config;
+
+    @Override
+    public void run(ApplicationArguments args) throws Exception {
+        log.info("=== Initializing database schema ===");
+
+        // Log JDBC connection details
+        try (Connection conn = dataSource.getConnection()) {
+            String jdbcUrl = conn.getMetaData().getURL();
+            String username = conn.getMetaData().getUserName();
+            String databaseProduct = conn.getMetaData().getDatabaseProductName();
+            String databaseVersion = conn.getMetaData().getDatabaseProductVersion();
+
+            log.info("JDBC URL: {}", jdbcUrl);
+            log.info("Database User: {}", username);
+            log.info("Database: {} {}", databaseProduct, databaseVersion);
+        }
+
+        log.info("Total tables to create: {}", config.getTables().size());
+
+        if (config.getTables().isEmpty()) {
+            log.warn("WARNING: No tables configured! Check data-generator.tables configuration.");
+        }
+
+        for (TableConfig table : config.getTables()) {
+            createTableIfNotExists(table);
+        }
+
+        log.info("=== Database schema initialization completed ===");
+    }
+
+    private void createTableIfNotExists(TableConfig table) throws Exception {
+        String createSql = buildCreateTableSql(table);
+
+        log.info("Creating table '{}' with {} columns", table.getName(), table.getColumns().size());
+        log.debug("SQL: {}", createSql);
+
+        try (Connection conn = dataSource.getConnection();
+             Statement stmt = conn.createStatement()) {
+
+            stmt.execute(createSql);
+            log.info("✓ Table '{}' created successfully or already exists", table.getName());
+        }
+    }
+
+    private String buildCreateTableSql(TableConfig table) {
+        StringBuilder sql = new StringBuilder("CREATE TABLE IF NOT EXISTS ");
+        sql.append(table.getName()).append(" (\n");
+        sql.append("  id BIGINT AUTO_INCREMENT PRIMARY KEY,\n");
+
+        for (ColumnConfig column : table.getColumns()) {
+            sql.append("  ").append(column.getName()).append(" ");
+
+            switch (column.getType()) {
+                case INTEGER:
+                    sql.append("INT");
+                    break;
+                case FLOAT:
+                    sql.append("DOUBLE");
+                    break;
+                case LIST:
+                case RANDOM_TEXT:
+                    sql.append("VARCHAR(255)");
+                    break;
+                case TIMESTAMP:
+                    sql.append("TIMESTAMP DEFAULT CURRENT_TIMESTAMP");
+                    break;
+            }
+
+            sql.append(",\n");
+        }
+
+        sql.append("  INDEX idx_timestamp (");
+        // Find timestamp column and add index
+        for (ColumnConfig column : table.getColumns()) {
+            if (column.getType() == ColumnConfig.ColumnType.TIMESTAMP) {
+                sql.append(column.getName());
+                break;
+            }
+        }
+        sql.append(")\n");
+
+        sql.append(") ENGINE=InnoDB DEFAULT CHARSET=utf8mb4");
+
+        return sql.toString();
+    }
+}
+
+######################################################################################################################################################
+#### end of file SchemaInitializer.java ####
+#### end of file SchemaInitializer.java ####
+
+# services/dataGenerator/src/main/java/com/loader/datagenerator/runner/ScheduledDataGenerator.java
+package com.loader.datagenerator.runner;
+
+import com.loader.datagenerator.service.DataGeneratorService;
+import lombok.RequiredArgsConstructor;
+import lombok.extern.slf4j.Slf4j;
+import org.springframework.context.annotation.Profile;
+import org.springframework.scheduling.annotation.Scheduled;
+import org.springframework.stereotype.Component;
+
+/**
+ * Scheduled runner to generate test data every minute
+ *
+ * <p>DEV-ONLY: Runs on a fixed rate to simulate continuous data ingestion.</p>
+ */
+@Slf4j
+@Component
+@Profile("dev")
+@RequiredArgsConstructor
+public class ScheduledDataGenerator {
+
+    private final DataGeneratorService dataGeneratorService;
+
+    /**
+     * Generate and insert data every minute
+     */
+    @Scheduled(fixedRate = 60000, initialDelay = 10000)  // Every 60 seconds, start after 10 seconds
+    public void generateData() {
+        log.info("Starting scheduled data generation...");
+        try {
+            dataGeneratorService.generateAndInsertData();
+            log.info("Scheduled data generation completed successfully");
+        } catch (Exception e) {
+            log.error("Scheduled data generation failed", e);
+        }
+    }
+}
+
+######################################################################################################################################################
+#### end of file ScheduledDataGenerator.java ####
+#### end of file ScheduledDataGenerator.java ####
+
+# services/dataGenerator/src/main/java/com/loader/datagenerator/DataGeneratorApplication.java
+package com.loader.datagenerator;
+
+import org.springframework.boot.SpringApplication;
+import org.springframework.boot.autoconfigure.SpringBootApplication;
+import org.springframework.boot.context.properties.ConfigurationPropertiesScan;
+import org.springframework.context.annotation.Profile;
+import org.springframework.scheduling.annotation.EnableScheduling;
+
+/**
+ * Test Data Generator Application
+ *
+ * <p>DEV-ONLY: Generates random test data and inserts into MySQL database
+ * to simulate real production data for testing the ETL loader service.</p>
+ *
+ * <p>Features:
+ * - Configurable table schemas via YAML
+ * - Random data generation (integers, floats, lists, text)
+ * - Configurable record insertion rate (records per minute)
+ * - Downtime simulation periods
+ * - JDBC-based insertion</p>
+ *
+ * <p>Only runs with Spring profile: dev</p>
+ */
+@SpringBootApplication
+@EnableScheduling
+@ConfigurationPropertiesScan
+@Profile("dev")  // DEV-ONLY - will not start in production
+public class DataGeneratorApplication {
+
+    public static void main(String[] args) {
+        SpringApplication.run(DataGeneratorApplication.class, args);
+    }
+}
+
+######################################################################################################################################################
+#### end of file DataGeneratorApplication.java ####
+#### end of file DataGeneratorApplication.java ####
+
+# services/dataGenerator/src/main/java/com/loader/datagenerator/model/DataGeneratorConfig.java
+package com.loader.datagenerator.model;
+
+import lombok.Data;
+import org.springframework.boot.context.properties.ConfigurationProperties;
+import org.springframework.stereotype.Component;
+
+import java.util.List;
+
+/**
+ * Root configuration for test data generator
+ */
+@Data
+@Component
+@ConfigurationProperties(prefix = "data-generator")
+public class DataGeneratorConfig {
+
+    private MysqlConfig mysql;
+    private List<TableConfig> tables;
+    private List<DowntimeConfig> downtime;
+
+    @Data
+    public static class MysqlConfig {
+        private String host;
+        private Integer port;
+        private String database;
+        private String user;
+        private String password;
+    }
+}
+
+######################################################################################################################################################
+#### end of file DataGeneratorConfig.java ####
+#### end of file DataGeneratorConfig.java ####
+
+# services/dataGenerator/src/main/java/com/loader/datagenerator/model/TableConfig.java
+package com.loader.datagenerator.model;
+
+import lombok.Data;
+
+import java.util.List;
+
+/**
+ * Configuration for a single table to generate data for
+ */
+@Data
+public class TableConfig {
+
+    private String name;
+    private RecordRateConfig recordsPerMinute;
+    private List<ColumnConfig> columns;
+
+    @Data
+    public static class RecordRateConfig {
+        private Integer min;
+        private Integer max;
+    }
+}
+
+######################################################################################################################################################
+#### end of file TableConfig.java ####
+#### end of file TableConfig.java ####
+
+# services/dataGenerator/src/main/java/com/loader/datagenerator/model/DowntimeConfig.java
+package com.loader.datagenerator.model;
+
+import lombok.Data;
+
+/**
+ * Configuration for scheduled downtime periods (simulates system outages)
+ */
+@Data
+public class DowntimeConfig {
+
+    private String start;  // HH:mm format
+    private String end;    // HH:mm format
+    private String reason;
+}
+
+######################################################################################################################################################
+#### end of file DowntimeConfig.java ####
+#### end of file DowntimeConfig.java ####
+
+# services/dataGenerator/src/main/java/com/loader/datagenerator/model/ColumnConfig.java
+package com.loader.datagenerator.model;
+
+import lombok.Data;
+
+import java.util.List;
+
+/**
+ * Configuration for a single column in a table
+ */
+@Data
+public class ColumnConfig {
+
+    private String name;
+    private ColumnType type;
+
+    // For integer and float types
+    private List<Number> range;  // [min, max]
+
+    // For float type
+    private Integer precision;
+
+    // For list type
+    private List<String> values;
+
+    // For random_text type
+    private Integer minLength;
+    private Integer maxLength;
+
+    public enum ColumnType {
+        INTEGER,
+        FLOAT,
+        LIST,
+        RANDOM_TEXT,
+        TIMESTAMP
+    }
+}
+
+######################################################################################################################################################
+#### end of file ColumnConfig.java ####
+#### end of file ColumnConfig.java ####
+
+# services/dataGenerator/src/main/java/com/loader/datagenerator/service/DataGeneratorService.java
+package com.loader.datagenerator.service;
+
+import com.loader.datagenerator.model.ColumnConfig;
+import com.loader.datagenerator.model.DataGeneratorConfig;
+import com.loader.datagenerator.model.DowntimeConfig;
+import com.loader.datagenerator.model.TableConfig;
+import lombok.RequiredArgsConstructor;
+import lombok.extern.slf4j.Slf4j;
+import org.springframework.context.annotation.Profile;
+import org.springframework.stereotype.Service;
+
+import javax.sql.DataSource;
+import java.sql.Connection;
+import java.sql.PreparedStatement;
+import java.sql.SQLException;
+import java.sql.Timestamp;
+import java.time.LocalTime;
+import java.time.format.DateTimeFormatter;
+import java.util.List;
+import java.util.Random;
+
+/**
+ * Service to generate random test data and insert via JDBC
+ *
+ * <p>DEV-ONLY: Generates random values based on column configuration
+ * and inserts them into MySQL tables.</p>
+ */
+@Slf4j
+@Service
+@Profile("dev")
+@RequiredArgsConstructor
+public class DataGeneratorService {
+
+    private final DataSource dataSource;
+    private final DataGeneratorConfig config;
+    private final Random random = new Random();
+
+    private static final String RANDOM_TEXT_CHARS = "ABCDEFGHIJKLMNOPQRSTUVWXYZabcdefghijklmnopqrstuvwxyz0123456789 ";
+    private static final DateTimeFormatter TIME_FORMATTER = DateTimeFormatter.ofPattern("HH:mm");
+
+    /**
+     * Check if current time is within any configured downtime period
+     */
+    public boolean isDowntime() {
+        if (config.getDowntime() == null || config.getDowntime().isEmpty()) {
+            return false;
+        }
+
+        LocalTime now = LocalTime.now();
+
+        for (DowntimeConfig downtime : config.getDowntime()) {
+            LocalTime start = LocalTime.parse(downtime.getStart(), TIME_FORMATTER);
+            LocalTime end = LocalTime.parse(downtime.getEnd(), TIME_FORMATTER);
+
+            if (now.isAfter(start) && now.isBefore(end)) {
+                log.info("Currently in downtime period: {} - {} ({})",
+                        downtime.getStart(), downtime.getEnd(), downtime.getReason());
+                return true;
+            }
+        }
+
+        return false;
+    }
+
+    /**
+     * Generate and insert records for all configured tables
+     */
+    public void generateAndInsertData() {
+        if (isDowntime()) {
+            log.info("Skipping data generation due to downtime period");
+            return;
+        }
+
+        log.info("=== Starting data generation for {} tables ===", config.getTables().size());
+
+        if (config.getTables().isEmpty()) {
+            log.warn("WARNING: No tables configured for data generation!");
+            return;
+        }
+
+        int totalRecords = 0;
+        for (TableConfig table : config.getTables()) {
+            try {
+                generateForTable(table);
+                totalRecords++;
+            } catch (Exception e) {
+                log.error("Failed to generate data for table: {}", table.getName(), e);
+            }
+        }
+
+        log.info("=== Data generation completed for {} tables ===", totalRecords);
+    }
+
+    /**
+     * Generate and insert random records for a single table
+     */
+    private void generateForTable(TableConfig table) throws SQLException {
+        // Determine number of records to insert this minute
+        int min = table.getRecordsPerMinute().getMin();
+        int max = table.getRecordsPerMinute().getMax();
+        int recordCount = min + random.nextInt(max - min + 1);
+
+        log.info("Generating {} records for table: {} (min={}, max={})", recordCount, table.getName(), min, max);
+
+        // Build INSERT statement
+        String sql = buildInsertSql(table);
+        log.debug("INSERT SQL: {}", sql);
+
+        try (Connection conn = dataSource.getConnection();
+             PreparedStatement stmt = conn.prepareStatement(sql)) {
+
+            for (int i = 0; i < recordCount; i++) {
+                setStatementParameters(stmt, table.getColumns());
+                stmt.addBatch();
+
+                // Log first record as sample
+                if (i == 0) {
+                    log.debug("Sample record for '{}': {}", table.getName(), stmt.toString());
+                }
+            }
+
+            long startTime = System.currentTimeMillis();
+            int[] results = stmt.executeBatch();
+            long duration = System.currentTimeMillis() - startTime;
+
+            log.info("✓ Successfully inserted {} records into '{}' in {}ms", results.length, table.getName(), duration);
+        }
+    }
+
+    /**
+     * Build INSERT SQL statement for a table
+     */
+    private String buildInsertSql(TableConfig table) {
+        StringBuilder sql = new StringBuilder("INSERT INTO ");
+        sql.append(table.getName()).append(" (");
+
+        // Column names
+        for (int i = 0; i < table.getColumns().size(); i++) {
+            if (i > 0) sql.append(", ");
+            sql.append(table.getColumns().get(i).getName());
+        }
+
+        sql.append(") VALUES (");
+
+        // Placeholders
+        for (int i = 0; i < table.getColumns().size(); i++) {
+            if (i > 0) sql.append(", ");
+            sql.append("?");
+        }
+
+        sql.append(")");
+        return sql.toString();
+    }
+
+    /**
+     * Set prepared statement parameters with random values
+     */
+    private void setStatementParameters(PreparedStatement stmt, List<ColumnConfig> columns) throws SQLException {
+        for (int i = 0; i < columns.size(); i++) {
+            ColumnConfig column = columns.get(i);
+            Object value = generateValue(column);
+
+            int paramIndex = i + 1;
+
+            switch (column.getType()) {
+                case INTEGER:
+                    stmt.setInt(paramIndex, (Integer) value);
+                    break;
+                case FLOAT:
+                    stmt.setDouble(paramIndex, (Double) value);
+                    break;
+                case LIST:
+                case RANDOM_TEXT:
+                    stmt.setString(paramIndex, (String) value);
+                    break;
+                case TIMESTAMP:
+                    stmt.setTimestamp(paramIndex, (Timestamp) value);
+                    break;
+            }
+        }
+    }
+
+    /**
+     * Generate a random value based on column configuration
+     */
+    private Object generateValue(ColumnConfig column) {
+        switch (column.getType()) {
+            case INTEGER:
+                return generateInteger(column);
+            case FLOAT:
+                return generateFloat(column);
+            case LIST:
+                return generateFromList(column);
+            case RANDOM_TEXT:
+                return generateRandomText(column);
+            case TIMESTAMP:
+                return new Timestamp(System.currentTimeMillis());
+            default:
+                throw new IllegalArgumentException("Unsupported column type: " + column.getType());
+        }
+    }
+
+    private Integer generateInteger(ColumnConfig column) {
+        int min = column.getRange().get(0).intValue();
+        int max = column.getRange().get(1).intValue();
+        return min + random.nextInt(max - min + 1);
+    }
+
+    private Double generateFloat(ColumnConfig column) {
+        double min = column.getRange().get(0).doubleValue();
+        double max = column.getRange().get(1).doubleValue();
+        double value = min + (max - min) * random.nextDouble();
+
+        // Apply precision if specified
+        if (column.getPrecision() != null) {
+            double scale = Math.pow(10, column.getPrecision());
+            value = Math.round(value * scale) / scale;
+        }
+
+        return value;
+    }
+
+    private String generateFromList(ColumnConfig column) {
+        List<String> values = column.getValues();
+        return values.get(random.nextInt(values.size()));
+    }
+
+    private String generateRandomText(ColumnConfig column) {
+        int minLen = column.getMinLength();
+        int maxLen = column.getMaxLength();
+        int length = minLen + random.nextInt(maxLen - minLen + 1);
+
+        StringBuilder text = new StringBuilder(length);
+        for (int i = 0; i < length; i++) {
+            text.append(RANDOM_TEXT_CHARS.charAt(random.nextInt(RANDOM_TEXT_CHARS.length())));
+        }
+
+        return text.toString().trim();
+    }
+}
+
+######################################################################################################################################################
+#### end of file DataGeneratorService.java ####
+#### end of file DataGeneratorService.java ####
+

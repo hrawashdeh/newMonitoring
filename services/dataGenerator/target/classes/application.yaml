@@ -1,0 +1,59 @@
+spring:
+  config:
+     import: optional:classpath:data-generator-config.yaml
+  application:
+    name: data-generator
+
+  profiles:
+    active: ${SPRING_PROFILES_ACTIVE:dev}
+
+  # MySQL DataSource Configuration
+  datasource:
+    url: jdbc:mysql://${MYSQL_HOST:localhost}:${MYSQL_PORT:3306}/${MYSQL_DATABASE:testdata}?createDatabaseIfNotExist=true
+    username: ${MYSQL_USER:testuser}
+    password: ${MYSQL_PASSWORD:testuser_password_dev}
+    driver-class-name: com.mysql.cj.jdbc.Driver
+
+    # HikariCP settings
+    hikari:
+      maximum-pool-size: 10
+      minimum-idle: 2
+      connection-timeout: 30000
+      idle-timeout: 600000
+      max-lifetime: 1800000
+
+# Logging Configuration
+logging:
+  level:
+    root: INFO
+    com.loader.datagenerator: DEBUG
+    org.springframework.jdbc: DEBUG
+    org.springframework.jdbc.core.JdbcTemplate: TRACE
+    org.springframework.scheduling: DEBUG
+    com.zaxxer.hikari: DEBUG
+    com.zaxxer.hikari.HikariConfig: DEBUG
+
+# Data Generator Configuration (loaded from external config)
+data-generator:
+  mysql:
+    host: ${MYSQL_HOST:localhost}
+    port: ${MYSQL_PORT:3306}
+    database: ${MYSQL_DATABASE:testdata}
+    user: ${MYSQL_USER:testuser}
+    password: ${MYSQL_PASSWORD:testuser_password_dev}
+
+  # Tables configuration - will be overridden by config file
+  tables: []
+
+  # Downtime configuration - will be overridden by config file
+  downtime: []
+
+# Management endpoints
+management:
+  endpoints:
+    web:
+      exposure:
+        include: health,info,metrics
+  endpoint:
+    health:
+      show-details: always

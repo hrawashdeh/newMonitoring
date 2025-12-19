@@ -1,0 +1,68 @@
+spring:
+  application:
+    name: loader
+  profiles:
+    active: dev
+
+  jpa:
+    open-in-view: false
+    properties:
+      hibernate.jdbc.time_zone: UTC
+      hibernate.format_sql: true
+
+  # Flyway database migration
+  # Disabled in dev profile (uses ddl-auto: create-drop)
+  # Enabled in production profiles
+  flyway:
+    enabled: false  # Override to true in production profiles
+    baseline-on-migrate: true
+    baseline-version: 0
+    locations: classpath:db/migration
+    schemas: loader,signals
+    validate-on-migrate: true
+
+# Encryption configuration for sensitive database columns
+# Key must be 256-bit (32 bytes) Base64-encoded
+# Generate with: openssl rand -base64 32
+encryption:
+  key: ${ENCRYPTION_KEY}
+
+# Loader scheduling configuration
+loader:
+  # Replica/pod name for distributed execution tracking
+  # Detection order: 1) This config, 2) HOSTNAME env var, 3) Network hostname
+  replica-name: ${LOADER_REPLICA_NAME:#{null}}
+
+  # Execution configuration
+  execution:
+    # Default lookback period for first run (when lastLoadTimestamp is null)
+    # Also used when lastLoadTimestamp is in the future (clock skew)
+    default-lookback-hours: 24
+
+logging:
+  level:
+    root: INFO
+    com.tiqmo.monitoring.loader: INFO
+  # Log rotation configuration (read by logback-spring.xml)
+  rotation:
+    max-file-size: 100MB  # Max size before rotation
+    max-days: 30          # Keep logs for 30 days
+
+management:
+  endpoints:
+    web:
+      exposure:
+        # FIXED Issue #16: Restrict public exposure to health only
+        # prometheus, metrics, info endpoints removed from public exposure
+        # They will be available via JMX or can be secured with Spring Security (Issue #14)
+        include: health
+      base-path: /actuator
+  endpoint:
+    health:
+      show-details: when-authorized  # Only show details when authenticated (requires Spring Security)
+  metrics:
+    export:
+      prometheus:
+        enabled: true
+    tags:
+      application: ${spring.application.name}

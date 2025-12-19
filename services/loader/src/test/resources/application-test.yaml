@@ -1,0 +1,57 @@
+# Test Profile Configuration
+# Used for integration tests with in-memory H2 database or testcontainers
+
+spring:
+  datasource:
+    # Use H2 in-memory database for fast integration tests
+    # Alternative: Use Testcontainers for PostgreSQL (more realistic but slower)
+    url: jdbc:h2:mem:testdb;MODE=PostgreSQL;DB_CLOSE_DELAY=-1;DB_CLOSE_ON_EXIT=FALSE
+    username: sa
+    password:
+    driver-class-name: org.h2.Driver
+
+  jpa:
+    hibernate:
+      # Create schema from entities for each test
+      ddl-auto: create-drop
+    properties:
+      hibernate.dialect: org.hibernate.dialect.H2Dialect
+      hibernate.format_sql: true
+    show-sql: false  # Set to true for debugging tests
+
+  # Disable Flyway for integration tests (Hibernate manages schema)
+  flyway:
+    enabled: false
+
+  sql:
+    init:
+      mode: never  # Don't run data.sql in tests
+
+# Encryption key for testing (DEV-ONLY KEY - not for production)
+encryption:
+  key: ${ENCRYPTION_KEY:e2mWpFHBa3+3DRfZtaNCADsy3E7FArTZ2RFGCRsxod4=}
+
+# Loader configuration
+loader:
+  replica-name: ${LOADER_REPLICA_NAME:test-replica-1}
+  execution:
+    default-lookback-hours: 24
+
+# Test logging - less verbose
+logging:
+  level:
+    root: INFO
+    com.tiqmo.monitoring.loader: DEBUG
+    org.hibernate: WARN
+    org.springframework: WARN
+    org.testcontainers: INFO
+
+# MySQL source pool configuration (won't be used in tests, but needed for config)
+sources:
+  mysql:
+    pool:
+      minimumIdle: 1
+      maximumPoolSize: 2
+      idleTimeoutMs: 300000
+      connectionTimeoutMs: 30000
+      leakDetectionThresholdMs: 0

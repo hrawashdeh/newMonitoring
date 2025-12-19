@@ -1,0 +1,218 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<configuration>
+    <!-- Load log rotation config from Spring application.yaml -->
+    <springProperty scope="context" name="LOG_ROTATION_SIZE"
+                    source="logging.rotation.max-file-size"
+                    defaultValue="100MB"/>
+    <springProperty scope="context" name="LOG_ROTATION_DAYS"
+                    source="logging.rotation.max-days"
+                    defaultValue="30"/>
+    <springProperty scope="context" name="LOG_LEVEL"
+                    source="logging.level.root"
+                    defaultValue="INFO"/>
+
+    <!-- Console appender with pattern layout -->
+    <appender name="CONSOLE" class="ch.qos.logback.core.ConsoleAppender">
+        <encoder>
+            <pattern>
+                %d{yyyy-MM-dd HH:mm:ss.SSS} [%thread] %-5level %logger{36} - [requestId=%X{requestId}] [correlationId=%X{correlationId}] [loaderCode=%X{loaderCode}] - %msg%n
+            </pattern>
+        </encoder>
+    </appender>
+
+    <!-- File appenders - Only enabled for local profile (disabled in Kubernetes/dev) -->
+    <springProfile name="local">
+    <!-- File appender with rotation for application logs -->
+    <appender name="FILE" class="ch.qos.logback.core.rolling.RollingFileAppender">
+        <file>logs/application.log</file>
+
+        <rollingPolicy class="ch.qos.logback.core.rolling.SizeAndTimeBasedRollingPolicy">
+            <!-- Daily rollover with size-based splitting -->
+            <fileNamePattern>logs/archive/application-%d{yyyy-MM-dd}.%i.log.gz</fileNamePattern>
+
+            <!-- Each file max size (from Spring config) -->
+            <maxFileSize>${LOG_ROTATION_SIZE}</maxFileSize>
+
+            <!-- Keep logs for X days (from Spring config) -->
+            <maxHistory>${LOG_ROTATION_DAYS}</maxHistory>
+
+            <!-- Total size cap (10GB) -->
+            <totalSizeCap>10GB</totalSizeCap>
+
+            <!-- Clean up on startup -->
+            <cleanHistoryOnStart>true</cleanHistoryOnStart>
+        </rollingPolicy>
+
+        <encoder>
+            <pattern>
+                %d{yyyy-MM-dd HH:mm:ss.SSS} [%thread] %-5level %logger{36} - [requestId=%X{requestId}] [correlationId=%X{correlationId}] [loaderCode=%X{loaderCode}] - %msg%n
+            </pattern>
+        </encoder>
+    </appender>
+
+    <!-- Separate API log file (only API_REQUEST, API_RESPONSE, API_ERROR) -->
+    <appender name="API_LOG" class="ch.qos.logback.core.rolling.RollingFileAppender">
+        <file>logs/api.log</file>
+
+        <rollingPolicy class="ch.qos.logback.core.rolling.SizeAndTimeBasedRollingPolicy">
+            <fileNamePattern>logs/archive/api-%d{yyyy-MM-dd}.%i.log.gz</fileNamePattern>
+            <maxFileSize>${LOG_ROTATION_SIZE}</maxFileSize>
+            <maxHistory>${LOG_ROTATION_DAYS}</maxHistory>
+            <totalSizeCap>20GB</totalSizeCap>
+            <cleanHistoryOnStart>true</cleanHistoryOnStart>
+        </rollingPolicy>
+
+        <encoder>
+            <pattern>
+                %d{yyyy-MM-dd HH:mm:ss.SSS} - %msg%n
+            </pattern>
+        </encoder>
+
+        <!-- Only log API_REQUEST, API_RESPONSE, API_ERROR, HTTP_CLIENT messages -->
+        <filter class="ch.qos.logback.core.filter.EvaluatorFilter">
+            <evaluator>
+                <expression>
+                    message.contains("API_REQUEST") ||
+                    message.contains("API_RESPONSE") ||
+                    message.contains("API_ERROR") ||
+                    message.contains("HTTP_CLIENT")
+                </expression>
+            </evaluator>
+            <onMismatch>DENY</onMismatch>
+            <onMatch>ACCEPT</onMatch>
+        </filter>
+    </appender>
+
+    <!-- Separate error log file (only ERROR and WARN levels) -->
+    <appender name="ERROR_LOG" class="ch.qos.logback.core.rolling.RollingFileAppender">
+        <file>logs/error.log</file>
+
+        <rollingPolicy class="ch.qos.logback.core.rolling.SizeAndTimeBasedRollingPolicy">
+            <fileNamePattern>logs/archive/error-%d{yyyy-MM-dd}.%i.log.gz</fileNamePattern>
+            <maxFileSize>${LOG_ROTATION_SIZE}</maxFileSize>
+            <maxHistory>${LOG_ROTATION_DAYS}</maxHistory>
+            <totalSizeCap>5GB</totalSizeCap>
+            <cleanHistoryOnStart>true</cleanHistoryOnStart>
+        </rollingPolicy>
+
+        <encoder>
+            <pattern>
+                %d{yyyy-MM-dd HH:mm:ss.SSS} [%thread] %-5level %logger{36} - [requestId=%X{requestId}] [correlationId=%X{correlationId}] - %msg%n%ex{full}
+            </pattern>
+        </encoder>
+
+        <!-- Only log ERROR and WARN levels -->
+        <filter class="ch.qos.logback.classic.filter.ThresholdFilter">
+            <level>WARN</level>
+        </filter>
+    </appender>
+
+    <!-- Loader execution log file (for scheduler and execution tracking) -->
+    <appender name="LOADER_LOG" class="ch.qos.logback.core.rolling.RollingFileAppender">
+        <file>logs/loader-execution.log</file>
+
+        <rollingPolicy class="ch.qos.logback.core.rolling.SizeAndTimeBasedRollingPolicy">
+            <fileNamePattern>logs/archive/loader-execution-%d{yyyy-MM-dd}.%i.log.gz</fileNamePattern>
+            <maxFileSize>${LOG_ROTATION_SIZE}</maxFileSize>
+            <maxHistory>${LOG_ROTATION_DAYS}</maxHistory>
+            <totalSizeCap>10GB</totalSizeCap>
+            <cleanHistoryOnStart>true</cleanHistoryOnStart>
+        </rollingPolicy>
+
+        <encoder>
+            <pattern>
+                %d{yyyy-MM-dd HH:mm:ss.SSS} - [requestId=%X{requestId}] [loaderCode=%X{loaderCode}] - %msg%n
+            </pattern>
+        </encoder>
+
+        <!-- Only log from loader execution packages -->
+        <filter class="ch.qos.logback.core.filter.EvaluatorFilter">
+            <evaluator>
+                <expression>
+                    logger.contains("execution") ||
+                    logger.contains("scheduler") ||
+                    logger.contains("backfill")
+                </expression>
+            </evaluator>
+            <onMismatch>DENY</onMismatch>
+            <onMatch>ACCEPT</onMatch>
+        </filter>
+    </appender>
+
+    <!-- SQL query log file (for debugging) -->
+    <appender name="SQL_LOG" class="ch.qos.logback.core.rolling.RollingFileAppender">
+        <file>logs/sql.log</file>
+
+        <rollingPolicy class="ch.qos.logback.core.rolling.SizeAndTimeBasedRollingPolicy">
+            <fileNamePattern>logs/archive/sql-%d{yyyy-MM-dd}.%i.log.gz</fileNamePattern>
+            <maxFileSize>${LOG_ROTATION_SIZE}</maxFileSize>
+            <maxHistory>7</maxHistory>
+            <totalSizeCap>2GB</totalSizeCap>
+            <cleanHistoryOnStart>true</cleanHistoryOnStart>
+        </rollingPolicy>
+
+        <encoder>
+            <pattern>
+                %d{yyyy-MM-dd HH:mm:ss.SSS} - %msg%n
+            </pattern>
+        </encoder>
+    </appender>
+
+    </springProfile>
+
+    <!-- Dev/Kubernetes profile loggers (console only) -->
+    <springProfile name="!local">
+        <logger name="org.hibernate.SQL" level="DEBUG" additivity="false">
+            <appender-ref ref="CONSOLE"/>
+        </logger>
+
+        <logger name="org.hibernate.type.descriptor.sql.BasicBinder" level="TRACE" additivity="false">
+            <appender-ref ref="CONSOLE"/>
+        </logger>
+
+        <logger name="org.springframework.transaction" level="DEBUG" additivity="false">
+            <appender-ref ref="CONSOLE"/>
+        </logger>
+
+        <logger name="com.zaxxer.hikari" level="INFO" additivity="false">
+            <appender-ref ref="CONSOLE"/>
+        </logger>
+
+        <!-- Root logger for dev/kubernetes (console only) -->
+        <root level="${LOG_LEVEL}">
+            <appender-ref ref="CONSOLE"/>
+        </root>
+    </springProfile>
+
+    <!-- Local profile loggers (console + files) -->
+    <springProfile name="local">
+        <logger name="org.hibernate.SQL" level="DEBUG" additivity="false">
+            <appender-ref ref="CONSOLE"/>
+            <appender-ref ref="SQL_LOG"/>
+        </logger>
+
+        <logger name="org.hibernate.type.descriptor.sql.BasicBinder" level="TRACE" additivity="false">
+            <appender-ref ref="CONSOLE"/>
+            <appender-ref ref="SQL_LOG"/>
+        </logger>
+
+        <logger name="org.springframework.transaction" level="DEBUG" additivity="false">
+            <appender-ref ref="CONSOLE"/>
+            <appender-ref ref="FILE"/>
+        </logger>
+
+        <logger name="com.zaxxer.hikari" level="INFO" additivity="false">
+            <appender-ref ref="CONSOLE"/>
+            <appender-ref ref="FILE"/>
+        </logger>
+
+        <!-- Root logger for local (console + files) -->
+        <root level="${LOG_LEVEL}">
+            <appender-ref ref="CONSOLE"/>
+            <appender-ref ref="FILE"/>
+            <appender-ref ref="API_LOG"/>
+            <appender-ref ref="ERROR_LOG"/>
+            <appender-ref ref="LOADER_LOG"/>
+        </root>
+    </springProfile>
+</configuration>

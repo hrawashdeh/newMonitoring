@@ -1,0 +1,13 @@
+auth:
+  enabled: true
+  existingSecret: infra-secrets
+  existingSecretPasswordKey: redis-password
+
+master:
+  persistence:
+    enabled: true
+    size: 5Gi
+
+replica:
+  replicaCount: 0
+

@@ -1,0 +1,39 @@
+spring:
+  application:
+    name: gateway-service
+
+  cloud:
+    gateway:
+      routes:
+        - id: loader-service
+          uri: http://loader-service:8080
+          predicates:
+            - Path=/api/v1/loaders/**
+          filters:
+            - name: RequestRateLimiter
+              args:
+                redis-rate-limiter.replenishRate: 1000
+                redis-rate-limiter.burstCapacity: 2000
+            - name: CircuitBreaker
+              args:
+                name: loaderServiceCircuitBreaker
+                fallbackUri: forward:/fallback/loader
+
+  data:
+    redis:
+      host: ${REDIS_HOST:redis-master}
+      port: ${REDIS_PORT:6379}
+      password: ${REDIS_PASSWORD}
+
+server:
+  port: 8888
+
+management:
+  endpoints:
+    web:
+      exposure:
+        include: health,info,prometheus,metrics
+  metrics:
+    export:
+      prometheus:
+        enabled: true

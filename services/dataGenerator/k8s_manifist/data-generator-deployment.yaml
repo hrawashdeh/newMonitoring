@@ -1,0 +1,107 @@
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  name: data-generator
+  namespace: monitoring-app
+  labels:
+    app: data-generator
+    component: test-utility
+    environment: dev
+spec:
+  replicas: 1
+  selector:
+    matchLabels:
+      app: data-generator
+  template:
+    metadata:
+      labels:
+        app: data-generator
+        component: test-utility
+        environment: dev
+    spec:
+      containers:
+      - name: data-generator
+        image: data-generator:0.0.1-SNAPSHOT
+        imagePullPolicy: IfNotPresent
+
+        ports:
+          - name: http
+            containerPort: 8080
+            protocol: TCP
+
+        env:
+        # Spring Profile
+        - name: SPRING_PROFILES_ACTIVE
+          value: "dev"
+
+        # MySQL Connection (from secret)
+        - name: MYSQL_HOST
+          valueFrom:
+            secretKeyRef:
+              name: app-secrets
+              key: MYSQL_HOST
+        - name: MYSQL_PORT
+          valueFrom:
+            secretKeyRef:
+              name: app-secrets
+              key: MYSQL_PORT
+        - name: MYSQL_DATABASE
+          valueFrom:
+            secretKeyRef:
+              name: app-secrets
+              key: MYSQL_APP_DB
+        - name: MYSQL_USER
+          valueFrom:
+            secretKeyRef:
+              name: app-secrets
+              key: MYSQL_APP_USER
+        - name: MYSQL_PASSWORD
+          valueFrom:
+            secretKeyRef:
+              name: app-secrets
+              key: MYSQL_APP_PASSWORD
+
+        resources:
+          requests:
+            memory: "256Mi"
+            cpu: "100m"
+          limits:
+            memory: "512Mi"
+            cpu: "500m"
+
+        livenessProbe:
+          httpGet:
+            path: /actuator/health
+            port: 8080
+          initialDelaySeconds: 30
+          periodSeconds: 30
+          timeoutSeconds: 5
+          failureThreshold: 3
+
+        readinessProbe:
+          httpGet:
+            path: /actuator/health
+            port: 8080
+          initialDelaySeconds: 20
+          periodSeconds: 10
+          timeoutSeconds: 5
+          failureThreshold: 3
+
+        
+---
+apiVersion: v1
+kind: Service
+metadata:
+  name: data-generator
+  namespace: monitoring-app
+  labels:
+    app: data-generator
+spec:
+  type: ClusterIP
+  selector:
+    app: data-generator
+  ports:
+    - name: http
+      port: 8080
+      targetPort: 8080
+      protocol: TCP
