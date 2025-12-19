@@ -1,0 +1,135 @@
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  name: loader-service
+  namespace: loader-services
+  labels:
+    app: loader-service
+    component: backend
+    tier: application
+spec:
+  replicas: 1  # Set to 1 until DDL mode changed from create-drop to validate
+  strategy:
+    type: RollingUpdate
+    rollingUpdate:
+      maxSurge: 1
+      maxUnavailable: 0  # Zero downtime
+  selector:
+    matchLabels:
+      app: loader-service
+  template:
+    metadata:
+      labels:
+        app: loader-service
+        component: backend
+        tier: application
+    spec:
+      containers:
+      - name: loader-service
+        image: loader-service:latest  # Build locally: mvn spring-boot:build-image
+        imagePullPolicy: Never  # NEVER pull from registry (local development only)
+        ports:
+        - name: http
+          containerPort: 8080
+          protocol: TCP
+
+        # Inject ALL config from sealed secret (single source of truth)
+        envFrom:
+        - secretRef:
+            name: loader-secrets
+
+        # Additional env vars (non-secret)
+        env:
+        # Replica identification for distributed execution
+        - name: LOADER_REPLICA_NAME
+          valueFrom:
+            fieldRef:
+              fieldPath: metadata.name
+
+        # JVM settings
+        - name: JAVA_OPTS
+          value: "-Xms512m -Xmx2304m -XX:+UseG1GC"
+
+        resources:
+          requests:
+            cpu: "500m"
+            memory: "1Gi"
+          limits:
+            cpu: "2000m"
+            memory: "3Gi"
+
+        livenessProbe:
+          httpGet:
+            path: /actuator/health/liveness
+            port: http
+          initialDelaySeconds: 60
+          periodSeconds: 10
+          timeoutSeconds: 5
+          failureThreshold: 3
+
+        readinessProbe:
+          httpGet:
+            path: /actuator/health/readiness
+            port: http
+          initialDelaySeconds: 30
+          periodSeconds: 5
+          timeoutSeconds: 3
+          failureThreshold: 3
+
+        # Graceful shutdown
+        lifecycle:
+          preStop:
+            exec:
+              command: ["/bin/sh", "-c", "sleep 10"]
+
+        # Security context
+        securityContext:
+          runAsNonRoot: true
+          runAsUser: 1000
+          allowPrivilegeEscalation: false
+          capabilities:
+            drop:
+              - ALL
+          readOnlyRootFilesystem: false  # Spring Boot needs write for temp files
+
+      # Service account
+      serviceAccountName: loader-service-sa
+
+      # Pod anti-affinity for high availability
+      affinity:
+        podAntiAffinity:
+          preferredDuringSchedulingIgnoredDuringExecution:
+          - weight: 100
+            podAffinityTerm:
+              labelSelector:
+                matchExpressions:
+                - key: app
+                  operator: In
+                  values:
+                  - loader-service
+              topologyKey: kubernetes.io/hostname
+
+---
+apiVersion: v1
+kind: Service
+metadata:
+  name: loader-service
+  namespace: loader-services
+  labels:
+    app: loader-service
+spec:
+  type: ClusterIP
+  ports:
+  - name: http
+    port: 8080
+    targetPort: http
+    protocol: TCP
+  selector:
+    app: loader-service
+
+---
+apiVersion: v1
+kind: ServiceAccount
+metadata:
+  name: loader-service-sa
+  namespace: loader-services

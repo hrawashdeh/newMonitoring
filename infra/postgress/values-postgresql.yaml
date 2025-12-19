@@ -1,11 +1,13 @@
+primary:
+  persistence:
+    enabled: true
+    size: 10Gi
+    storageClass: local-path
 auth:
   existingSecret: infra-secrets
-
   username: alerts_user
   database: alerts_db
-
   secretKeys:
-    # These keys must exist in loader-secrets
     adminPasswordKey: postgres-admin-password
     userPasswordKey: postgres-app-password
 
@@ -14,3 +16,19 @@ primary:
     enabled: true
     size: 10Gi
     storageClass: local-path
+
+  podSecurityContext:
+    enabled: true
+    fsGroup: 1001
+    fsGroupChangePolicy: "Always"
+
+  containerSecurityContext:
+    enabled: true
+    runAsUser: 1001
+    runAsGroup: 1001
+    runAsNonRoot: true
+
+volumePermissions:
+  enabled: true
+  securityContext:
+    runAsUser: 0

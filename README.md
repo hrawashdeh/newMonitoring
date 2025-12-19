@@ -210,10 +210,21 @@ kubectl taint nodes --all node-role.kubernetes.io/control-plane- || true
 ```
 
 ---
-
-## 5. Install Sealed Secrets Controller
+## 5. Set ProjectRoot
 
 ```bash
+PROJECT_ROOT="/Volumes/Files/Projects/newLoader"
+echo "**** Switching to Project Root"
+echo "⚠️  please verify project root in path  your environment"
+echo ${PROJECT_ROOT}
+cd ${PROJECT_ROOT}
+
+````
+
+## 6. Install Sealed Secrets Controller
+
+```bash
+cd ${PROJECT_ROOT}
 SEALED_NS="sealed-secrets"
 helm repo add sealed-secrets https://bitnami-labs.github.io/sealed-secrets
 helm repo update
@@ -229,19 +240,21 @@ kubectl rollout status deployment/sealed-secrets -n ${SEALED_NS} --timeout=180s
 
 ---
 
-## 6. Create Application Namespace
+## 7. Create Application Namespace
 
 ```bash
+cd ${PROJECT_ROOT}
 NAMESPACE="monitoring-infra"
 kubectl create namespace ${NAMESPACE} --dry-run=client -o yaml | kubectl apply -f -
 ```
 
 ---
 
-## 7. Create Plain Secret Locally and Seal It
+## 8. Create Plain Secret Locally and Seal It
 
 ```bash
-cd ./monitoring/infra
+
+cd ${PROJECT_ROOT}/infra
 mkdir -p secrets
 ```
 
@@ -281,7 +294,7 @@ kubectl apply -f secrets/monitoring-secrets-sealed.yaml
 
 ---
 
-## 8. StorageClass (Linux Bare-Metal)
+## 9. StorageClass (Linux Bare-Metal)
 
 ```bash
 curl -fsSL https://raw.githubusercontent.com/rancher/local-path-provisioner/master/deploy/local-path-storage.yaml -o local-path-storage.yaml
@@ -291,7 +304,7 @@ kubectl get storageclass
 
 ---
 
-## 9. Install PostgreSQL via Helm
+## 10. Install PostgreSQL via Helm
 
 ```bash
 cd ./monitoring/infra
@@ -314,19 +327,21 @@ kubectl get svc -n ${NAMESPACE}
 ```
 
 ```bash
-psql -h 127.0.0.1 -p 30432 -U app_user -d app_db
+psql -h 127.0.0.1 -p 30432 -U alerts_user -d alerts_db
 ```
 
 ---
 
-## 10. Install MySQL via Helm
+## 11. Install MySQL via statful set
 
 ```bash
 cd ./monitoring/infra
 
-helm upgrade --install mysql bitnami/mysql \
-  -n ${NAMESPACE} \
-  -f mysql/values-mysql.yaml
+k apply -f ./mysql/mysql-statefulset.yaml
+
+#helm upgrade --install mysql bitnami/mysql \
+#  -n ${NAMESPACE} \
+#  -f mysql/values-mysql.yaml
 ```
 
 ```bash
@@ -334,9 +349,67 @@ kubectl rollout status statefulset/mysql -n ${NAMESPACE} --timeout=300s
 kubectl get pods -n ${NAMESPACE}
 ```
 
+```bash
+k apply -f ./${PROJECT_ROOT}/infra/mysql/mysql-nodeport.yaml
+
+mysql -h 127.0.0.1 -P 30306 -u test_user -p
+
+
+```
 ---
+## 12. install redis via helm
+
+```bash
+helm repo add bitnami https://charts.bitnami.com/bitnami
+helm repo update
+
+helm upgrade --install redis bitnami/redis \
+  -n monitoring-infra \
+  -f redis/values-redis.yaml
+
+```
+#### Wait:
+```bash
+kubectl rollout status statefulset/redis-master -n monitoring-infra --timeout=300s
+```
+
+#### expose service
+```bash
+kubectl apply -f ./${PROJECT_ROOT}/infra/redis/redis-nodeport.yaml
+```
+
+#### Test Access
+
+```bash
+redis-cli -a "$(kubectl get secret infra-secrets -n monitoring-infra -o jsonpath='{.data.redis-password}' | base64 -d)"
 
 
+```
+
+## 13. Install prometheus via helm
+### - add and update helm repo
+
+```bash
+# Add repo
+helm repo add prometheus-community https://prometheus-community.github.io/helm-charts
+helm repo update
+
+```
+
+### - install helm
+
+```bash
+helm upgrade --install monitoring prometheus-community/kube-prometheus-stack \
+  -n monitoring-infra \
+  -f values-kps.yaml
+
+```
+
+### - verify pods status helm
+```bash
+kubectl get pods -n monitoring-infra
+kubectl get svc -n monitoring-infra | egrep 'grafana|prometheus|alertmanager'
+```
 ## 11. Health Check
 
 ```bash
