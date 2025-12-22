@@ -3,7 +3,11 @@ package com.tiqmo.monitoring.loader.service.scheduler;
 import com.tiqmo.monitoring.loader.domain.loader.entity.LoadStatus;
 import com.tiqmo.monitoring.loader.domain.loader.entity.Loader;
 import com.tiqmo.monitoring.loader.domain.loader.entity.SourceDatabase;
+import com.tiqmo.monitoring.loader.domain.loader.repo.LoadHistoryRepository;
+import com.tiqmo.monitoring.loader.domain.loader.repo.LoaderExecutionLockRepository;
 import com.tiqmo.monitoring.loader.domain.loader.repo.LoaderRepository;
+import com.tiqmo.monitoring.loader.infra.config.ExecutionProperties;
+import com.tiqmo.monitoring.loader.infra.config.LockingProperties;
 import com.tiqmo.monitoring.loader.service.execution.LoadExecutorService;
 import com.tiqmo.monitoring.loader.service.locking.LoaderLock;
 import com.tiqmo.monitoring.loader.service.locking.LockManager;
@@ -17,6 +21,8 @@ import java.time.Instant;
 import java.util.Arrays;
 import java.util.Collections;
 import java.util.Optional;
+import java.util.concurrent.ExecutorService;
+import java.util.concurrent.Executors;
 
 import static org.mockito.ArgumentMatchers.any;
 import static org.mockito.ArgumentMatchers.eq;
@@ -35,16 +41,50 @@ class LoaderSchedulerServiceTest {
   private LoaderRepository loaderRepository;
 
   @Mock
+  private LoadHistoryRepository loadHistoryRepository;
+
+  @Mock
+  private LoaderExecutionLockRepository lockRepository;
+
+  @Mock
   private LockManager lockManager;
 
   @Mock
   private LoadExecutorService loadExecutorService;
 
+  @Mock
+  private ExecutionProperties executionProperties;
+
+  @Mock
+  private LockingProperties lockingProperties;
+
+  @Mock
+  private com.tiqmo.monitoring.loader.domain.signals.repo.SignalsHistoryRepository signalsHistoryRepository;
+
+  private ExecutorService executorService;
+
   private LoaderSchedulerService scheduler;
 
   @BeforeEach
   void setUp() {
-    scheduler = new LoaderSchedulerService(loaderRepository, lockManager, loadExecutorService);
+    executorService = Executors.newFixedThreadPool(2);
+
+    // Set default property values
+    when(executionProperties.getExecutionTimeoutHours()).thenReturn(2);
+    when(lockingProperties.getStaleLockThresholdHours()).thenReturn(2);
+    when(lockingProperties.getReleasedLockRetentionDays()).thenReturn(7);
+
+    scheduler = new LoaderSchedulerService(
+        loaderRepository,
+        loadHistoryRepository,
+        lockRepository,
+        lockManager,
+        loadExecutorService,
+        executorService,
+        executionProperties,
+        lockingProperties,
+        signalsHistoryRepository
+    );
   }
 
   @Test

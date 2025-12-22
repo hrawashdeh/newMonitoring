@@ -51,11 +51,7 @@ public class SignalsController {
 
     @PostMapping
     public ResponseEntity<SignalsHistory> create(@Valid @RequestBody SignalsHistory signal) {
-        // Set createTime to current epoch if not provided
-        if (signal.getCreateTime() == null) {
-            signal.setCreateTime(System.currentTimeMillis() / 1000);
-        }
-
+        // createdAt is now auto-managed by PostgreSQL DEFAULT NOW()
         SignalsHistory saved = ingestSvc.append(signal);
         return ResponseEntity.status(HttpStatus.CREATED).body(saved);
     }

@@ -14,23 +14,16 @@ spring:
 
   jpa:
     hibernate:
-      # IMPORTANT: Use 'validate' in production to prevent accidental schema changes
-      ddl-auto: validate
+      # IMPORTANT: Schema created by DDL scripts, not Hibernate
+      ddl-auto: none
     properties:
       hibernate.dialect: org.hibernate.dialect.PostgreSQLDialect
       hibernate.hbm2ddl.create_namespaces: false
     show-sql: false  # Disable SQL logging in production
 
-  # Flyway handles all schema migrations in production
+  # Flyway DISABLED - using DDL scripts + etl_initializer service instead
   flyway:
-    enabled: true
-    baseline-on-migrate: true
-    baseline-version: 0
-    locations: classpath:db/migration
-    schemas: loader,signals
-    validate-on-migrate: true
-    out-of-order: false
-    clean-disabled: true  # NEVER allow clean in production
+    enabled: false
 
   sql:
     init:

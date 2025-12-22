@@ -13,7 +13,7 @@ spring:
 
   jpa:
     hibernate:
-      ddl-auto: create-drop
+      ddl-auto: none  # Schema managed entirely by etl_initializer Flyway migrations
     properties:
       hibernate.dialect: org.hibernate.dialect.PostgreSQLDialect
       hibernate.hbm2ddl.create_namespaces: false

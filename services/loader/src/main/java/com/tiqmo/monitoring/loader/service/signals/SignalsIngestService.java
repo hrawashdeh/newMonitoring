@@ -47,12 +47,7 @@ public class SignalsIngestService {
             // Validation
             validateSignal(signal);
 
-            // Set createTime if not set
-            if (signal.getCreateTime() == null) {
-                signal.setCreateTime(System.currentTimeMillis() / 1000);
-                log.debug("Set createTime to current timestamp");
-            }
-
+            // createdAt is now auto-managed by PostgreSQL DEFAULT NOW()
             SignalsHistory saved = repo.save(signal);
             log.info("Signal saved | id={}", saved.getId());
 
@@ -105,16 +100,7 @@ public class SignalsIngestService {
 
             log.debug("Converted {} DTOs to entities", signals.size());
 
-            // Set createTime for all records
-            long now = System.currentTimeMillis() / 1000;
-            signals.forEach(s -> {
-                if (s.getCreateTime() == null) {
-                    s.setCreateTime(now);
-                }
-            });
-
-            log.debug("Set createTime for all signals");
-
+            // createdAt is now auto-managed by PostgreSQL DEFAULT NOW()
             List<SignalsHistory> saved = repo.saveAll(signals);
             log.info("Bulk append completed | savedCount={}", saved.size());
 

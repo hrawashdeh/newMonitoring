@@ -33,7 +33,7 @@ import java.time.Instant;
  * @since 1.0.0
  */
 @Slf4j
-@Component
+// @Component // Disabled: etl_initializer now manages all data loading via YAML files
 @Profile("dev")
 @RequiredArgsConstructor
 public class DevDataLoader {
@@ -291,8 +291,10 @@ public class DevDataLoader {
     log.info("  - 5 segment dictionary entries");
 
     // Reload SourceRegistry to initialize connection pools for newly created databases
-    log.info("🔄 Reloading SourceRegistry to initialize connection pools...");
-    sourceRegistry.loadAll();
-    log.info("✅ SourceRegistry reloaded with TEST_MYSQL connection pool");
+    // DISABLED: Causes crash if external MySQL is not available
+    // Use etl_initializer to populate real source databases instead
+    log.info("⚠️ SourceRegistry reload skipped in dev mode (use etl_initializer to add real sources)");
+    // sourceRegistry.loadAll();
+    // log.info("✅ SourceRegistry reloaded with TEST_MYSQL connection pool");
   }
 }

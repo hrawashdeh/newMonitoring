@@ -8,9 +8,11 @@ import com.zaxxer.hikari.HikariDataSource;
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
 import org.springframework.context.event.EventListener;
+import org.springframework.core.env.Environment;
 import org.springframework.stereotype.Component;
 
 import java.sql.Connection;
+import java.util.Arrays;
 import java.util.Map;
 
 @Slf4j
@@ -20,6 +22,7 @@ public class DbConnectivityRunner {
 
   private final SourceRegistry registry;
   private final DbPermissionInspector permissionInspector;
+  private final Environment environment;
   boolean majorViolationDetected = false;
 
   /** Run only after SourceRegistry has loaded and announced pools. */
@@ -69,10 +72,18 @@ public class DbConnectivityRunner {
     }
 
     if (majorViolationDetected) {
-      log.error("🚫 One or more source databases are NOT read-only — shutting down service!");
-      log.info("== Dev probe@DbConnectivityRunner end ==");
-      // Gracefully shut down the application context
-      System.exit(1);
+      // Check if running in dev profile
+      boolean isDevProfile = Arrays.asList(environment.getActiveProfiles()).contains("dev");
+
+      if (isDevProfile) {
+        log.warn("⚠️ One or more source databases are NOT read-only — but continuing in DEV profile");
+        log.warn("🔧 Dev Mode: Read-only validation disabled. Fix permissions for production!");
+      } else {
+        log.error("🚫 One or more source databases are NOT read-only — shutting down service!");
+        log.info("== Dev probe@DbConnectivityRunner end ==");
+        // Gracefully shut down the application context
+        System.exit(1);
+      }
     }
   }
 }

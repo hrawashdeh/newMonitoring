@@ -4,20 +4,27 @@ import com.tiqmo.monitoring.loader.domain.loader.entity.Loader;
 import com.tiqmo.monitoring.loader.domain.loader.entity.LoaderExecutionLock;
 import com.tiqmo.monitoring.loader.domain.loader.repo.LoaderExecutionLockRepository;
 import com.tiqmo.monitoring.loader.infra.ReplicaNameProvider;
+import com.tiqmo.monitoring.loader.infra.config.LockingProperties;
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 
 import java.time.Instant;
+import java.util.List;
+import java.util.Map;
 import java.util.Optional;
 import java.util.UUID;
+import java.util.concurrent.ConcurrentHashMap;
+import java.util.concurrent.Future;
 
 /**
  * Default implementation of LockManager.
  *
  * <p>Uses database-backed locking with {@link LoaderExecutionLock} entity.
  * Enforces per-loader and global concurrency limits.
+ *
+ * <p>Tracks active execution threads for timeout and cancellation support.
  *
  * @author Hassan Rawashdeh
  * @since 1.0.0
@@ -28,10 +35,16 @@ import java.util.UUID;
 public class DefaultLockManager implements LockManager {
 
   private static final int GLOBAL_LIMIT = 100;
-  private static final long STALE_LOCK_THRESHOLD_HOURS = 2;
 
   private final LoaderExecutionLockRepository lockRepository;
   private final ReplicaNameProvider replicaNameProvider;
+  private final LockingProperties lockingProperties;
+
+  /**
+   * Thread registry: Maps lockId to Future for active executions.
+   * Allows cancellation of hung threads when stale locks are cleaned up.
+   */
+  private final Map<String, Future<?>> activeExecutions = new ConcurrentHashMap<>();
 
   @Override
   @Transactional
@@ -117,17 +130,74 @@ public class DefaultLockManager implements LockManager {
   @Override
   @Transactional
   public int cleanupStaleLocks() {
-    Instant staleThreshold = Instant.now().minusSeconds(STALE_LOCK_THRESHOLD_HOURS * 3600);
+    int thresholdHours = lockingProperties.getStaleLockThresholdHours();
+    Instant staleThreshold = Instant.now().minusSeconds(thresholdHours * 3600);
     Instant releasedAt = Instant.now();
 
+    // Find stale locks before releasing them (to get lockIds for thread cancellation)
+    List<LoaderExecutionLock> staleLocks = lockRepository.findByReleasedAndAcquiredAtBefore(
+        false, staleThreshold);
+
+    if (staleLocks.isEmpty()) {
+      return 0;
+    }
+
+    // Cancel associated threads BEFORE releasing locks
+    int cancelledThreads = 0;
+    for (LoaderExecutionLock lock : staleLocks) {
+      String lockId = lock.getLockId();
+      Future<?> future = activeExecutions.get(lockId);
+
+      if (future != null && !future.isDone()) {
+        log.warn("Cancelling hung execution thread for stale lock: {} (loader: {}, acquired: {})",
+            lockId, lock.getLoaderCode(), lock.getAcquiredAt());
+
+        boolean cancelled = future.cancel(true); // Interrupt the thread
+        if (cancelled) {
+          cancelledThreads++;
+          log.warn("Successfully cancelled thread for lock: {}", lockId);
+        } else {
+          log.error("Failed to cancel thread for lock: {} (may have already completed)", lockId);
+        }
+
+        activeExecutions.remove(lockId);
+      }
+    }
+
+    // Now release the stale locks in database
     int cleaned = lockRepository.cleanupStaleLocks(staleThreshold, releasedAt);
 
     if (cleaned > 0) {
-      log.warn("Cleaned up {} stale locks (older than {} hours)",
-          cleaned, STALE_LOCK_THRESHOLD_HOURS);
+      log.warn("Cleaned up {} stale lock(s) (older than {} hours) and cancelled {} hung thread(s)",
+          cleaned, thresholdHours, cancelledThreads);
     }
 
     return cleaned;
+  }
+
+  @Override
+  public void registerExecution(String lockId, Future<?> future) {
+    if (lockId == null || lockId.isBlank()) {
+      throw new IllegalArgumentException("Lock ID cannot be null or blank");
+    }
+    if (future == null) {
+      throw new IllegalArgumentException("Future cannot be null");
+    }
+
+    activeExecutions.put(lockId, future);
+    log.debug("Registered execution thread for lock: {}", lockId);
+  }
+
+  @Override
+  public void unregisterExecution(String lockId) {
+    if (lockId == null || lockId.isBlank()) {
+      return;
+    }
+
+    Future<?> removed = activeExecutions.remove(lockId);
+    if (removed != null) {
+      log.debug("Unregistered execution thread for lock: {}", lockId);
+    }
   }
 
   @Override

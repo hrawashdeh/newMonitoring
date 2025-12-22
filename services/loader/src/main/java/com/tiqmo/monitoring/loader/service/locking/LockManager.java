@@ -3,6 +3,7 @@ package com.tiqmo.monitoring.loader.service.locking;
 import com.tiqmo.monitoring.loader.domain.loader.entity.Loader;
 
 import java.util.Optional;
+import java.util.concurrent.Future;
 
 /**
  * Manages distributed execution locks for loader scheduling.
@@ -107,4 +108,25 @@ public interface LockManager {
    * @return total number of active locks
    */
   long countTotalActiveLocks();
+
+  /**
+   * Registers an execution thread with the lock manager.
+   *
+   * <p>This allows the lock manager to cancel/interrupt hung threads
+   * when stale locks are cleaned up.
+   *
+   * @param lockId the lock ID
+   * @param future the Future representing the execution thread
+   * @throws IllegalArgumentException if lockId or future is null
+   */
+  void registerExecution(String lockId, Future<?> future);
+
+  /**
+   * Unregisters an execution thread from the lock manager.
+   *
+   * <p>Should be called when execution completes (success or failure).
+   *
+   * @param lockId the lock ID
+   */
+  void unregisterExecution(String lockId);
 }

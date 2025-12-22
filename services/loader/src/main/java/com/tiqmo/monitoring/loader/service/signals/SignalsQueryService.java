@@ -11,6 +11,7 @@ import org.slf4j.MDC;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 
+import java.time.Instant;
 import java.util.List;
 
 /**
@@ -49,8 +50,12 @@ public class SignalsQueryService {
             validateLoaderCode(loaderCode);
             validateTimeRange(fromEpoch, toEpoch);
 
+            // Convert epoch to Instant
+            Instant fromTime = Instant.ofEpochSecond(fromEpoch);
+            Instant toTime = Instant.ofEpochSecond(toEpoch);
+
             List<SignalsHistory> results = repo.findByLoaderCodeAndLoadTimeStampBetween(
-                loaderCode, fromEpoch, toEpoch);
+                loaderCode, fromTime, toTime);
 
             log.info("Query completed | loaderCode={} | resultCount={}", loaderCode, results.size());
 
@@ -85,8 +90,12 @@ public class SignalsQueryService {
             validateSegmentCode(segmentCode);
             validateTimeRange(fromEpoch, toEpoch);
 
+            // Convert epoch to Instant
+            Instant fromTime = Instant.ofEpochSecond(fromEpoch);
+            Instant toTime = Instant.ofEpochSecond(toEpoch);
+
             List<SignalsHistory> results = repo.findByLoaderCodeAndSegmentCodeAndLoadTimeStampBetween(
-                loaderCode, segmentCode, fromEpoch, toEpoch);
+                loaderCode, segmentCode, fromTime, toTime);
 
             log.info("Query completed | loaderCode={} | segmentCode={} | resultCount={}",
                 loaderCode, segmentCode, results.size());

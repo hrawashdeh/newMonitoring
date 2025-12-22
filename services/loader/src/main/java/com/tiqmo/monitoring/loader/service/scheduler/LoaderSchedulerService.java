@@ -2,12 +2,17 @@ package com.tiqmo.monitoring.loader.service.scheduler;
 
 import com.tiqmo.monitoring.loader.domain.loader.entity.LoadStatus;
 import com.tiqmo.monitoring.loader.domain.loader.entity.Loader;
+import com.tiqmo.monitoring.loader.domain.loader.repo.LoadHistoryRepository;
+import com.tiqmo.monitoring.loader.domain.loader.repo.LoaderExecutionLockRepository;
 import com.tiqmo.monitoring.loader.domain.loader.repo.LoaderRepository;
+import com.tiqmo.monitoring.loader.infra.config.ExecutionProperties;
+import com.tiqmo.monitoring.loader.infra.config.LockingProperties;
 import com.tiqmo.monitoring.loader.service.execution.LoadExecutorService;
 import com.tiqmo.monitoring.loader.service.locking.LoaderLock;
 import com.tiqmo.monitoring.loader.service.locking.LockManager;
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
+import org.springframework.beans.factory.annotation.Qualifier;
 import org.springframework.scheduling.annotation.Scheduled;
 import org.springframework.stereotype.Service;
 
@@ -16,6 +21,10 @@ import java.time.Instant;
 import java.util.Comparator;
 import java.util.List;
 import java.util.Optional;
+import java.util.concurrent.ExecutorService;
+import java.util.concurrent.Future;
+import java.util.concurrent.TimeUnit;
+import java.util.concurrent.TimeoutException;
 
 /**
  * Loader Scheduler Service - Coordinates automated loader execution.
@@ -56,13 +65,29 @@ import java.util.Optional;
 public class LoaderSchedulerService {
 
   private final LoaderRepository loaderRepository;
+  private final LoadHistoryRepository loadHistoryRepository;
+  private final LoaderExecutionLockRepository lockRepository;
   private final LockManager lockManager;
   private final LoadExecutorService loadExecutorService;
+
+  @Qualifier("loaderExecutorService")
+  private final ExecutorService executorService;
+
+  private final ExecutionProperties executionProperties;
+  private final LockingProperties lockingProperties;
+
+  private final com.tiqmo.monitoring.loader.domain.signals.repo.SignalsHistoryRepository signalsHistoryRepository;
 
   /**
    * Round 12: Auto-recovery threshold for FAILED loaders (20 minutes).
    */
   private static final Duration FAILED_RECOVERY_THRESHOLD = Duration.ofMinutes(20);
+
+  /**
+   * Load history retention period (30 days).
+   * Older records are deleted to maintain query performance.
+   */
+  private static final int LOAD_HISTORY_RETENTION_DAYS = 30;
 
   /**
    * Main scheduling loop - runs every 10 seconds.
@@ -206,6 +231,7 @@ public class LoaderSchedulerService {
    * Round 10: Process a single loader.
    *
    * <p>Checks if loader is due for execution and attempts to execute if eligible.
+   * Executes in thread pool with configured timeout.
    *
    * @param loader the loader to process
    */
@@ -232,19 +258,41 @@ public class LoaderSchedulerService {
     }
 
     LoaderLock lock = lockOpt.get();
+    String lockId = lock.getLockId();
+
     try {
       log.info("Scheduler: Executing loader {} (status: {}, last run: {})",
           loaderCode, loader.getLoadStatus(), loader.getLastLoadTimestamp());
 
-      // Execute the loader
-      loadExecutorService.executeLoader(loader);
+      // Submit execution to thread pool with timeout
+      Future<?> future = executorService.submit(() -> {
+        try {
+          loadExecutorService.executeLoader(loader);
+        } catch (Exception e) {
+          log.error("Loader execution failed: {}", loaderCode, e);
+          throw new RuntimeException(e);
+        }
+      });
 
-      log.info("Scheduler: Successfully executed loader {}", loaderCode);
+      // Register thread for potential cancellation
+      lockManager.registerExecution(lockId, future);
 
-    } catch (Exception e) {
-      log.error("Scheduler: Failed to execute loader {}: {}", loaderCode, e.getMessage(), e);
+      // Wait with timeout (configurable from application.yaml)
+      int timeoutHours = executionProperties.getExecutionTimeoutHours();
+      try {
+        future.get(timeoutHours, TimeUnit.HOURS);
+        log.info("Scheduler: Successfully executed loader {}", loaderCode);
+      } catch (TimeoutException e) {
+        log.error("Scheduler: Loader {} execution timed out after {} hours - cancelling",
+            loaderCode, timeoutHours);
+        future.cancel(true); // Interrupt the thread
+      } catch (Exception e) {
+        log.error("Scheduler: Loader {} execution failed: {}", loaderCode, e.getMessage(), e);
+      }
+
     } finally {
-      // Always release the lock
+      // Always unregister and release the lock
+      lockManager.unregisterExecution(lockId);
       lockManager.releaseLock(lock);
       log.debug("Scheduler: Released lock for loader {}", loaderCode);
     }
@@ -284,5 +332,97 @@ public class LoaderSchedulerService {
     }
 
     return isDue;
+  }
+
+  /**
+   * Cleanup old released locks - runs daily at configured time (default: 2 AM).
+   *
+   * <p>Deletes locks that have been released for longer than the configured
+   * retention period (default: 7 days). This maintains query performance on
+   * the loader_execution_lock table.
+   *
+   * <p>Schedule configured via {@code loader.locking.cleanup-schedule} in application.yaml.
+   */
+  @Scheduled(cron = "${loader.locking.cleanup-schedule:0 0 2 * * ?}")
+  public void cleanupReleasedLocks() {
+    try {
+      int retentionDays = lockingProperties.getReleasedLockRetentionDays();
+      Instant deleteBefore = Instant.now().minusSeconds(retentionDays * 86400L);
+
+      log.debug("Starting cleanup of released locks older than {} days", retentionDays);
+
+      long deleted = lockRepository.deleteByReleasedAndReleasedAtBefore(true, deleteBefore);
+
+      if (deleted > 0) {
+        log.info("Cleaned up {} released lock(s) older than {} days", deleted, retentionDays);
+      } else {
+        log.debug("No released locks found older than {} days", retentionDays);
+      }
+
+    } catch (Exception e) {
+      log.error("Error during released locks cleanup", e);
+    }
+  }
+
+  /**
+   * Cleanup orphaned signals from FAILED loads - runs every hour.
+   *
+   * <p>Deletes signals_history records where load_history_id points to a FAILED load.
+   * This prevents orphaned data from accumulating due to non-transactional execution.
+   *
+   * <p><b>Detection:</b> Direct FK relationship via load_history_id
+   * <p><b>Safety:</b> Only deletes signals from confirmed FAILED loads
+   * <p><b>Performance:</b> Uses indexed load_history_id column
+   */
+  @Scheduled(cron = "0 0 * * * ?") // Every hour at :00
+  public void cleanupOrphanedSignals() {
+    try {
+      log.debug("Starting orphaned signals cleanup");
+
+      // Method 1: Direct delete with subquery (most efficient)
+      long deleted = signalsHistoryRepository.deleteByLoadHistoryIdInFailedLoads();
+
+      if (deleted > 0) {
+        log.warn("Cleaned up {} orphaned signal(s) from FAILED loads", deleted);
+      } else {
+        log.debug("No orphaned signals found from FAILED loads");
+      }
+
+    } catch (Exception e) {
+      log.error("Error during orphaned signals cleanup", e);
+    }
+  }
+
+  /**
+   * Cleanup old load_history records - runs daily at 3 AM.
+   *
+   * <p>Deletes load_history records older than {@link #LOAD_HISTORY_RETENTION_DAYS}
+   * (30 days) to maintain query performance.
+   *
+   * <p><b>NOTE:</b> Orphaned signals are cleaned up BEFORE this via {@link #cleanupOrphanedSignals()}
+   *
+   * <p>Retention period can be adjusted via the constant or made configurable.
+   */
+  @Scheduled(cron = "0 0 3 * * ?") // Daily at 3 AM
+  public void cleanupLoadHistory() {
+    try {
+      Instant deleteBefore = Instant.now().minusSeconds(LOAD_HISTORY_RETENTION_DAYS * 86400L);
+
+      log.debug("Starting cleanup of load_history records older than {} days",
+          LOAD_HISTORY_RETENTION_DAYS);
+
+      long deleted = loadHistoryRepository.deleteByStartTimeBefore(deleteBefore);
+
+      if (deleted > 0) {
+        log.info("Cleaned up {} load_history record(s) older than {} days",
+            deleted, LOAD_HISTORY_RETENTION_DAYS);
+      } else {
+        log.debug("No load_history records found older than {} days",
+            LOAD_HISTORY_RETENTION_DAYS);
+      }
+
+    } catch (Exception e) {
+      log.error("Error during load_history cleanup", e);
+    }
   }
 }

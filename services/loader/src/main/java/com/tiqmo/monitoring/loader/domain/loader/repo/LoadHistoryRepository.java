@@ -3,9 +3,11 @@ package com.tiqmo.monitoring.loader.domain.loader.repo;
 import com.tiqmo.monitoring.loader.domain.loader.entity.LoadExecutionStatus;
 import com.tiqmo.monitoring.loader.domain.loader.entity.LoadHistory;
 import org.springframework.data.jpa.repository.JpaRepository;
+import org.springframework.data.jpa.repository.Modifying;
 import org.springframework.data.jpa.repository.Query;
 import org.springframework.data.repository.query.Param;
 import org.springframework.stereotype.Repository;
+import org.springframework.transaction.annotation.Transactional;
 
 import java.time.Instant;
 import java.util.List;
@@ -88,6 +90,8 @@ public interface LoadHistoryRepository extends JpaRepository<LoadHistory, Long> 
      * @param before Delete records before this time
      * @return Number of deleted records
      */
+    @Transactional
+    @Modifying
     long deleteByStartTimeBefore(Instant before);
 
     // ==================== Round 16: History Query Methods ====================
@@ -176,4 +180,20 @@ public interface LoadHistoryRepository extends JpaRepository<LoadHistory, Long> 
      */
     @Query("SELECT h FROM LoadHistory h ORDER BY h.startTime DESC LIMIT :limit")
     List<LoadHistory> findRecentExecutions(@Param("limit") int limit);
+
+    // ==================== Gap Scanner Methods ====================
+
+    /**
+     * Find executions for a loader after a certain time (for gap detection).
+     *
+     * @param loaderCode Loader code
+     * @param startTimeAfter Lower bound for start time
+     * @return Executions for this loader after the given time (ordered by start time ASC)
+     */
+    @Query("SELECT h FROM LoadHistory h WHERE h.loaderCode = :loaderCode " +
+           "AND h.startTime > :startTimeAfter ORDER BY h.startTime ASC")
+    List<LoadHistory> findByLoaderCodeAndStartTimeAfter(
+        @Param("loaderCode") String loaderCode,
+        @Param("startTimeAfter") Instant startTimeAfter
+    );
 }

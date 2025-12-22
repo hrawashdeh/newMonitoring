@@ -1,0 +1,134 @@
+
+
+etl:
+  metadata:
+    load_version: 1
+    description: "Initial ETL configuration for fresh cluster deployment"
+
+  sources:
+    - db_code: TEST_MYSQL
+      version: 1
+      ip: mysql.monitoring-infra.svc.cluster.local  # Corrected namespace
+      port: 3306
+      db_type: MYSQL
+      db_name: test_data  # Corrected database name (underscore, not camelCase)
+      user_name: test_user  # Corrected username (underscore)
+      pass_word: HaAirK101348qAppD  # Will be encrypted in DB with AES-256-GCM
+
+  loaders:
+    - loader_code: SALES_DATA
+      version: 1
+      source_db_code: TEST_MYSQL
+      loader_sql: |
+        SELECT
+          FLOOR(UNIX_TIMESTAMP(timestamp) / 60) * 60 AS load_time_stamp,
+          product AS segment_1,
+          NULL AS segment_2,
+          NULL AS segment_3,
+          NULL AS segment_4,
+          NULL AS segment_5,
+          NULL AS segment_6,
+          NULL AS segment_7,
+          NULL AS segment_8,
+          NULL AS segment_9,
+          NULL AS segment_10,
+          COUNT(*) AS rec_count,
+          SUM(amount) AS sum_val,
+          AVG(amount) AS avg_val,
+          MAX(amount) AS max_val,
+          MIN(amount) AS min_val
+        FROM sales_data
+        WHERE timestamp >= STR_TO_DATE(':fromTime', '%Y-%m-%d %H:%i')
+          AND timestamp <  STR_TO_DATE(':toTime',   '%Y-%m-%d %H:%i')
+        GROUP BY load_time_stamp, segment_1, segment_2, segment_3,
+          segment_4, segment_5, segment_6, segment_7, segment_8, segment_9, segment_10
+        ORDER BY load_time_stamp
+      min_interval_seconds: 60
+      max_interval_seconds: 120
+      max_query_period_seconds: 86400
+      max_parallel_executions: 2
+      load_status: IDLE
+      purge_strategy: FAIL_ON_DUPLICATE
+      consecutive_zero_record_runs: 0
+      enabled: true
+
+    - loader_code: USER_ACTIVITY
+      version: 1
+      source_db_code: TEST_MYSQL
+      loader_sql: |
+        SELECT
+          FLOOR(UNIX_TIMESTAMP(timestamp) / 60) * 60 AS load_time_stamp,
+          action AS segment_1,
+          CASE
+            WHEN user_id BETWEEN 1 AND 3333 THEN 'Tier-1'
+            WHEN user_id BETWEEN 3334 AND 6666 THEN 'Tier-2'
+            ELSE 'Tier-3'
+          END AS segment_2,
+          NULL AS segment_3,
+          NULL AS segment_4,
+          NULL AS segment_5,
+          NULL AS segment_6,
+          NULL AS segment_7,
+          NULL AS segment_8,
+          NULL AS segment_9,
+          NULL AS segment_10,
+          COUNT(*) AS rec_count,
+          SUM(session_duration) AS sum_val,
+          AVG(session_duration) AS avg_val,
+          MAX(session_duration) AS max_val,
+          MIN(session_duration) AS min_val
+        FROM user_activity
+        WHERE timestamp >= STR_TO_DATE(':fromTime', '%Y-%m-%d %H:%i')
+          AND timestamp <  STR_TO_DATE(':toTime',   '%Y-%m-%d %H:%i')
+        GROUP BY load_time_stamp, segment_1, segment_2, segment_3,
+          segment_4, segment_5, segment_6, segment_7, segment_8, segment_9, segment_10
+        ORDER BY load_time_stamp
+      min_interval_seconds: 60
+      max_interval_seconds: 120
+      max_query_period_seconds: 86400
+      max_parallel_executions: 2
+      load_status: IDLE
+      purge_strategy: FAIL_ON_DUPLICATE
+      consecutive_zero_record_runs: 0
+      enabled: true
+
+    - loader_code: SENSOR_READINGS
+      version: 1
+      source_db_code: TEST_MYSQL
+      loader_sql: |
+        SELECT
+          FLOOR(UNIX_TIMESTAMP(timestamp) / 60) * 60 AS load_time_stamp,
+          location AS segment_1,
+          CASE
+            WHEN temperature < 0 THEN 'Freezing'
+            WHEN temperature < 10 THEN 'Cold'
+            WHEN temperature < 25 THEN 'Moderate'
+            ELSE 'Hot'
+          END AS segment_2,
+          NULL AS segment_3,
+          NULL AS segment_4,
+          NULL AS segment_5,
+          NULL AS segment_6,
+          NULL AS segment_7,
+          NULL AS segment_8,
+          NULL AS segment_9,
+          NULL AS segment_10,
+          COUNT(*) AS rec_count,
+          SUM(temperature) AS sum_val,
+          AVG(temperature) AS avg_val,
+          MAX(temperature) AS max_val,
+          MIN(temperature) AS min_val
+        FROM sensor_readings
+        WHERE timestamp >= STR_TO_DATE(':fromTime', '%Y-%m-%d %H:%i')
+          AND timestamp <  STR_TO_DATE(':toTime',   '%Y-%m-%d %H:%i')
+        GROUP BY load_time_stamp, segment_1, segment_2, segment_3,
+          segment_4, segment_5, segment_6, segment_7, segment_8, segment_9, segment_10
+        ORDER BY load_time_stamp
+      min_interval_seconds: 60
+      max_interval_seconds: 120
+      max_query_period_seconds: 86400
+      max_parallel_executions: 2
+      load_status: IDLE
+      purge_strategy: FAIL_ON_DUPLICATE
+      consecutive_zero_record_runs: 0
+      enabled: true

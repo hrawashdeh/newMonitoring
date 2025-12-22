@@ -4,6 +4,8 @@ package com.tiqmo.monitoring.loader.domain.signals.entity;
 import jakarta.persistence.*;
 import lombok.*;
 
+import java.time.Instant;
+
 @Getter @Setter @NoArgsConstructor @AllArgsConstructor @Builder
 @Entity
 @Table(name = "signals_history", schema = "signals")
@@ -14,8 +16,8 @@ public class SignalsHistory {
   @Column(name="loader_code", nullable=false, length=64)
   private String loaderCode;
 
-  @Column(name="load_time_stamp", nullable=false)  // epoch seconds or millis
-  private Long loadTimeStamp;
+  @Column(name="load_time_stamp", nullable=false)
+  private Instant loadTimeStamp;
 
   @Column(name="segment_code", length=128)
   private String segmentCode;
@@ -26,5 +28,14 @@ public class SignalsHistory {
   @Column(name="avg_val")    private Double avgVal;
   @Column(name="sum_val")    private Double sumVal;
 
-  @Column(name="create_time") private Long createTime; // epoch
+  @Column(name="created_at", insertable=false, updatable=false)
+  private Instant createdAt;
+
+  /**
+   * Reference to the load_history record that inserted this signal.
+   * Used for orphaned data cleanup: DELETE WHERE load_history_id IN (SELECT id FROM load_history WHERE status='FAILED')
+   * NULL for backfill jobs (not tracked in load_history).
+   */
+  @Column(name="load_history_id")
+  private Long loadHistoryId;
 }

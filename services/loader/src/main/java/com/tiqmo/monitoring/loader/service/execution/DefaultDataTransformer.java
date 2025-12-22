@@ -72,7 +72,6 @@ public class DefaultDataTransformer implements DataTransformer {
       return List.of();
     }
 
-    long createTime = System.currentTimeMillis() / 1000; // Unix epoch seconds
     List<SignalsHistory> results = new ArrayList<>(queryResult.rows().size());
 
     // Issue #2.1: Calculate timezone offset in seconds
@@ -88,7 +87,7 @@ public class DefaultDataTransformer implements DataTransformer {
     int rowIndex = 0;
     for (Map<String, Object> row : queryResult.rows()) {
       try {
-        SignalsHistory signal = transformRow(loaderCode, row, createTime, rowIndex, timezoneOffsetSeconds);
+        SignalsHistory signal = transformRow(loaderCode, row, rowIndex, timezoneOffsetSeconds);
         results.add(signal);
       } catch (Exception e) {
         throw new TransformationException(
@@ -110,23 +109,22 @@ public class DefaultDataTransformer implements DataTransformer {
    *
    * @param loaderCode the loader code
    * @param row the row data
-   * @param createTime the creation timestamp
    * @param rowIndex the row index (for error messages)
    * @param timezoneOffsetSeconds timezone offset in seconds to add to timestamp (for UTC normalization)
    * @return SignalsHistory entity
    * @throws TransformationException if required field is missing or conversion fails
    */
   private SignalsHistory transformRow(String loaderCode, Map<String, Object> row,
-                                     long createTime, int rowIndex, long timezoneOffsetSeconds)
+                                     int rowIndex, long timezoneOffsetSeconds)
       throws TransformationException {
 
     // Required field: timestamp
-    Long loadTimeStamp = extractTimestamp(row, rowIndex);
+    Instant loadTimeStamp = extractTimestamp(row, rowIndex);
 
     // Issue #2.1: Normalize timestamp to UTC by adding timezone offset
     // Example: Source 10:00 GMT+4, offset=4*3600 → UTC 14:00
     if (timezoneOffsetSeconds != 0) {
-      loadTimeStamp += timezoneOffsetSeconds;
+      loadTimeStamp = loadTimeStamp.plusSeconds(timezoneOffsetSeconds);
     }
 
     // Extract 10 segment fields
@@ -162,7 +160,6 @@ public class DefaultDataTransformer implements DataTransformer {
         .minVal(minVal)
         .avgVal(avgVal)
         .sumVal(sumVal)
-        .createTime(createTime)
         .build();
   }
 
@@ -173,18 +170,18 @@ public class DefaultDataTransformer implements DataTransformer {
    * <ul>
    *   <li>Long: Unix epoch seconds or milliseconds (auto-detected)</li>
    *   <li>Integer: Unix epoch seconds</li>
-   *   <li>Instant: Converted to epoch seconds</li>
-   *   <li>java.sql.Timestamp: From JDBC ResultSet (converted to epoch seconds)</li>
-   *   <li>java.util.Date: Legacy date type (converted to epoch seconds)</li>
+   *   <li>Instant: Used directly</li>
+   *   <li>java.sql.Timestamp: From JDBC ResultSet (converted to Instant)</li>
+   *   <li>java.util.Date: Legacy date type (converted to Instant)</li>
    *   <li>String: Parsed as ISO-8601 or Unix epoch</li>
    * </ul>
    *
    * @param row the row data
    * @param rowIndex the row index (for error messages)
-   * @return timestamp as Unix epoch seconds
+   * @return timestamp as Instant
    * @throws TransformationException if timestamp is missing or invalid
    */
-  private Long extractTimestamp(Map<String, Object> row, int rowIndex)
+  private Instant extractTimestamp(Map<String, Object> row, int rowIndex)
       throws TransformationException {
 
     Object value = findValue(row, TIMESTAMP_COLUMNS);
@@ -197,33 +194,33 @@ public class DefaultDataTransformer implements DataTransformer {
     }
 
     try {
-      // Long (epoch seconds or millis)
-      if (value instanceof Long longValue) {
-        // Auto-detect: if > year 3000 in seconds (94608000000), it's likely millis
-        if (longValue > 94608000000L) {
-          return longValue / 1000; // Convert millis to seconds
-        }
-        return longValue;
-      }
-
-      // Integer (epoch seconds)
-      if (value instanceof Integer intValue) {
-        return intValue.longValue();
-      }
-
-      // Instant
+      // Instant - use directly
       if (value instanceof Instant instant) {
-        return instant.getEpochSecond();
+        return instant;
       }
 
       // java.sql.Timestamp (from JDBC ResultSet)
       if (value instanceof java.sql.Timestamp timestamp) {
-        return timestamp.getTime() / 1000; // Convert millis to seconds
+        return timestamp.toInstant();
       }
 
       // java.util.Date (legacy)
       if (value instanceof java.util.Date date) {
-        return date.getTime() / 1000;
+        return date.toInstant();
+      }
+
+      // Long (epoch seconds or millis)
+      if (value instanceof Long longValue) {
+        // Auto-detect: if > year 3000 in seconds (94608000000), it's likely millis
+        if (longValue > 94608000000L) {
+          return Instant.ofEpochMilli(longValue);
+        }
+        return Instant.ofEpochSecond(longValue);
+      }
+
+      // Integer (epoch seconds)
+      if (value instanceof Integer intValue) {
+        return Instant.ofEpochSecond(intValue.longValue());
       }
 
       // BigDecimal (from MySQL UNIX_TIMESTAMP() function)
@@ -231,26 +228,26 @@ public class DefaultDataTransformer implements DataTransformer {
         long epochValue = bigDecimalValue.longValue();
         // Auto-detect: if > year 3000 in seconds (94608000000), it's likely millis
         if (epochValue > 94608000000L) {
-          return epochValue / 1000; // Convert millis to seconds
+          return Instant.ofEpochMilli(epochValue);
         }
-        return epochValue;
+        return Instant.ofEpochSecond(epochValue);
       }
 
       // Double/Float (decimal epoch values)
       if (value instanceof Double doubleValue) {
         long epochValue = doubleValue.longValue();
         if (epochValue > 94608000000L) {
-          return epochValue / 1000;
+          return Instant.ofEpochMilli(epochValue);
         }
-        return epochValue;
+        return Instant.ofEpochSecond(epochValue);
       }
 
       if (value instanceof Float floatValue) {
         long epochValue = floatValue.longValue();
         if (epochValue > 94608000000L) {
-          return epochValue / 1000;
+          return Instant.ofEpochMilli(epochValue);
         }
-        return epochValue;
+        return Instant.ofEpochSecond(epochValue);
       }
 
       // String (ISO-8601 or epoch)
@@ -259,12 +256,12 @@ public class DefaultDataTransformer implements DataTransformer {
         try {
           long epochValue = Long.parseLong(strValue);
           if (epochValue > 94608000000L) {
-            return epochValue / 1000;
+            return Instant.ofEpochMilli(epochValue);
           }
-          return epochValue;
+          return Instant.ofEpochSecond(epochValue);
         } catch (NumberFormatException e) {
           // Try parsing as ISO-8601
-          return Instant.parse(strValue).getEpochSecond();
+          return Instant.parse(strValue);
         }
       }
 

@@ -25,6 +25,13 @@ prometheus:
 
 alertmanager:
   enabled: true
-  
+
+# Disable node-exporter (not needed for application monitoring)
 prometheus-node-exporter:
   enabled: false
+nodeExporter:
+  enabled: false
+
+
+
+

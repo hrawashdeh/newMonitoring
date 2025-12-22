@@ -63,6 +63,9 @@ public class DefaultLoadExecutorService implements LoadExecutorService {
   // Issue #2.2: Configuration service for downtime detection threshold
   private final com.tiqmo.monitoring.loader.service.config.ConfigService configService;
 
+  // Auto-Backfill on Failure feature
+  private final com.tiqmo.monitoring.loader.service.backfill.BackfillService backfillService;
+
   /**
    * Executes a loader with full data pipeline.
    *
@@ -110,7 +113,8 @@ public class DefaultLoadExecutorService implements LoadExecutorService {
       history = saveHistoryAndLoaderAtStart(history, loader);
 
       // 4. Execute loader (REAL IMPLEMENTATION - Rounds 6-9)
-      LoadExecutionResult result = executeLoaderReal(loader, window);
+      // Pass history.getId() to set load_history_id on all signals for orphan cleanup
+      LoadExecutionResult result = executeLoaderReal(loader, window, history.getId());
 
       // 5. Update history with success
       Instant endTime = Instant.now();
@@ -183,15 +187,47 @@ public class DefaultLoadExecutorService implements LoadExecutorService {
       } catch (Exception e) {
         log.error("Loader execution failed | loaderCode={}", loader.getLoaderCode(), e);
 
+        // Get window for backfill submission and timestamp advancement
+        TimeWindow window = history != null
+            ? new TimeWindow(history.getQueryFromTime(), history.getQueryToTime())
+            : timeWindowCalculator.calculateWindow(loader);
+
         // Update history with failure
         if (history != null) {
           Instant endTime = Instant.now();
           updateHistoryFailure(history, e, startTime, endTime);
         }
 
-        // Update loader to FAILED status (transactional)
+        // AUTO-BACKFILL FEATURE: Submit backfill job for failed window
+        try {
+          log.info("Auto-Backfill: Submitting backfill job for failed loader {} | window: {} to {}",
+              loader.getLoaderCode(), window.fromTime(), window.toTime());
+
+          backfillService.submitBackfillJob(
+              loader.getLoaderCode(),
+              window.fromTime(),
+              window.toTime(),
+              com.tiqmo.monitoring.loader.domain.loader.entity.PurgeStrategy.PURGE_AND_RELOAD,
+              "SYSTEM_AUTO_RECOVERY"
+          );
+
+          log.info("Auto-Backfill: Backfill job submitted successfully for {} | window: {} to {}",
+              loader.getLoaderCode(), window.fromTime(), window.toTime());
+        } catch (Exception backfillError) {
+          log.error("Auto-Backfill: Failed to submit backfill job for {}: {}",
+              loader.getLoaderCode(), backfillError.getMessage(), backfillError);
+          // Continue with failure handling even if backfill submission fails
+        }
+
+        // Update loader to FAILED status and ADVANCE timestamp (transactional)
+        // This prevents the loader from getting stuck retrying the same window forever
         loader.setLoadStatus(LoadStatus.FAILED);
         loader.setFailedSince(Instant.now());
+        loader.setLastLoadTimestamp(window.toTime());  // CRITICAL: Advance timestamp so loader moves forward
+
+        log.info("Auto-Backfill: Advanced lastLoadTimestamp for {} to {} (failed window will be recovered via backfill)",
+            loader.getLoaderCode(), window.toTime());
+
         if (history != null) {
           history = saveHistoryAndLoaderAfterFailure(history, loader);
         } else {
@@ -264,6 +300,8 @@ public class DefaultLoadExecutorService implements LoadExecutorService {
     history.setDurationSeconds(Duration.between(startTime, endTime).getSeconds());
     history.setQueryFromTime(result.getQueryFromTime());
     history.setQueryToTime(result.getQueryToTime());
+    history.setActualFromTime(result.getActualFromTime());
+    history.setActualToTime(result.getActualToTime());
     history.setRecordsLoaded(result.getRecordsLoaded());
     history.setRecordsIngested(result.getRecordsIngested());
     loadHistoryRepository.save(history);
@@ -303,16 +341,19 @@ public class DefaultLoadExecutorService implements LoadExecutorService {
    *   <li><b>Round 7</b>: Build executable SQL (QueryParameterReplacer)</li>
    *   <li>Execute query against source database (SourceDbManager)</li>
    *   <li><b>Round 8</b>: Transform results (DataTransformer)</li>
+   *   <li>Set load_history_id for orphan cleanup tracking</li>
    *   <li>Ingest to signals_history (SignalsHistoryRepository)</li>
    * </ol>
    *
    * @param loader the loader to execute
+   * @param window time window for this execution
+   * @param loadHistoryId load_history.id to link signals for orphan cleanup
    * @return execution result with counts
    * @throws Exception if any step fails
    */
-  private LoadExecutionResult executeLoaderReal(Loader loader, TimeWindow window) throws Exception {
+  private LoadExecutionResult executeLoaderReal(Loader loader, TimeWindow window, Long loadHistoryId) throws Exception {
     String loaderCode = loader.getLoaderCode();
-    log.debug("Starting real execution for loader: {}", loaderCode);
+    log.debug("Starting real execution for loader: {} | loadHistoryId={}", loaderCode, loadHistoryId);
 
     // Step 2: Build executable SQL (Round 7 + Issue #2.1: Timezone handling)
     String loaderSql = loader.getLoaderSql(); // This is encrypted, auto-decrypted by JPA
@@ -340,18 +381,107 @@ public class DefaultLoadExecutorService implements LoadExecutorService {
     log.debug("Transformed {} rows for {}: {} SignalsHistory entities created (timezone offset: {} hours)",
         rows.size(), loaderCode, signals.size(), timezoneOffset != null ? timezoneOffset : 0);
 
+    // Step 4.5: Set load_history_id on all signals for orphan cleanup tracking
+    signals.forEach(signal -> signal.setLoadHistoryId(loadHistoryId));
+    log.debug("Set load_history_id={} on {} signals for orphan cleanup", loadHistoryId, signals.size());
+
+    // Step 4.6: Apply purge strategy (check for duplicates BEFORE insert)
+    applyPurgeStrategy(loader, window);
+
     // Step 5: Ingest to signals_history table
     List<SignalsHistory> ingested = signalsHistoryRepository.saveAll(signals);
     log.debug("Ingested {} signals for {} to signals_history table",
         ingested.size(), loaderCode);
 
+    // Step 6: Calculate actual time range from loaded data (for finalized scan capture)
+    Instant actualFromTime = null;
+    Instant actualToTime = null;
+    if (!signals.isEmpty()) {
+      actualFromTime = signals.stream()
+          .map(SignalsHistory::getLoadTimeStamp)
+          .filter(ts -> ts != null)
+          .min(Instant::compareTo)
+          .orElse(null);
+      actualToTime = signals.stream()
+          .map(SignalsHistory::getLoadTimeStamp)
+          .filter(ts -> ts != null)
+          .max(Instant::compareTo)
+          .orElse(null);
+      log.debug("Actual time range for {}: from={}, to={} (vs queried: {} to {})",
+          loaderCode, actualFromTime, actualToTime, window.fromTime(), window.toTime());
+    }
+
     // Return result
     return LoadExecutionResult.builder()
         .queryFromTime(window.fromTime())
         .queryToTime(window.toTime())
+        .actualFromTime(actualFromTime)
+        .actualToTime(actualToTime)
         .recordsLoaded((long) rows.size())
         .recordsIngested((long) ingested.size())
         .build();
+  }
+
+  /**
+   * Applies purge strategy for scheduled loads (matching backfill behavior).
+   *
+   * <p>Checks loader.purgeStrategy and acts accordingly:
+   * <ul>
+   *   <li>FAIL_ON_DUPLICATE: Throw exception if data exists in time window</li>
+   *   <li>PURGE_AND_RELOAD: Delete existing data before insert (NOT recommended for scheduled loads)</li>
+   *   <li>SKIP_DUPLICATES: No action (duplicates handled by unique constraints)</li>
+   * </ul>
+   *
+   * @param loader Loader with purge_strategy configuration
+   * @param window Time window for this execution
+   * @throws com.tiqmo.monitoring.loader.exception.BusinessException if FAIL_ON_DUPLICATE and data exists
+   */
+  private void applyPurgeStrategy(Loader loader, TimeWindow window) {
+    com.tiqmo.monitoring.loader.domain.loader.entity.PurgeStrategy strategy = loader.getPurgeStrategy();
+    String loaderCode = loader.getLoaderCode();
+
+    log.debug("Applying purge strategy {} for scheduled load | loaderCode={} | timeRange=[{}, {}]",
+        strategy, loaderCode, window.fromTime(), window.toTime());
+
+    switch (strategy) {
+      case FAIL_ON_DUPLICATE:
+        // Check if data exists in this time window
+        List<SignalsHistory> existing = signalsHistoryRepository
+            .findByLoaderCodeAndLoadTimeStampBetween(loaderCode, window.fromTime(), window.toTime());
+        if (!existing.isEmpty()) {
+          log.error("FAIL_ON_DUPLICATE: Found {} existing records for {} in range [{}, {}]",
+              existing.size(), loaderCode, window.fromTime(), window.toTime());
+          throw new com.tiqmo.monitoring.loader.exception.BusinessException(
+              com.tiqmo.monitoring.loader.dto.common.ErrorCode.BACKFILL_DUPLICATE_DATA,
+              String.format("Duplicate data detected: Found %d existing records for %s in time window. " +
+                  "This typically indicates: (1) concurrent execution, (2) retry without clearing old data, " +
+                  "or (3) orphaned data from previous failure. Use backfill with PURGE_AND_RELOAD to clean up.",
+                  existing.size(), loaderCode)
+          );
+        }
+        log.debug("FAIL_ON_DUPLICATE: No duplicates found for {}", loaderCode);
+        break;
+
+      case PURGE_AND_RELOAD:
+        // Delete existing data in this time window
+        long deleted = signalsHistoryRepository.deleteByLoaderCodeAndLoadTimeStampBetween(
+            loaderCode, window.fromTime(), window.toTime());
+        if (deleted > 0) {
+          log.warn("PURGE_AND_RELOAD: Deleted {} existing records for {} before scheduled load",
+              deleted, loaderCode);
+        }
+        break;
+
+      case SKIP_DUPLICATES:
+        // No action - duplicates will be handled by database unique constraints (if any)
+        log.debug("SKIP_DUPLICATES: Proceeding with insert for {}", loaderCode);
+        break;
+
+      default:
+        log.warn("Unknown purge strategy {} for loader {}, defaulting to FAIL_ON_DUPLICATE behavior",
+            strategy, loaderCode);
+        break;
+    }
   }
 
   // ====================================================================================
@@ -407,6 +537,8 @@ public class DefaultLoadExecutorService implements LoadExecutorService {
   private static class LoadExecutionResult {
     private Instant queryFromTime;
     private Instant queryToTime;
+    private Instant actualFromTime;  // Min timestamp from loaded data
+    private Instant actualToTime;    // Max timestamp from loaded data
     private Long recordsLoaded;
     private Long recordsIngested;
   }

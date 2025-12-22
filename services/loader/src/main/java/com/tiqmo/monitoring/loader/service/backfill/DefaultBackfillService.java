@@ -433,6 +433,10 @@ public class DefaultBackfillService implements BackfillService {
         log.info("Transformed {} rows for backfill: {} SignalsHistory entities created",
             rows.size(), signals.size());
 
+        // Step 4.5: Set load_history_id to NULL for backfill (tracked separately via backfill_job)
+        signals.forEach(signal -> signal.setLoadHistoryId(null));
+        log.debug("Set load_history_id=NULL for {} backfill signals (not orphan-tracked)", signals.size());
+
         // Step 5: Apply purge strategy
         long recordsPurged = applyPurgeStrategy(job.getPurgeStrategy(), loaderCode, fromTime, toTime);
 
@@ -466,32 +470,29 @@ public class DefaultBackfillService implements BackfillService {
                                      String loaderCode,
                                      Instant fromTime,
                                      Instant toTime) {
-        long fromEpoch = fromTime.getEpochSecond();
-        long toEpoch = toTime.getEpochSecond();
-
         log.debug("Applying purge strategy | strategy={} | loaderCode={} | timeRange=[{}, {}]",
-            strategy, loaderCode, fromEpoch, toEpoch);
+            strategy, loaderCode, fromTime, toTime);
 
         switch (strategy) {
             case PURGE_AND_RELOAD:
                 // Delete existing data in range
                 long deleted = signalsHistoryRepository.deleteByLoaderCodeAndLoadTimeStampBetween(
-                    loaderCode, fromEpoch, toEpoch);
+                    loaderCode, fromTime, toTime);
                 log.info("PURGE_AND_RELOAD applied | loaderCode={} | deleted={} | timeRange=[{}, {}]",
-                    loaderCode, deleted, fromEpoch, toEpoch);
+                    loaderCode, deleted, fromTime, toTime);
                 return deleted;
 
             case FAIL_ON_DUPLICATE:
                 // Check if data exists
                 List<SignalsHistory> existing = signalsHistoryRepository
-                    .findByLoaderCodeAndLoadTimeStampBetween(loaderCode, fromEpoch, toEpoch);
+                    .findByLoaderCodeAndLoadTimeStampBetween(loaderCode, fromTime, toTime);
                 if (!existing.isEmpty()) {
                     log.warn("FAIL_ON_DUPLICATE: duplicate data found | loaderCode={} | existingRecords={} | timeRange=[{}, {}]",
-                        loaderCode, existing.size(), fromEpoch, toEpoch);
+                        loaderCode, existing.size(), fromTime, toTime);
                     throw new BusinessException(
                         ErrorCode.BACKFILL_DUPLICATE_DATA,
-                        String.format("Found %d existing records for %s in range [%d, %d]",
-                            existing.size(), loaderCode, fromEpoch, toEpoch)
+                        String.format("Found %d existing records for %s in range [%s, %s]",
+                            existing.size(), loaderCode, fromTime, toTime)
                     );
                 }
                 log.debug("FAIL_ON_DUPLICATE: no duplicates found");

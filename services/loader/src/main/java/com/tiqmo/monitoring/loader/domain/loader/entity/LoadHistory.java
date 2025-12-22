@@ -76,15 +76,31 @@ public class LoadHistory {
 
     /**
      * Query start time (from lastLoadTimestamp or default lookback).
+     * This is the ATTEMPTED time range.
      */
     @Column(name = "query_from_time", nullable = false)
     private Instant queryFromTime;
 
     /**
      * Query end time (min of: fromTime + maxQueryPeriod, now()).
+     * This is the ATTEMPTED time range.
      */
     @Column(name = "query_to_time", nullable = false)
     private Instant queryToTime;
+
+    /**
+     * Actual start time of loaded data (min timestamp from source query results).
+     * May differ from queryFromTime if source has gaps or delays.
+     */
+    @Column(name = "actual_from_time")
+    private Instant actualFromTime;
+
+    /**
+     * Actual end time of loaded data (max timestamp from source query results).
+     * May differ from queryToTime if source has gaps or delays.
+     */
+    @Column(name = "actual_to_time")
+    private Instant actualToTime;
 
     // ==================== RESULTS ====================
 

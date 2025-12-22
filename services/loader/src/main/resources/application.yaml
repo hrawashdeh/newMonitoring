@@ -39,6 +39,26 @@ loader:
     # Also used when lastLoadTimestamp is in the future (clock skew)
     default-lookback-hours: 24
 
+    # Thread pool for loader executions
+    thread-pool-size: 10
+
+    # Execution timeout - loaders exceeding this will be forcefully terminated
+    # Recommended: 2 hours (same as stale lock threshold)
+    execution-timeout-hours: 2
+
+  # Lock management configuration
+  locking:
+    # Stale lock threshold - locks older than this are automatically released
+    stale-lock-threshold-hours: 2
+
+    # Released lock retention - locks released longer than this are deleted
+    # Recommended: 7-30 days for historical debugging
+    released-lock-retention-days: 7
+
+    # Cleanup schedule for released locks (cron expression)
+    # Default: daily at 2 AM
+    cleanup-schedule: "0 0 2 * * ?"
+
 logging:
   level:
     root: INFO

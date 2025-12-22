@@ -5,6 +5,7 @@ import jakarta.validation.Valid;
 import jakarta.validation.constraints.*;
 import lombok.Data;
 
+import java.time.Instant;
 import java.util.List;
 
 /**
@@ -48,7 +49,8 @@ public class BulkSignalsRequest {
         public SignalsHistory toEntity(String loaderCode) {
             SignalsHistory s = new SignalsHistory();
             s.setLoaderCode(loaderCode);
-            s.setLoadTimeStamp(loadTimeStamp);
+            // Convert epoch seconds to Instant
+            s.setLoadTimeStamp(loadTimeStamp != null ? Instant.ofEpochSecond(loadTimeStamp) : null);
             s.setSegmentCode(segmentCode);
             s.setRecCount(recCount);
             s.setMaxVal(maxVal);

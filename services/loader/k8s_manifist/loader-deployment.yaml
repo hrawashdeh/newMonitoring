@@ -1,10 +1,10 @@
 apiVersion: apps/v1
 kind: Deployment
 metadata:
-  name: loader-service
-  namespace: loader-services
+  name: signal-loader
+  namespace: monitoring-app
   labels:
-    app: loader-service
+    app: signal-loader
     component: backend
     tier: application
 spec:
@@ -16,17 +16,17 @@ spec:
       maxUnavailable: 0  # Zero downtime
   selector:
     matchLabels:
-      app: loader-service
+      app: signal-loader
   template:
     metadata:
       labels:
-        app: loader-service
+        app: signal-loader
         component: backend
         tier: application
     spec:
       containers:
-      - name: loader-service
-        image: loader-service:latest  # Build locally: mvn spring-boot:build-image
+      - name: signal-loader
+        image: signal-loader:0.0.1-SNAPSHOT  # Build locally: mvn spring-boot:build-image
         imagePullPolicy: Never  # NEVER pull from registry (local development only)
         ports:
         - name: http
@@ -36,10 +36,15 @@ spec:
         # Inject ALL config from sealed secret (single source of truth)
         envFrom:
         - secretRef:
-            name: loader-secrets
+            name: app-secrets
 
         # Additional env vars (non-secret)
         env:
+        # Override profile to dev (allows non-read-only source databases for testing)
+        # Schema is managed by etl_initializer (Flyway), not Hibernate
+        - name: SPRING_PROFILES_ACTIVE
+          value: "dev"
+
         # Replica identification for distributed execution
         - name: LOADER_REPLICA_NAME
           valueFrom:
@@ -93,7 +98,7 @@ spec:
           readOnlyRootFilesystem: false  # Spring Boot needs write for temp files
 
       # Service account
-      serviceAccountName: loader-service-sa
+      serviceAccountName: signal-loader-sa
 
       # Pod anti-affinity for high availability
       affinity:
@@ -106,17 +111,17 @@ spec:
                 - key: app
                   operator: In
                   values:
-                  - loader-service
+                  - signal-loader
               topologyKey: kubernetes.io/hostname
 
 ---
 apiVersion: v1
 kind: Service
 metadata:
-  name: loader-service
-  namespace: loader-services
+  name: signal-loader
+  namespace: monitoring-app
   labels:
-    app: loader-service
+    app: signal-loader
 spec:
   type: ClusterIP
   ports:
@@ -125,11 +130,11 @@ spec:
     targetPort: http
     protocol: TCP
   selector:
-    app: loader-service
+    app: signal-loader
 
 ---
 apiVersion: v1
 kind: ServiceAccount
 metadata:
-  name: loader-service-sa
-  namespace: loader-services
+  name: signal-loader-sa
+  namespace: monitoring-app
