@@ -4,9 +4,11 @@
 
 > Single source of truth for cross-session development tracking and handovers.
 
-**Last Updated:** 2025-12-22 (Updated: Custom notification providers)
-**Project Status:** Phase 0 Complete → Phase 1 In Planning
-**Target Go-Live:** TBD based on phase completion
+**Last Updated:** 2025-12-22 (Updated: POC-first approach for manager demo)
+**Project Status:** Phase 0 Complete → **POC Stage 1 Ready to Start**
+**Team:** Solo Developer + Claude Code (Two-Man Army)
+**POC Timeline:** 2-3 weeks (Stage 1: 2 weeks, Stage 2: 1 week)
+**Target Manager Demo:** Week 2 (functional) + Week 3 (with security)
 
 ---
 
@@ -41,7 +43,8 @@ A **definition-driven monitoring and incident management platform** for enterpri
 - **Definition-driven**: Charts and alerts are declarative configurations, not hardcoded logic
 - **Microservices architecture**: Independent scalability and team ownership
 - **Security-first**: JWT authentication, AES-256 encryption, full audit trails
-- **MENA-optimized stack**: React + Spring Boot = easiest hiring in Saudi Arabia
+- **MENA-optimized stack**: React + Spring Boot = easiest hiring in Saudi Arabia (when team grows)
+- **Solo developer friendly**: Built with AI assistance (Claude Code), practical sprint planning
 
 ### Key Differentiators
 
@@ -417,13 +420,254 @@ Your current environment already has:
 
 ---
 
-## Sprint Breakdown
+## 🎯 POC: Loader GUI (Manager Demo)
 
-### Sprint 1-2: Loader UI + Foundation Infrastructure (4 weeks)
+**Priority:** 🔴 **HIGHEST - SHOW VALUE FIRST**
 
-**Goal:** Complete loader service ecosystem with UI + essential infrastructure
+**Objective:** Demonstrate working Loader Management UI to manager as proof of concept
 
-**Priority:** 🔴 CRITICAL - Foundation for everything else
+**Timeline:** 2-3 weeks (solo developer)
+
+**Strategy:** Two-stage delivery - functional first, security second
+
+---
+
+### Stage 1: Functional Loader GUI (Week 1-2)
+
+**Goal:** Working UI that demonstrates all loader management capabilities (NO AUTH YET)
+
+**Deliverables:**
+
+**React 18 + Vite Frontend (Days 1-3)**
+- [ ] Project scaffolding: React 18 + TypeScript + Vite
+- [ ] Install shadcn/ui + Tailwind CSS
+- [ ] Project structure: `/src/pages`, `/src/components`, `/src/lib`, `/src/api`
+- [ ] API client setup (axios or fetch)
+- [ ] TanStack Query configuration
+- [ ] Basic routing (React Router)
+
+**Loaders List Page - `/loaders` (Days 4-5)**
+- [ ] **Component:** `LoadersListPage.tsx`
+- [ ] **Features:**
+  - TanStack Table with loaders data
+  - Columns: Loader Code, Source DB (host:port/dbname), Status, Last Run, Interval, Actions
+  - Search by loader code (debounced)
+  - Filter by status (ACTIVE, PAUSED, FAILED)
+  - Sort by code, last run, interval
+  - Pagination (10/25/50/100 per page)
+  - "Create New Loader" button → opens modal
+  - Row actions: Edit (icon), Pause/Resume (toggle), Delete (with confirmation)
+- [ ] **API:** `GET /api/v1/res/loaders/loaders`
+- [ ] **Styling:** shadcn/ui Table + Card components
+
+**Loader Details Page - `/loaders/{code}` (Days 6-7)**
+- [ ] **Component:** `LoaderDetailsPage.tsx`
+- [ ] **Sections:**
+  - **Header:** Loader code, status badge, Edit/Delete buttons
+  - **Configuration Tab:**
+    - Source database info (host, port, database, username, type)
+    - SQL query (read-only, Monaco editor with syntax highlighting)
+    - Execution settings (interval, max parallelism, fetch size)
+    - Segments assigned (chips/badges)
+  - **Execution History Tab:**
+    - TanStack Table with last 50 executions
+    - Columns: Timestamp, Status, Records Processed, Duration, Error Message
+    - Filter by status
+    - Export to CSV button
+  - **Signals Tab:**
+    - Mini chart preview (optional - defer to later sprint)
+    - Link to full signals explorer
+- [ ] **APIs:**
+  - `GET /api/v1/res/loaders/{code}`
+  - `GET /api/v1/res/loaders/{code}/history` (you may need to create this)
+- [ ] **Styling:** shadcn/ui Tabs + Table components
+
+**Create/Edit Loader Form (Days 8-10)**
+- [ ] **Component:** `LoaderEditorDialog.tsx` (modal dialog)
+- [ ] **Form Fields (React Hook Form + Zod validation):**
+  - Loader Code (text, required, max 64 chars, unique)
+  - Source Database (dropdown, fetch from `/api/v1/admin/res/db-sources`)
+  - Loader SQL (Monaco editor, required, SQL syntax highlighting)
+  - Interval (number + unit selector: minutes/hours/days)
+  - Max Parallelism (number, default 1, min 1, max 10)
+  - Fetch Size (number, default 1000, min 100)
+  - Segments (multi-select, fetch from segments dictionary)
+  - Purge Strategy (dropdown: NONE, OLD_RUNS, ALL)
+- [ ] **Validation:**
+  - Loader code: alphanumeric + underscore, no spaces
+  - SQL query: not empty, basic SQL syntax check (starts with SELECT)
+  - Interval: > 0
+- [ ] **APIs:**
+  - `POST /api/v1/res/loaders` (create)
+  - `PUT /api/v1/res/loaders/{code}` (update)
+  - `GET /api/v1/admin/res/db-sources` (source dropdown)
+- [ ] **UX:**
+  - Validation errors shown inline
+  - Loading spinner during submit
+  - Success toast notification
+  - Close dialog and refresh list on success
+
+**Source Databases Page - `/sources` (Day 11)**
+- [ ] **Component:** `SourceDatabasesPage.tsx`
+- [ ] **Features:**
+  - TanStack Table with sources
+  - Columns: Code, Host, Port, Database, Type, Username, Read-Only Status (badge)
+  - Passwords shown as `********` (encrypted, don't decrypt in UI)
+  - Read-only compliance badge: ✅ Verified / ❌ Failed
+  - "Test Connection" button per row (optional)
+  - "Create New Source" button (optional - can defer)
+- [ ] **API:** `GET /api/v1/admin/res/db-sources`
+- [ ] **Styling:** shadcn/ui Table + Badge components
+
+**CORS Configuration (Day 12)**
+- [ ] **Backend:** Add CORS configuration to loader-service
+  ```java
+  @Configuration
+  public class WebConfig implements WebMvcConfigurer {
+      @Override
+      public void addCorsMappings(CorsRegistry registry) {
+          registry.addMapping("/api/**")
+                  .allowedOrigins("http://localhost:5173", "http://localhost:3000")
+                  .allowedMethods("GET", "POST", "PUT", "DELETE", "OPTIONS")
+                  .allowedHeaders("*")
+                  .allowCredentials(true);
+      }
+  }
+  ```
+- [ ] Test from React dev server (http://localhost:5173)
+
+**Local Testing (Days 13-14)**
+- [ ] End-to-end flows:
+  - Create loader → appears in list
+  - Edit loader → changes saved
+  - Delete loader → confirmation dialog → removed from list
+  - View loader details → see config and history
+  - Filter/search loaders → results update
+  - View sources → credentials hidden
+- [ ] Fix bugs, improve UX
+- [ ] Polish styling, responsive design
+
+**Stage 1 Demo to Manager:**
+✅ **Show:** Fully functional loader management UI
+✅ **Explain:** "This is working but accessible to anyone - we'll add security in Stage 2"
+✅ **Value:** Can manage loaders through UI instead of database queries
+
+---
+
+### Stage 2: Login + Access Control (Week 3)
+
+**Goal:** Secure the UI with JWT authentication and role-based access control
+
+**Deliverables:**
+
+**Authentication UI (Days 1-2)**
+- [ ] **Login Page:** `LoginPage.tsx`
+  - Form: username + password (React Hook Form + Zod)
+  - API: `POST /api/v1/auth/login`
+  - Store JWT token in localStorage
+  - Redirect to `/loaders` on success
+  - Show error message on failure
+  - Professional styling (shadcn/ui Form components)
+- [ ] **Auth Context:**
+  - `AuthContext.tsx`: stores user, token, roles
+  - `useAuth()` hook: login, logout, isAuthenticated
+  - `ProtectedRoute` component: redirect to login if not authenticated
+- [ ] **Token Management:**
+  - Attach token to all API requests (axios interceptor)
+  - Handle 401 responses (token expired → logout → redirect to login)
+  - Optional: Token refresh logic
+
+**Access Control (Days 3-4)**
+- [ ] **Role-Based UI:**
+  - ADMIN: Full access (create, edit, delete loaders)
+  - OPERATOR: Read + operational endpoints (pause/resume, view)
+  - VIEWER: Read-only (no create/edit/delete buttons)
+- [ ] **Conditional Rendering:**
+  ```tsx
+  {hasRole('ADMIN') && (
+    <Button onClick={handleDelete}>Delete</Button>
+  )}
+  ```
+- [ ] **Navigation:**
+  - Add user profile dropdown (top-right)
+  - Show username + role
+  - Logout button
+  - Avatar/initials
+
+**App Shell & Layout (Day 5)**
+- [ ] **Component:** `AppLayout.tsx`
+  - Sidebar navigation (loaders, sources, signals, etc.)
+  - Header with breadcrumbs + user profile
+  - Main content area
+  - Responsive (collapse sidebar on mobile)
+- [ ] **Navigation Items:**
+  - Home (dashboard - placeholder for now)
+  - Loaders (link to `/loaders`)
+  - Sources (link to `/sources`)
+  - Signals (placeholder)
+  - Settings (placeholder)
+
+**Testing & Polish (Days 6-7)**
+- [ ] Test with 3 users:
+  - admin/admin123 (ROLE_ADMIN) - can do everything
+  - operator/operator123 (ROLE_OPERATOR) - can view + pause/resume
+  - viewer/viewer123 (ROLE_VIEWER) - read-only
+- [ ] Verify RBAC works (buttons hidden for VIEWER)
+- [ ] Logout → redirects to login
+- [ ] Token expired → redirects to login
+- [ ] Fix any security issues
+
+**Stage 2 Demo to Manager:**
+✅ **Show:** Same UI but now with login screen and role-based access
+✅ **Explain:** "Now it's production-ready with security - only authorized users can access"
+✅ **Value:** Enterprise-grade security, audit trail (who did what)
+
+---
+
+## POC Success Criteria (Manager Demo Checklist)
+
+**Stage 1 Demo (Functional UI):**
+- ✅ Login to application (Stage 2)
+- ✅ See list of 5+ loaders in table
+- ✅ Search for loader by code → finds it instantly
+- ✅ Filter by status (ACTIVE) → shows only active loaders
+- ✅ Click "Create New Loader" → form opens
+- ✅ Fill form, submit → loader created, appears in list
+- ✅ Click loader row → details page opens
+- ✅ See loader configuration (SQL query, source DB, interval)
+- ✅ See execution history (last 50 runs)
+- ✅ Click Edit → form opens with current values
+- ✅ Change interval, submit → loader updated
+- ✅ Click Delete → confirmation dialog → loader deleted
+- ✅ View source databases → see encrypted credentials as `***`
+- ✅ UI is responsive, fast, professional
+
+**Stage 2 Demo (Security):**
+- ✅ Logout → redirected to login page
+- ✅ Login as VIEWER → see loaders but no Create/Edit/Delete buttons
+- ✅ Login as OPERATOR → see loaders, can pause/resume, no delete
+- ✅ Login as ADMIN → full access
+- ✅ Token expiry handled gracefully
+- ✅ Unauthorized API calls return 403 Forbidden
+
+**Manager Talking Points:**
+1. **Speed:** "Built in 2-3 weeks with AI assistance (Claude Code)"
+2. **Technology:** "Modern stack - React 18, TypeScript, shadcn/ui - same as Netflix, Vercel"
+3. **Security:** "JWT authentication, role-based access control, encrypted credentials"
+4. **Scalability:** "Built on Spring Boot + Kubernetes, can handle 1000s of loaders"
+5. **Next Steps:** "This is the foundation - we'll add charts, alerting, incidents on top"
+
+---
+
+## Sprint Breakdown (After POC)
+
+**Once POC is approved, continue with these sprints:**
+
+### Sprint 1: Infrastructure + Signals Visualization (Weeks 4-7)
+
+**Goal:** Deploy production infrastructure and add time-series charts
+
+**Priority:** 🔴 HIGH - Make it production-ready + visualize loader execution data
 
 **Dependencies Introduced:**
 - ✅ Redis (caching + rate limiting)
@@ -1246,15 +1490,32 @@ Your current environment already has:
 
 ## Team & Deployment Info
 
-### Team Structure (Recommended)
+### Team Structure (ACTUAL)
 
-| Role | Count | Responsibilities |
-|------|-------|------------------|
-| **Tech Lead** | 1 | Architecture decisions, code reviews, cross-service coordination |
-| **Backend Engineers (Java/Spring)** | 2-3 | Microservices development, RabbitMQ integration, PostgreSQL optimization |
-| **Frontend Engineers (React)** | 2 | UI development, shadcn/ui components, Apache ECharts integration |
-| **DevOps Engineer** | 1 | Kubernetes deployment, CI/CD, monitoring setup, disaster recovery |
-| **QA Engineer** | 1 | Integration testing, load testing, security testing |
+**Reality:** Solo Developer + AI Assistant (Claude Code)
+
+| Role | Resource | Responsibilities |
+|------|----------|------------------|
+| **Developer (You)** | 1 person | All development, architecture decisions, deployment, testing |
+| **AI Assistant (Claude Code)** | 24/7 available | Code generation, troubleshooting, documentation, architecture guidance, best practices |
+
+**Working Model:**
+- **You:** High-level decisions, business logic, testing, deployment, Git operations
+- **Claude Code:** Code scaffolding, boilerplate generation, debugging assistance, documentation writing, architecture planning
+
+**Sprint Adjustments for Solo Developer:**
+- Original estimate: 2 weeks per sprint (team of 5-7)
+- **Realistic solo estimate: 3-4 weeks per sprint**
+- Focus on MVP (Minimum Viable Product) for each sprint
+- Defer advanced features to later sprints
+- Prioritize working functionality over perfection
+
+**Recommended Approach:**
+1. **80/20 Rule:** Implement 80% of value with 20% of features first
+2. **Iterate:** Ship working version, gather feedback, improve
+3. **Leverage existing:** Use libraries/frameworks instead of building from scratch
+4. **Automation:** CI/CD, testing, deployment scripts (Claude Code helps build these)
+5. **Documentation as you go:** PROJECT_TRACKER.md + code comments
 
 ### Deployment Environment
 
@@ -1311,52 +1572,458 @@ Untracked files:
 | Phase | Status | Start Date | Target End Date | Completion % | Blockers |
 |-------|--------|------------|-----------------|--------------|----------|
 | **Phase 0: Foundation** | ✅ COMPLETE | - | 2025-12-22 | 100% | None |
-| **Phase 1: Core Dashboard** | 🔵 PLANNING | 2025-12-23 | 2025-02-28 | 0% | Team assignment pending |
-| **Phase 2: Alerting** | ⏸️ PENDING | TBD | TBD | 0% | Phase 1 dependency |
-| **Phase 3: Incidents & Jira** | ⏸️ PENDING | TBD | TBD | 0% | Phase 2 dependency |
-| **Phase 4: Optimization** | ⏸️ PENDING | TBD | TBD | 0% | Phase 3 dependency |
+| **POC Stage 1: Functional UI** | 🔵 READY TO START | 2025-12-23 | 2026-01-06 | 0% | None |
+| **POC Stage 2: Login + Security** | ⏸️ PENDING | 2026-01-06 | 2026-01-13 | 0% | Stage 1 complete |
+| **Sprint 1: Infrastructure + Viz** | ⏸️ PENDING | TBD | TBD | 0% | POC approval |
+| **Sprint 2+: Features** | ⏸️ PENDING | TBD | TBD | 0% | Sprint 1 complete |
 
 ---
 
-## Next Steps (Immediate Actions)
+## Next Steps (POC - Loader GUI)
 
-### For Project Manager
-1. [ ] Review and approve phased plan
-2. [ ] Assign team members to Phase 1 tasks
-3. [ ] Set up project tracking tool (Jira/Linear/GitHub Projects)
-4. [ ] Schedule Phase 1 kickoff meeting
-5. [ ] Approve infrastructure deployment (Gateway, RabbitMQ, MinIO)
+**Objective:** Build POC for manager demo in 2-3 weeks
 
-### For Tech Lead
-1. [ ] Create detailed task breakdown for Phase 1.1 (Infrastructure)
-2. [ ] Design API contracts for dashboards-service
-3. [ ] Set up development environment for team
-4. [ ] Create Git branch strategy (feature branches, main, staging, production)
-5. [ ] Set up CI/CD pipeline skeleton
-
-### For DevOps Engineer
-1. [ ] Deploy Spring Cloud Gateway (Week 1)
-2. [ ] Deploy RabbitMQ (Week 1)
-3. [ ] Deploy MinIO with PVC (Week 1)
-4. [ ] Verify Redis cluster (Week 1)
-5. [ ] Create Kubernetes manifests for all 6 services (templates)
-
-### For Frontend Team
-1. [ ] Set up React 18 + Vite project (Week 2)
-2. [ ] Install shadcn/ui + Tailwind CSS (Week 2)
-3. [ ] Create folder structure and coding standards (Week 2)
-4. [ ] Implement authentication flow (Week 3)
-5. [ ] Design dashboard layout mockups (Week 2)
-
-### For Backend Team
-1. [ ] Create dashboards-service project structure (Week 3)
-2. [ ] Design PostgreSQL schema for dashboards (Week 3)
-3. [ ] Implement chart definition API (Week 4)
-4. [ ] Integrate Redis caching (Week 5)
-5. [ ] Enhance signals-service query API (Week 6)
+**Strategy:** Show functional value fast (Stage 1), add security after (Stage 2)
 
 ---
 
+### Week 1: Repository Cleanup + Start Stage 1
+
+**Day 1 Morning: Clean Repository (30 minutes)**
+```bash
+# Execute these commands
+cd /Volumes/Files/Projects/newLoader
+
+# 1. Remove .DS_Store files
+find . -name ".DS_Store" -not -path "*/backup/*" -delete
+echo ".DS_Store" >> .gitignore
+
+# 2. Add untracked gitignore files
+git add services/loader/.gitignore
+git add services/dataGenerator/.idea/.gitignore
+
+# 3. Commit cleanup
+git add .gitignore
+git commit -m "Clean repository: remove .DS_Store, add gitignore files"
+
+# 4. Push to origin
+git push origin main
+```
+
+**Day 1 Afternoon - Day 3: React Project Setup**
+
+**Tell Claude Code:**
+```
+"I need to create a React 18 project with TypeScript and Vite for a loader management UI.
+
+Requirements:
+- React 18 + TypeScript + Vite
+- Install shadcn/ui with Tailwind CSS
+- Install TanStack Table v8 + TanStack Query v5
+- Install React Router v6
+- Install React Hook Form + Zod for forms
+- Install axios for API calls
+
+Project structure:
+/src
+  /api - API client and hooks
+  /components - Reusable components
+  /pages - Page components
+  /lib - Utilities
+  /types - TypeScript types
+
+Configure:
+- Tailwind with shadcn/ui theme
+- TypeScript strict mode
+- Vite dev server on port 5173
+- API base URL: http://localhost:8080 (loader-service)
+
+Generate:
+- Complete package.json with all dependencies
+- vite.config.ts
+- tsconfig.json
+- tailwind.config.ts
+- src/main.tsx (entry point)
+- src/App.tsx (main app with router)
+- Basic folder structure
+"
+```
+
+**Claude Code will generate the complete project structure. You:**
+1. Copy files to `/Volumes/Files/Projects/newLoader/frontend/` directory
+2. Run `npm install`
+3. Run `npm run dev`
+4. Verify dev server runs on http://localhost:5173
+
+**Days 4-5: Loaders List Page**
+
+**Tell Claude Code:**
+```
+"Create a loaders list page component using TanStack Table and shadcn/ui.
+
+API Endpoint: GET http://localhost:8080/api/v1/res/loaders/loaders
+Response format: Array of loader objects with fields:
+- loaderCode (string)
+- sourceDatabase (object with host, port, dbName, type)
+- status (enum: ACTIVE, PAUSED, FAILED)
+- lastRun (timestamp)
+- intervalSeconds (number)
+- maxParallelism (number)
+
+Component requirements:
+- File: src/pages/LoadersListPage.tsx
+- Use TanStack Table for data display
+- Columns: Loader Code, Source DB (host:port/dbname), Status (badge), Last Run, Interval, Actions
+- Search input (debounced) that filters by loader code
+- Status filter dropdown (All, ACTIVE, PAUSED, FAILED)
+- Pagination (10, 25, 50, 100 per page)
+- Sort by: code, lastRun, intervalSeconds
+- Actions column: Edit (icon button), Delete (icon button with confirmation)
+- "Create New Loader" button (top-right)
+- Use shadcn/ui: Table, Button, Badge, Input, Select components
+- Use TanStack Query for data fetching with loading/error states
+- TypeScript with proper types
+
+Also generate:
+- src/api/loaders.ts - API functions (getLoaders, deleteLoader)
+- src/types/loader.ts - TypeScript types
+- src/hooks/useLoaders.ts - TanStack Query hook
+"
+```
+
+**Claude Code will generate all files. You:**
+1. Copy files to project
+2. Test page at http://localhost:5173/loaders
+3. Fix CORS errors (Claude Code will help if needed)
+
+**Days 6-7: Loader Details Page**
+
+**Tell Claude Code:**
+```
+"Create a loader details page with tabs for configuration, execution history, and signals.
+
+API Endpoints:
+- GET /api/v1/res/loaders/{code} - Get loader details
+- GET /api/v1/res/loaders/{code}/history - Get execution history (you may need to create this endpoint)
+
+Component requirements:
+- File: src/pages/LoaderDetailsPage.tsx
+- Use React Router params to get loader code
+- Use shadcn/ui Tabs component with 3 tabs:
+  1. Configuration tab:
+     - Display loader metadata in cards
+     - Source database info (read-only)
+     - SQL query in Monaco editor (read-only, syntax highlighting)
+     - Execution settings (interval, parallelism, fetch size)
+     - Segments as badges
+  2. Execution History tab:
+     - TanStack Table with last 50 runs
+     - Columns: Timestamp, Status, Records, Duration, Error
+     - Filter by status
+  3. Signals tab:
+     - Placeholder for now: "View signals in Signals Explorer"
+- Header: Loader code + status badge + Edit/Delete buttons
+- Use shadcn/ui: Tabs, Card, Badge, Button, Table
+- TypeScript types for loader details
+
+Also generate:
+- src/api/loaders.ts - Add getLoaderDetails, getLoaderHistory
+- src/types/loader.ts - Add LoaderDetails type
+"
+```
+
+**Days 8-10: Create/Edit Loader Form**
+
+**Tell Claude Code:**
+```
+"Create a loader editor dialog (modal) with form for creating/editing loaders.
+
+API Endpoints:
+- POST /api/v1/res/loaders - Create loader
+- PUT /api/v1/res/loaders/{code} - Update loader
+- GET /api/v1/admin/res/db-sources - Get source databases for dropdown
+
+Component requirements:
+- File: src/components/LoaderEditorDialog.tsx
+- Use shadcn/ui Dialog component
+- Use React Hook Form + Zod for validation
+- Form fields:
+  - Loader Code (text input, required, max 64 chars, alphanumeric + underscore)
+  - Source Database (select dropdown from API)
+  - Loader SQL (Monaco editor or textarea, required, must start with SELECT)
+  - Interval (number input + unit selector: minutes/hours/days)
+  - Max Parallelism (number input, default 1, min 1, max 10)
+  - Fetch Size (number input, default 1000, min 100)
+  - Segments (multi-select, fetch from API if available, or text input)
+  - Purge Strategy (select: NONE, OLD_RUNS, ALL)
+- Validation:
+  - Show inline errors
+  - Disable submit while validating
+- UX:
+  - Loading spinner during submit
+  - Success toast notification (use shadcn/ui Toast)
+  - Close dialog on success
+  - Refresh parent component data
+- TypeScript with Zod schema
+
+Also generate:
+- src/api/loaders.ts - Add createLoader, updateLoader
+- src/api/sources.ts - Add getSources
+- src/schemas/loader.ts - Zod validation schema
+"
+```
+
+**Day 11: Source Databases Page**
+
+**Tell Claude Code:**
+```
+"Create a source databases page to display all configured data sources.
+
+API Endpoint: GET /api/v1/admin/res/db-sources
+
+Component requirements:
+- File: src/pages/SourceDatabasesPage.tsx
+- Use TanStack Table
+- Columns: Code, Host, Port, Database, Type, Username, Read-Only Status
+- Password column: show as ******** (never decrypt in UI)
+- Read-Only Status: Badge (✅ Verified or ❌ Failed)
+- No create/edit for now (defer to later)
+- Use shadcn/ui: Table, Badge, Card
+
+Also generate:
+- src/api/sources.ts - getSources function
+- src/types/source.ts - TypeScript types
+"
+```
+
+**Day 12: CORS Configuration**
+
+**If you get CORS errors, tell Claude Code:**
+```
+"I'm getting CORS errors when calling loader-service APIs from React app running on http://localhost:5173.
+
+Error: "No 'Access-Control-Allow-Origin' header is present on the requested resource"
+
+Backend: Spring Boot 3.5.6 (loader-service)
+Frontend: React on http://localhost:5173
+
+Generate Spring Boot CORS configuration class to allow:
+- Origins: http://localhost:5173, http://localhost:3000
+- Methods: GET, POST, PUT, DELETE, OPTIONS
+- Headers: * (all)
+- Credentials: true
+"
+```
+
+**Claude Code will provide WebConfig.java. You:**
+1. Add to `services/loader/src/main/java/.../config/WebConfig.java`
+2. Rebuild: `mvn clean package`
+3. Restart loader-service
+4. Test React app again
+
+**Days 13-14: Testing + Bug Fixes**
+
+**Test all flows:**
+- ✅ View loaders list
+- ✅ Search loaders
+- ✅ Filter by status
+- ✅ Create new loader
+- ✅ Edit existing loader
+- ✅ Delete loader (with confirmation)
+- ✅ View loader details (all 3 tabs)
+- ✅ View source databases
+
+**For each bug, tell Claude Code:**
+```
+"Bug: [describe what's not working]
+Expected: [what should happen]
+Actual: [what actually happens]
+Error message: [paste error from console]
+"
+```
+
+**Claude Code will debug and provide fixes.**
+
+---
+
+### Week 2 End: Stage 1 Demo to Manager
+
+**What to show:**
+1. Open http://localhost:5173/loaders
+2. Show loaders list with search/filter
+3. Create a new loader (live)
+4. Edit the loader
+5. View loader details
+6. Delete the loader
+7. Show source databases page
+
+**What to say:**
+- "This is a working UI for managing loaders - replaces database queries"
+- "It's functional but not secured yet - we'll add login in Stage 2"
+- "Built in 2 weeks using modern React stack with AI assistance"
+
+**Manager should see:**
+✅ Professional-looking UI
+✅ Fast, responsive
+✅ Working CRUD operations
+✅ Real data from database
+
+---
+
+### Week 3: Stage 2 (Login + Access Control)
+
+**Days 1-2: Authentication**
+
+**Tell Claude Code:**
+```
+"Add JWT authentication to the React app.
+
+Backend API: POST /api/v1/auth/login
+Request: {"username": "admin", "password": "admin123"}
+Response: {"token": "jwt_token", "username": "admin", "roles": ["ROLE_ADMIN"]}
+
+Requirements:
+1. Login page (src/pages/LoginPage.tsx):
+   - Form with username + password (React Hook Form + Zod)
+   - Call /api/v1/auth/login
+   - Store JWT token in localStorage
+   - Redirect to /loaders on success
+   - Show error message on failure
+
+2. Auth context (src/contexts/AuthContext.tsx):
+   - Store user, token, roles in context
+   - Provide useAuth() hook with: login, logout, isAuthenticated, hasRole
+   - Load token from localStorage on app start
+
+3. Protected routes:
+   - Wrap routes with ProtectedRoute component
+   - Redirect to /login if not authenticated
+
+4. Axios interceptor:
+   - Attach token to all API requests (Authorization: Bearer {token})
+   - Handle 401 responses (logout + redirect to /login)
+
+5. Update App.tsx routing to use ProtectedRoute
+
+Generate all necessary files with TypeScript.
+"
+```
+
+**Days 3-4: Role-Based Access Control**
+
+**Tell Claude Code:**
+```
+"Implement role-based access control (RBAC) in the UI.
+
+Roles:
+- ROLE_ADMIN: Full access (create, edit, delete)
+- ROLE_OPERATOR: Read + pause/resume
+- ROLE_VIEWER: Read-only
+
+Requirements:
+1. Conditional rendering based on role:
+   - Hide "Create New Loader" button for VIEWER/OPERATOR
+   - Hide Edit/Delete buttons for VIEWER
+   - Show Pause/Resume for OPERATOR
+
+2. User profile dropdown (top-right):
+   - Show username
+   - Show role badge
+   - Logout button
+   - Avatar with initials
+
+3. Update components:
+   - LoadersListPage: conditional Create button
+   - LoaderDetailsPage: conditional Edit/Delete buttons
+   - Add useAuth hook usage
+
+Generate updated components with RBAC logic.
+"
+```
+
+**Day 5: App Shell & Layout**
+
+**Tell Claude Code:**
+```
+"Create an app shell layout with sidebar navigation.
+
+Requirements:
+- File: src/components/AppLayout.tsx
+- Sidebar with navigation items:
+  - Home (placeholder)
+  - Loaders (/loaders)
+  - Sources (/sources)
+  - Signals (placeholder)
+  - Settings (placeholder)
+- Header with:
+  - Breadcrumbs
+  - User profile dropdown (right side)
+- Main content area
+- Responsive (collapse sidebar on mobile)
+- Use shadcn/ui components
+
+Update App.tsx to use AppLayout wrapper for protected routes.
+"
+```
+
+**Days 6-7: Testing + Polish**
+
+**Test with 3 user accounts:**
+
+```bash
+# In loader-service, users are:
+# admin/admin123 (ROLE_ADMIN)
+# operator/operator123 (ROLE_OPERATOR)
+# viewer/viewer123 (ROLE_VIEWER)
+```
+
+**Test scenarios:**
+1. Login as VIEWER → no Create/Edit/Delete buttons ✅
+2. Login as OPERATOR → can Pause/Resume, no Delete ✅
+3. Login as ADMIN → full access ✅
+4. Logout → redirected to login ✅
+5. Token expiry → redirected to login ✅
+6. Direct URL access when not logged in → redirected ✅
+
+**Fix any RBAC bugs with Claude Code's help.**
+
+---
+
+### Week 3 End: Final Manager Demo
+
+**What to show:**
+1. Login screen
+2. Login as VIEWER → show limited access
+3. Logout
+4. Login as ADMIN → show full access
+5. All CRUD operations
+6. User profile with role display
+
+**What to say:**
+- "Now the UI is secured with enterprise-grade authentication"
+- "Role-based access control ensures users only see what they're allowed to"
+- "JWT tokens with 24-hour expiry"
+- "This is production-ready for the loader management module"
+
+**Manager should approve:**
+✅ POC demonstrates value
+✅ Modern, professional UI
+✅ Secure with RBAC
+✅ Fast delivery (3 weeks total)
+
+---
+
+## After POC Approval
+
+**Next priorities (from manager):**
+1. ✅ Charts/Visualization (show signal data trends)
+2. ✅ Alerting (replace existing solution)
+3. ✅ Deploy to production (add Gateway, SSL, Redis)
+4. ⏸️ Incidents, Jira integration (later)
+
+**Adjust PROJECT_TRACKER.md based on manager feedback.**
+
+---
 ## Success Metrics (KPIs)
 
 ### Phase 1 Success Criteria
