@@ -47,4 +47,31 @@ public class EtlLoaderDto {
     private Integer maxParallelExecutions;
 
     private Boolean enabled;
+
+    // Source database ID for create/update operations
+    @NotNull(message = "Source database is required")
+    private Long sourceDatabaseId;
+
+    // Purge strategy for handling duplicate data
+    private String purgeStrategy; // "FAIL_ON_DUPLICATE" | "PURGE_AND_RELOAD" | "SKIP_DUPLICATES"
+
+    // Additional fields for frontend display
+    private Integer sourceTimezoneOffsetHours;
+    private Integer consecutiveZeroRecordRuns;
+    private Integer aggregationPeriodSeconds;
+    private String createdBy;
+    private String updatedBy;
+    private java.time.Instant createdAt;
+    private java.time.Instant updatedAt;
+
+    // Approval workflow fields (read-only - cannot be modified via update endpoint)
+    private String approvalStatus; // "PENDING_APPROVAL" | "APPROVED" | "REJECTED"
+    private String approvedBy;
+    private java.time.Instant approvedAt;
+    private String rejectedBy;
+    private java.time.Instant rejectedAt;
+    private String rejectionReason;
+
+    // Source database connection info (password excluded for security) - populated in responses
+    private SourceDatabaseDto sourceDatabase;
 }

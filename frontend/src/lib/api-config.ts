@@ -23,8 +23,14 @@ export const API_ENDPOINTS = {
   CREATE_LOADER: '/v1/res/loaders',
   UPDATE_LOADER: (code: string) => `/v1/res/loaders/${code}`,
   DELETE_LOADER: (code: string) => `/v1/res/loaders/${code}`,
+  LOADERS_STATS: '/v1/res/loaders/stats',
+  LOADERS_ACTIVITY: '/v1/res/loaders/activity',
+  SOURCE_DATABASES: '/v1/res/loaders/source-databases',
+  APPROVE_LOADER: (code: string) => `/v1/res/loaders/${code}/approve`,
+  REJECT_LOADER: (code: string) => `/v1/res/loaders/${code}/reject`,
+  TEST_QUERY: '/v1/res/loaders/test-query',
 
-  // Source Databases
+  // Source Databases (Admin)
   SOURCES_LIST: '/v1/admin/res/db-sources',
 
   // Signals

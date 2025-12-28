@@ -4,6 +4,9 @@
   <component name="MavenProjectsManager">
     <option name="originalFiles">
       <list>
+        <option value="$PROJECT_DIR$/services/loader/pom.xml" />
+        <option value="$PROJECT_DIR$/services/gateway/pom.xml" />
+        <option value="$PROJECT_DIR$/services/etl_initializer/pom.xml" />
         <option value="$PROJECT_DIR$/services/dataGenerator/pom.xml" />
       </list>
     </option>

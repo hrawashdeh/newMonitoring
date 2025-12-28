@@ -1,5 +1,6 @@
 package com.tiqmo.monitoring.loader.service.scheduler;
 
+import com.tiqmo.monitoring.loader.domain.loader.entity.ApprovalStatus;
 import com.tiqmo.monitoring.loader.domain.loader.entity.LoadStatus;
 import com.tiqmo.monitoring.loader.domain.loader.entity.Loader;
 import com.tiqmo.monitoring.loader.domain.loader.repo.LoadHistoryRepository;
@@ -98,6 +99,9 @@ public class LoaderSchedulerService {
    *   <li>Round 10: Basic scheduling logic</li>
    *   <li>Round 11: Priority-based execution</li>
    * </ul>
+   *
+   * <p><b>SECURITY:</b> Only executes APPROVED loaders. PENDING_APPROVAL and
+   * REJECTED loaders are skipped to prevent unauthorized code execution.
    */
   @Scheduled(fixedDelay = 10000, initialDelay = 5000)
   public void scheduleLoaders() {
@@ -107,14 +111,14 @@ public class LoaderSchedulerService {
       // Round 12: Auto-recover FAILED loaders
       recoverFailedLoaders();
 
-      // Round 10: Find all enabled loaders
-      List<Loader> enabledLoaders = loaderRepository.findAllByEnabledTrue();
+      // SECURITY: Find all enabled AND APPROVED loaders only
+      List<Loader> enabledLoaders = loaderRepository.findAllByEnabledTrueAndApprovalStatus(ApprovalStatus.APPROVED);
       if (enabledLoaders.isEmpty()) {
-        log.debug("Scheduler: No enabled loaders found");
+        log.debug("Scheduler: No enabled and approved loaders found");
         return;
       }
 
-      log.debug("Scheduler: Found {} enabled loader(s)", enabledLoaders.size());
+      log.debug("Scheduler: Found {} enabled and approved loader(s)", enabledLoaders.size());
 
       // Round 11: Sort by priority (IDLE > RUNNING > FAILED)
       List<Loader> sortedLoaders = sortByPriority(enabledLoaders);

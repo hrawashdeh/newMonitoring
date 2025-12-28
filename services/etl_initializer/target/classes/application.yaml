@@ -1,0 +1,56 @@
+spring:
+  application:
+    name: etl-initializer
+
+  datasource:
+    url: ${SPRING_DATASOURCE_URL}
+    username: ${SPRING_DATASOURCE_USERNAME}
+    password: ${SPRING_DATASOURCE_PASSWORD}
+    driver-class-name: org.postgresql.Driver
+
+  jpa:
+    hibernate:
+      ddl-auto: none  # Schema managed by Flyway migrations
+    properties:
+      hibernate.dialect: org.hibernate.dialect.PostgreSQLDialect
+      hibernate.hbm2ddl.create_namespaces: false
+    show-sql: false
+
+  # Flyway database migrations (runs before application starts)
+  flyway:
+    enabled: true
+    locations: classpath:db/migration
+    baseline-on-migrate: true
+    baseline-version: 0
+    validate-on-migrate: true
+    out-of-order: false
+    schemas: loader,signals
+
+# Encryption key for sensitive fields
+encryption:
+  key: ${ENCRYPTION_KEY}
+
+# ETL File Processing Configuration
+etl:
+  file:
+    upload-path: ${ETL_UPLOAD_PATH:/data/uploads}        # Where users upload YAML files
+    processed-path: ${ETL_PROCESSED_PATH:/data/processed}  # Successfully processed files
+    failed-path: ${ETL_FAILED_PATH:/data/failed}          # Failed processing files
+    scan-interval-seconds: ${ETL_SCAN_INTERVAL:60}        # Check for new files every 60 seconds
+
+logging:
+  level:
+    root: INFO
+    com.tiqmo.monitoring.initializer: INFO
+
+# Actuator configuration for health checks
+management:
+  endpoints:
+    web:
+      exposure:
+        include: health
+  endpoint:
+    health:
+      show-details: when-authorized
+  server:
+    port: 8080

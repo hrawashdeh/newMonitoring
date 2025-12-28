@@ -2,7 +2,9 @@ package com.tiqmo.monitoring.initializer;
 
 import com.fasterxml.jackson.databind.ObjectMapper;
 import com.fasterxml.jackson.dataformat.yaml.YAMLFactory;
+import com.tiqmo.monitoring.initializer.config.AuthData;
 import com.tiqmo.monitoring.initializer.config.LoaderData;
+import com.tiqmo.monitoring.initializer.config.MessageData;
 import com.tiqmo.monitoring.initializer.domain.Loader;
 import com.tiqmo.monitoring.initializer.domain.SourceDatabase;
 import com.tiqmo.monitoring.initializer.domain.enums.DbType;
@@ -88,7 +90,19 @@ class FileMonitorService {
 
         for (File file : yamlFiles) {
             try {
-                processFile(file);
+                String fileName = file.getName();
+                if (fileName.startsWith("etl-data")) {
+                    log.info("Detected ETL data file: {}", fileName);
+                    processEtlFile(file);
+                } else if (fileName.startsWith("auth-data")) {
+                    log.info("Detected Auth data file: {}", fileName);
+                    processAuthFile(file);
+                } else if (fileName.startsWith("messages-data")) {
+                    log.info("Detected Messages data file: {}", fileName);
+                    processMessagesFile(file);
+                } else {
+                    log.warn("Unknown file type: {}. Skipping.", fileName);
+                }
             } catch (Exception e) {
                 log.error("Error processing file {}: {}", file.getName(), e.getMessage(), e);
                 moveToFailed(file, e.getMessage());
@@ -96,7 +110,7 @@ class FileMonitorService {
         }
     }
 
-    private void processFile(File file) throws Exception {
+    private void processEtlFile(File file) throws Exception {
         String fileName = file.getName();
         String filePath = file.getAbsolutePath();
         long fileSize = file.length();
@@ -123,7 +137,7 @@ class FileMonitorService {
         }
 
         // Parse YAML file
-        LoaderData data = parseYamlFile(file);
+        LoaderData data = parseEtlYamlFile(file);
 
         if (data.getMetadata() == null || data.getMetadata().getLoadVersion() == null) {
             throw new IllegalArgumentException("Missing metadata.load_version in YAML file");
@@ -195,7 +209,7 @@ class FileMonitorService {
         return count != null && count > 0;
     }
 
-    private LoaderData parseYamlFile(File file) throws IOException {
+    private LoaderData parseEtlYamlFile(File file) throws IOException {
         ObjectMapper mapper = new ObjectMapper(new YAMLFactory());
         // Configure to handle snake_case property names (load_version -> loadVersion)
         mapper.setPropertyNamingStrategy(com.fasterxml.jackson.databind.PropertyNamingStrategies.SNAKE_CASE);
@@ -361,6 +375,363 @@ class FileMonitorService {
 
         return count;
     }
+
+    // ===================== AUTH FILE PROCESSING =====================
+
+    private void processAuthFile(File file) throws Exception {
+        String fileName = file.getName();
+        String filePath = file.getAbsolutePath();
+        long fileSize = file.length();
+
+        log.info("Processing auth file: {} ({} bytes)", fileName, fileSize);
+
+        // Read YAML content for encryption
+        String yamlContent = Files.readString(file.toPath());
+        log.debug("Read YAML content: {} characters", yamlContent.length());
+
+        // Encrypt YAML content using AES-256-GCM
+        String encryptedContent = encryptionService.encrypt(yamlContent);
+        log.debug("Encrypted YAML content: {} characters", encryptedContent.length());
+
+        // Calculate SHA-256 hash
+        String fileHash = calculateFileHash(file);
+        log.debug("File hash: {}", fileHash);
+
+        // Check if already processed
+        if (isAlreadyProcessed(fileHash)) {
+            log.warn("File {} already processed (duplicate hash). Skipping.", fileName);
+            moveToProcessed(file);
+            return;
+        }
+
+        // Parse YAML file
+        AuthData data = parseAuthYamlFile(file);
+
+        if (data.getMetadata() == null || data.getMetadata().getLoadVersion() == null) {
+            throw new IllegalArgumentException("Missing metadata.load_version in auth YAML file");
+        }
+
+        int targetVersion = data.getMetadata().getLoadVersion();
+        int currentVersion = getCurrentAuthVersion();
+
+        log.info("Auth file version: {}, Current auth version: {}", targetVersion, currentVersion);
+
+        if (targetVersion <= currentVersion) {
+            log.warn("Auth file version {} is not greater than current version {}. Skipping.",
+                targetVersion, currentVersion);
+            moveToProcessed(file);
+            return;
+        }
+
+        // Mark as processing (store encrypted YAML content)
+        long logId = createInitializationLog(fileName, filePath, fileSize, fileHash,
+            targetVersion, encryptedContent, "PROCESSING");
+
+        try {
+            // Load users
+            int usersLoaded = loadUsers(data, currentVersion);
+            log.info("Loaded {} new users", usersLoaded);
+
+            // Generate CSV metadata
+            String csvMetadata = generateCsvMetadata(fileName, targetVersion, usersLoaded, 0);
+
+            // Update initialization log
+            updateInitializationLog(logId, usersLoaded, 0, csvMetadata, "COMPLETED", null);
+
+            // Update auth version
+            updateCurrentAuthVersion(targetVersion);
+
+            log.info("Successfully processed auth file: {} (version {})", fileName, targetVersion);
+
+            // Move to processed
+            moveToProcessed(file);
+
+        } catch (Exception e) {
+            updateInitializationLog(logId, 0, 0, null, "FAILED", e.getMessage());
+            throw e;
+        }
+    }
+
+    private AuthData parseAuthYamlFile(File file) throws IOException {
+        ObjectMapper mapper = new ObjectMapper(new YAMLFactory());
+        // Configure to handle snake_case property names (load_version -> loadVersion)
+        mapper.setPropertyNamingStrategy(com.fasterxml.jackson.databind.PropertyNamingStrategies.SNAKE_CASE);
+
+        // YAML file has "auth:" root element
+        var rootNode = mapper.readTree(file);
+        var authNode = rootNode.get("auth");
+        if (authNode == null) {
+            throw new IllegalArgumentException("YAML file must have 'auth:' root element");
+        }
+        return mapper.treeToValue(authNode, AuthData.class);
+    }
+
+    private int loadUsers(AuthData data, int currentVersion) {
+        if (data.getUsers() == null || data.getUsers().isEmpty()) {
+            log.warn("No users configured in auth YAML");
+            return 0;
+        }
+
+        int count = 0;
+        for (AuthData.AuthUserConfig user : data.getUsers()) {
+            try {
+                // Insert user into auth.users table (with ON CONFLICT UPDATE)
+                String insertUserSql = """
+                    INSERT INTO auth.users
+                    (username, password, email, full_name, enabled,
+                     account_non_expired, account_non_locked,
+                     credentials_non_expired, created_by)
+                    VALUES (?, ?, ?, ?, ?, ?, ?, ?, 'etl-initializer')
+                    ON CONFLICT (username) DO UPDATE SET
+                        password = EXCLUDED.password,
+                        email = EXCLUDED.email,
+                        full_name = EXCLUDED.full_name,
+                        enabled = EXCLUDED.enabled,
+                        account_non_expired = EXCLUDED.account_non_expired,
+                        account_non_locked = EXCLUDED.account_non_locked,
+                        credentials_non_expired = EXCLUDED.credentials_non_expired,
+                        updated_at = NOW(),
+                        updated_by = 'etl-initializer'
+                    RETURNING id
+                    """;
+
+                Long userId = jdbcTemplate.queryForObject(insertUserSql, Long.class,
+                    user.getUsername(),
+                    user.getPassword(),  // Already BCrypt hashed
+                    user.getEmail(),
+                    user.getFullName(),
+                    user.getEnabled() != null ? user.getEnabled() : true,
+                    user.getAccountNonExpired() != null ? user.getAccountNonExpired() : true,
+                    user.getAccountNonLocked() != null ? user.getAccountNonLocked() : true,
+                    user.getCredentialsNonExpired() != null ? user.getCredentialsNonExpired() : true
+                );
+
+                log.info("Created/updated user: {} (id: {})", user.getUsername(), userId);
+
+                // Link user to roles
+                if (user.getRoles() != null && !user.getRoles().isEmpty()) {
+                    for (String roleName : user.getRoles()) {
+                        String linkRoleSql = """
+                            INSERT INTO auth.user_roles (user_id, role_id, granted_by)
+                            SELECT ?, r.id, 'etl-initializer'
+                            FROM auth.roles r
+                            WHERE r.role_name = ?
+                            ON CONFLICT (user_id, role_id) DO NOTHING
+                            """;
+
+                        int rowsAffected = jdbcTemplate.update(linkRoleSql, userId, roleName);
+                        if (rowsAffected > 0) {
+                            log.info("Linked user {} to role {}", user.getUsername(), roleName);
+                        } else {
+                            log.debug("User {} already has role {} or role doesn't exist",
+                                user.getUsername(), roleName);
+                        }
+                    }
+                }
+
+                count++;
+
+            } catch (Exception e) {
+                log.error("Failed to create user {}: {}", user.getUsername(), e.getMessage(), e);
+                throw new RuntimeException("Failed to create user: " + user.getUsername(), e);
+            }
+        }
+
+        return count;
+    }
+
+    private int getCurrentAuthVersion() {
+        try {
+            String versionStr = jdbcTemplate.queryForObject(
+                "SELECT config_value FROM general.system_config WHERE config_key = 'CURRENT_AUTH_VERSION'",
+                String.class
+            );
+            return versionStr != null ? Integer.parseInt(versionStr) : 0;
+        } catch (Exception e) {
+            log.warn("Could not read CURRENT_AUTH_VERSION: {}. Assuming version 0.", e.getMessage());
+            return 0;
+        }
+    }
+
+    private void updateCurrentAuthVersion(int newVersion) {
+        // Insert or update auth version
+        jdbcTemplate.update(
+            """
+            INSERT INTO general.system_config (config_key, config_value, description, created_at, updated_at)
+            VALUES ('CURRENT_AUTH_VERSION', ?, 'Current authentication data version', NOW(), NOW())
+            ON CONFLICT (config_key) DO UPDATE SET
+                config_value = EXCLUDED.config_value,
+                updated_at = NOW()
+            """,
+            String.valueOf(newVersion)
+        );
+    }
+
+    // ===================== END AUTH FILE PROCESSING =====================
+
+    // ===================== MESSAGES FILE PROCESSING =====================
+
+    private void processMessagesFile(File file) throws Exception {
+        String fileName = file.getName();
+        String filePath = file.getAbsolutePath();
+        long fileSize = file.length();
+
+        log.info("Processing messages file: {} ({} bytes)", fileName, fileSize);
+
+        // Read YAML content for encryption
+        String yamlContent = Files.readString(file.toPath());
+        log.debug("Read YAML content: {} characters", yamlContent.length());
+
+        // Encrypt YAML content using AES-256-GCM
+        String encryptedContent = encryptionService.encrypt(yamlContent);
+        log.debug("Encrypted YAML content: {} characters", encryptedContent.length());
+
+        // Calculate SHA-256 hash
+        String fileHash = calculateFileHash(file);
+        log.debug("File hash: {}", fileHash);
+
+        // Check if already processed
+        if (isAlreadyProcessed(fileHash)) {
+            log.warn("File {} already processed (duplicate hash). Skipping.", fileName);
+            moveToProcessed(file);
+            return;
+        }
+
+        // Parse YAML file
+        MessageData data = parseMessagesYamlFile(file);
+
+        if (data.getMetadata() == null || data.getMetadata().getLoadVersion() == null) {
+            throw new IllegalArgumentException("Missing metadata.load_version in messages YAML file");
+        }
+
+        int targetVersion = data.getMetadata().getLoadVersion();
+        int currentVersion = getCurrentMessagesVersion();
+
+        log.info("Messages file version: {}, Current messages version: {}", targetVersion, currentVersion);
+
+        if (targetVersion <= currentVersion) {
+            log.warn("Messages file version {} is not greater than current version {}. Skipping.",
+                targetVersion, currentVersion);
+            moveToProcessed(file);
+            return;
+        }
+
+        // Mark as processing (store encrypted YAML content)
+        long logId = createInitializationLog(fileName, filePath, fileSize, fileHash,
+            targetVersion, encryptedContent, "PROCESSING");
+
+        try {
+            // Load messages
+            int messagesLoaded = loadMessages(data, currentVersion);
+            log.info("Loaded {} new messages", messagesLoaded);
+
+            // Generate CSV metadata
+            String csvMetadata = generateCsvMetadata(fileName, targetVersion, messagesLoaded, 0);
+
+            // Update initialization log
+            updateInitializationLog(logId, messagesLoaded, 0, csvMetadata, "COMPLETED", null);
+
+            // Update messages version
+            updateCurrentMessagesVersion(targetVersion);
+
+            log.info("Successfully processed messages file: {} (version {})", fileName, targetVersion);
+
+            // Move to processed
+            moveToProcessed(file);
+
+        } catch (Exception e) {
+            updateInitializationLog(logId, 0, 0, null, "FAILED", e.getMessage());
+            throw e;
+        }
+    }
+
+    private MessageData parseMessagesYamlFile(File file) throws IOException {
+        ObjectMapper mapper = new ObjectMapper(new YAMLFactory());
+        // Configure to handle snake_case property names (load_version -> loadVersion)
+        mapper.setPropertyNamingStrategy(com.fasterxml.jackson.databind.PropertyNamingStrategies.SNAKE_CASE);
+
+        // YAML file has "messages:" root element
+        var rootNode = mapper.readTree(file);
+        var messagesNode = rootNode.get("messages");
+        if (messagesNode == null) {
+            throw new IllegalArgumentException("YAML file must have 'messages:' root element");
+        }
+        return mapper.treeToValue(messagesNode, MessageData.class);
+    }
+
+    private int loadMessages(MessageData data, int currentVersion) {
+        if (data.getMessages() == null || data.getMessages().isEmpty()) {
+            log.warn("No messages configured in messages YAML");
+            return 0;
+        }
+
+        int count = 0;
+        for (MessageData.MessageConfig message : data.getMessages()) {
+            try {
+                // Insert message into general.message_dictionary table (with ON CONFLICT UPDATE)
+                String insertMessageSql = """
+                    INSERT INTO general.message_dictionary
+                    (message_code, message_category, message_en, message_ar,
+                     description, created_by)
+                    VALUES (?, ?, ?, ?, ?, ?)
+                    ON CONFLICT (message_code) DO UPDATE SET
+                        message_category = EXCLUDED.message_category,
+                        message_en = EXCLUDED.message_en,
+                        message_ar = EXCLUDED.message_ar,
+                        description = EXCLUDED.description,
+                        updated_at = NOW(),
+                        updated_by = 'etl-initializer'
+                    """;
+
+                jdbcTemplate.update(insertMessageSql,
+                    message.getMessageCode(),
+                    message.getMessageCategory(),
+                    message.getMessageEn(),
+                    message.getMessageAr(),
+                    message.getDescription(),
+                    message.getCreatedBy() != null ? message.getCreatedBy() : "system"
+                );
+
+                log.info("Created/updated message: {}", message.getMessageCode());
+                count++;
+
+            } catch (Exception e) {
+                log.error("Failed to create message {}: {}", message.getMessageCode(), e.getMessage(), e);
+                throw new RuntimeException("Failed to create message: " + message.getMessageCode(), e);
+            }
+        }
+
+        return count;
+    }
+
+    private int getCurrentMessagesVersion() {
+        try {
+            String versionStr = jdbcTemplate.queryForObject(
+                "SELECT config_value FROM general.system_config WHERE config_key = 'CURRENT_MESSAGES_VERSION'",
+                String.class
+            );
+            return versionStr != null ? Integer.parseInt(versionStr) : 0;
+        } catch (Exception e) {
+            log.warn("Could not read CURRENT_MESSAGES_VERSION: {}. Assuming version 0.", e.getMessage());
+            return 0;
+        }
+    }
+
+    private void updateCurrentMessagesVersion(int newVersion) {
+        // Insert or update messages version
+        jdbcTemplate.update(
+            """
+            INSERT INTO general.system_config (config_key, config_value, description, created_at, updated_at)
+            VALUES ('CURRENT_MESSAGES_VERSION', ?, 'Current message dictionary data version', NOW(), NOW())
+            ON CONFLICT (config_key) DO UPDATE SET
+                config_value = EXCLUDED.config_value,
+                updated_at = NOW()
+            """,
+            String.valueOf(newVersion)
+        );
+    }
+
+    // ===================== END MESSAGES FILE PROCESSING =====================
 
     private void moveToProcessed(File file) {
         try {

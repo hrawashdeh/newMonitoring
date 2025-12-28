@@ -1,0 +1,37 @@
+grafana:
+  enabled: true
+  service:
+    type: ClusterIP
+  persistence:
+    enabled: true
+    size: 5Gi
+  initChownData:
+    enabled: false
+  securityContext:
+    fsGroup: 472
+
+prometheus:
+  service:
+    type: ClusterIP
+  prometheusSpec:
+    retention: 7d
+    storageSpec:
+      volumeClaimTemplate:
+        spec:
+          accessModes: ["ReadWriteOnce"]
+          resources:
+            requests:
+              storage: 10Gi
+
+alertmanager:
+  enabled: true
+
+# Disable node-exporter (not needed for application monitoring)
+prometheus-node-exporter:
+  enabled: false
+nodeExporter:
+  enabled: false
+
+
+
+

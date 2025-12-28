@@ -1,0 +1,38 @@
+auth:
+  metadata:
+    load_version: 1
+    description: "Initial authentication users for fresh cluster deployment"
+
+  users:
+    - username: admin
+      password: $2y$10$xWWcR5TAfL2QlfAjcVhws.HS3MhHSZkTl17goQVN13kodF678JXvG  # HaAdmin123
+      email: admin@me.sa
+      full_name: System Administrator
+      enabled: true
+      account_non_expired: true
+      account_non_locked: true
+      credentials_non_expired: true
+      roles:
+        - ROLE_ADMIN
+
+    - username: operator
+      password: $2y$10$RAWM1jgCYFpJALFoNWoyou/PjvmHGKgixBEzGnjuanBbZ25PTkS3S  # HaOperator123
+      email: operator@me.sa
+      full_name: System Operator
+      enabled: true
+      account_non_expired: true
+      account_non_locked: true
+      credentials_non_expired: true
+      roles:
+        - ROLE_OPERATOR
+
+    - username: viewer
+      password: $2y$10$arYUioTKqZg4Bh.dxJlOjefiraDtjoodrzFLzJhR/PC/zigQK1Mry  # HaViewer123
+      email: viewer@me.sa
+      full_name: System Viewer
+      enabled: true
+      account_non_expired: true
+      account_non_locked: true
+      credentials_non_expired: true
+      roles:
+        - ROLE_VIEWER

@@ -21,8 +21,11 @@ spec:
     spec:
       containers:
       - name: data-generator
+        # Image version is set by deployment script (scripts/deploy-data-generator.sh)
+        # Never use :latest in production - always use timestamped versions
+        # Example: data-generator:1.0.0-1766772210
         image: data-generator:0.0.1-SNAPSHOT
-        imagePullPolicy: IfNotPresent
+        imagePullPolicy: Always  # Enterprise-grade: always check for new versions
 
         ports:
           - name: http

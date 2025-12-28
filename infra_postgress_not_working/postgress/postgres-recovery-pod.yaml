@@ -1,0 +1,18 @@
+apiVersion: v1
+kind: Pod
+metadata:
+  name: postgres-recovery
+  namespace: monitoring-infra
+spec:
+  containers:
+  - name: recovery
+    image: postgres:16-alpine
+    command: ["/bin/sh", "-c", "sleep infinity"]
+    volumeMounts:
+    - name: data
+      mountPath: /data
+  volumes:
+  - name: data
+    persistentVolumeClaim:
+      claimName: data-postgres-postgresql-0
+  restartPolicy: Never

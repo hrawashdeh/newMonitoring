@@ -2,7 +2,40 @@
 <module type="JAVA_MODULE" version="4">
   <component name="NewModuleRootManager" inherit-compiler-output="true">
     <exclude-output />
-    <content url="file://$MODULE_DIR$" />
+    <content url="file://$MODULE_DIR$">
+      <!-- loader service -->
+      <sourceFolder url="file://$MODULE_DIR$/services/loader/src/main/java" isTestSource="false" />
+      <sourceFolder url="file://$MODULE_DIR$/services/loader/src/main/resources" type="java-resource" />
+      <sourceFolder url="file://$MODULE_DIR$/services/loader/src/test/java" isTestSource="true" />
+      <sourceFolder url="file://$MODULE_DIR$/services/loader/src/test/resources" type="java-test-resource" />
+      <excludeFolder url="file://$MODULE_DIR$/services/loader/target" />
+
+      <!-- dataGenerator service -->
+      <sourceFolder url="file://$MODULE_DIR$/services/dataGenerator/src/main/java" isTestSource="false" />
+      <sourceFolder url="file://$MODULE_DIR$/services/dataGenerator/src/main/resources" type="java-resource" />
+      <sourceFolder url="file://$MODULE_DIR$/services/dataGenerator/src/test/java" isTestSource="true" />
+      <sourceFolder url="file://$MODULE_DIR$/services/dataGenerator/src/test/resources" type="java-test-resource" />
+      <excludeFolder url="file://$MODULE_DIR$/services/dataGenerator/target" />
+
+      <!-- etl_initializer service -->
+      <sourceFolder url="file://$MODULE_DIR$/services/etl_initializer/src/main/java" isTestSource="false" />
+      <sourceFolder url="file://$MODULE_DIR$/services/etl_initializer/src/main/resources" type="java-resource" />
+      <sourceFolder url="file://$MODULE_DIR$/services/etl_initializer/src/test/java" isTestSource="true" />
+      <sourceFolder url="file://$MODULE_DIR$/services/etl_initializer/src/test/resources" type="java-test-resource" />
+      <excludeFolder url="file://$MODULE_DIR$/services/etl_initializer/target" />
+
+      <!-- gateway service -->
+      <sourceFolder url="file://$MODULE_DIR$/services/gateway/src/main/java" isTestSource="false" />
+      <sourceFolder url="file://$MODULE_DIR$/services/gateway/src/main/resources" type="java-resource" />
+      <sourceFolder url="file://$MODULE_DIR$/services/gateway/src/test/java" isTestSource="true" />
+      <sourceFolder url="file://$MODULE_DIR$/services/gateway/src/test/resources" type="java-test-resource" />
+      <excludeFolder url="file://$MODULE_DIR$/services/gateway/target" />
+
+      <!-- frontend (React) -->
+      <sourceFolder url="file://$MODULE_DIR$/frontend/src" isTestSource="false" />
+      <excludeFolder url="file://$MODULE_DIR$/frontend/node_modules" />
+      <excludeFolder url="file://$MODULE_DIR$/frontend/dist" />
+    </content>
     <orderEntry type="inheritedJdk" />
     <orderEntry type="sourceFolder" forTests="false" />
   </component>

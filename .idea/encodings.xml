@@ -2,5 +2,8 @@
 <project version="4">
   <component name="Encoding">
     <file url="file://$PROJECT_DIR$/services/dataGenerator/src/main/java" charset="UTF-8" />
+    <file url="file://$PROJECT_DIR$/services/etl_initializer/src/main/java" charset="UTF-8" />
+    <file url="file://$PROJECT_DIR$/services/gateway/src/main/java" charset="UTF-8" />
+    <file url="file://$PROJECT_DIR$/services/loader/src/main/java" charset="UTF-8" />
   </component>
 </project>

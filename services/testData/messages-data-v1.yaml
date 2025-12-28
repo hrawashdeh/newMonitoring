@@ -1,0 +1,201 @@
+messages:
+  metadata:
+    load_version: 1
+    description: "System messages for errors, warnings, and notifications in multiple languages"
+
+  messages:
+    # Authentication Success Messages
+    - message_code: AUTH_LOGIN_SUCCESS
+      message_category: SUCCESS
+      message_en: "Login successful. Welcome back!"
+      message_ar: "تم تسجيل الدخول بنجاح. مرحباً بعودتك!"
+      description: "Successful login message"
+      created_by: system
+
+    # Authentication Error Messages
+    - message_code: AUTH_LOGIN_FAILED
+      message_category: ERROR
+      message_en: "Login failed. Invalid username or password."
+      message_ar: "فشل تسجيل الدخول. اسم المستخدم أو كلمة المرور غير صحيحة."
+      description: "Generic login failure"
+      created_by: system
+
+    - message_code: AUTH_INVALID_CREDENTIALS
+      message_category: ERROR
+      message_en: "Invalid username or password. Please try again."
+      message_ar: "اسم المستخدم أو كلمة المرور غير صحيح. يرجى المحاولة مرة أخرى."
+      description: "Invalid credentials error"
+      created_by: system
+
+    - message_code: AUTH_ACCOUNT_DISABLED
+      message_category: ERROR
+      message_en: "Your account has been disabled. Please contact the administrator."
+      message_ar: "تم تعطيل حسابك. يرجى الاتصال بالمسؤول."
+      description: "Account disabled error"
+      created_by: system
+
+    - message_code: AUTH_ACCOUNT_LOCKED
+      message_category: ERROR
+      message_en: "Your account has been locked due to multiple failed login attempts. Please contact support."
+      message_ar: "تم قفل حسابك بسبب محاولات تسجيل الدخول الفاشلة المتعددة. يرجى الاتصال بالدعم."
+      description: "Account locked error"
+      created_by: system
+
+    - message_code: AUTH_ACCOUNT_EXPIRED
+      message_category: ERROR
+      message_en: "Your account has expired. Please contact the administrator to renew access."
+      message_ar: "انتهت صلاحية حسابك. يرجى الاتصال بالمسؤول لتجديد الوصول."
+      description: "Account expired error"
+      created_by: system
+
+    - message_code: AUTH_CREDENTIALS_EXPIRED
+      message_category: ERROR
+      message_en: "Your password has expired. Please reset your password."
+      message_ar: "انتهت صلاحية كلمة المرور الخاصة بك. يرجى إعادة تعيين كلمة المرور."
+      description: "Password expired error"
+      created_by: system
+
+    - message_code: AUTH_USER_NOT_FOUND
+      message_category: ERROR
+      message_en: "User not found. Please check your username and try again."
+      message_ar: "المستخدم غير موجود. يرجى التحقق من اسم المستخدم والمحاولة مرة أخرى."
+      description: "User not found error"
+      created_by: system
+
+    - message_code: AUTH_TOKEN_INVALID
+      message_category: ERROR
+      message_en: "Invalid or expired authentication token. Please login again."
+      message_ar: "رمز المصادقة غير صالح أو منتهي الصلاحية. يرجى تسجيل الدخول مرة أخرى."
+      description: "Invalid token error"
+      created_by: system
+
+    - message_code: AUTH_TOKEN_EXPIRED
+      message_category: ERROR
+      message_en: "Your session has expired. Please login again."
+      message_ar: "انتهت صلاحية جلستك. يرجى تسجيل الدخول مرة أخرى."
+      description: "Token expired error"
+      created_by: system
+
+    # Authorization Error Messages
+    - message_code: AUTH_UNAUTHORIZED
+      message_category: ERROR
+      message_en: "Authentication required. Please login to access this resource."
+      message_ar: "المصادقة مطلوبة. يرجى تسجيل الدخول للوصول إلى هذا المورد."
+      description: "401 Unauthorized"
+      created_by: system
+
+    - message_code: AUTH_FORBIDDEN
+      message_category: ERROR
+      message_en: "You do not have permission to access this resource."
+      message_ar: "ليس لديك إذن للوصول إلى هذا المورد."
+      description: "403 Forbidden"
+      created_by: system
+
+    - message_code: AUTH_INSUFFICIENT_PRIVILEGES
+      message_category: ERROR
+      message_en: "Insufficient privileges. This action requires higher access level."
+      message_ar: "صلاحيات غير كافية. يتطلب هذا الإجراء مستوى وصول أعلى."
+      description: "Insufficient privileges"
+      created_by: system
+
+    # Input Validation Error Messages
+    - message_code: VALIDATION_REQUIRED_FIELD
+      message_category: ERROR
+      message_en: "Required field is missing: {field}"
+      message_ar: "الحقل المطلوب مفقود: {field}"
+      description: "Required field validation"
+      created_by: system
+
+    - message_code: VALIDATION_INVALID_FORMAT
+      message_category: ERROR
+      message_en: "Invalid format for field: {field}"
+      message_ar: "تنسيق غير صالح للحقل: {field}"
+      description: "Format validation"
+      created_by: system
+
+    - message_code: VALIDATION_MIN_LENGTH
+      message_category: ERROR
+      message_en: "Field {field} must be at least {min} characters long."
+      message_ar: "يجب أن يكون الحقل {field} {min} حرفاً على الأقل."
+      description: "Minimum length validation"
+      created_by: system
+
+    - message_code: VALIDATION_MAX_LENGTH
+      message_category: ERROR
+      message_en: "Field {field} must not exceed {max} characters."
+      message_ar: "يجب ألا يتجاوز الحقل {field} {max} حرفاً."
+      description: "Maximum length validation"
+      created_by: system
+
+    # General Success Messages
+    - message_code: GENERAL_OPERATION_SUCCESS
+      message_category: SUCCESS
+      message_en: "Operation completed successfully."
+      message_ar: "تمت العملية بنجاح."
+      description: "Generic success message"
+      created_by: system
+
+    - message_code: GENERAL_DATA_SAVED
+      message_category: SUCCESS
+      message_en: "Data saved successfully."
+      message_ar: "تم حفظ البيانات بنجاح."
+      description: "Data save success"
+      created_by: system
+
+    - message_code: GENERAL_DATA_DELETED
+      message_category: SUCCESS
+      message_en: "Data deleted successfully."
+      message_ar: "تم حذف البيانات بنجاح."
+      description: "Data delete success"
+      created_by: system
+
+    - message_code: GENERAL_DATA_UPDATED
+      message_category: SUCCESS
+      message_en: "Data updated successfully."
+      message_ar: "تم تحديث البيانات بنجاح."
+      description: "Data update success"
+      created_by: system
+
+    # General Error Messages
+    - message_code: GENERAL_INTERNAL_ERROR
+      message_category: ERROR
+      message_en: "An internal error occurred. Please try again later or contact support."
+      message_ar: "حدث خطأ داخلي. يرجى المحاولة مرة أخرى لاحقاً أو الاتصال بالدعم."
+      description: "500 Internal Server Error"
+      created_by: system
+
+    - message_code: GENERAL_NOT_FOUND
+      message_category: ERROR
+      message_en: "Resource not found."
+      message_ar: "المورد غير موجود."
+      description: "404 Not Found"
+      created_by: system
+
+    - message_code: GENERAL_BAD_REQUEST
+      message_category: ERROR
+      message_en: "Bad request. Please check your input and try again."
+      message_ar: "طلب غير صحيح. يرجى التحقق من المدخلات والمحاولة مرة أخرى."
+      description: "400 Bad Request"
+      created_by: system
+
+    - message_code: GENERAL_SERVICE_UNAVAILABLE
+      message_category: ERROR
+      message_en: "Service temporarily unavailable. Please try again later."
+      message_ar: "الخدمة غير متاحة مؤقتاً. يرجى المحاولة مرة أخرى لاحقاً."
+      description: "503 Service Unavailable"
+      created_by: system
+
+    # Warning Messages
+    - message_code: WARNING_SESSION_EXPIRING
+      message_category: WARNING
+      message_en: "Your session will expire in {minutes} minutes."
+      message_ar: "ستنتهي صلاحية جلستك خلال {minutes} دقيقة."
+      description: "Session expiry warning"
+      created_by: system
+
+    - message_code: WARNING_UNSAVED_CHANGES
+      message_category: WARNING
+      message_en: "You have unsaved changes. Do you want to leave this page?"
+      message_ar: "لديك تغييرات غير محفوظة. هل تريد مغادرة هذه الصفحة؟"
+      description: "Unsaved changes warning"
+      created_by: system

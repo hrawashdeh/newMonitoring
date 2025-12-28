@@ -5,32 +5,28 @@ import io.jsonwebtoken.Jwts;
 import io.jsonwebtoken.security.Keys;
 import lombok.extern.slf4j.Slf4j;
 import org.springframework.beans.factory.annotation.Value;
-import org.springframework.security.core.Authentication;
-import org.springframework.security.core.GrantedAuthority;
 import org.springframework.stereotype.Component;
 
 import javax.crypto.SecretKey;
 import java.nio.charset.StandardCharsets;
-import java.time.Instant;
-import java.util.Date;
-import java.util.stream.Collectors;
 
 /**
- * JWT Token Provider for generating and validating JWT tokens.
+ * JWT Token Validator for validating JWT tokens issued by Auth Service.
  *
  * <p>Features:
  * <ul>
- *   <li>Token generation with username and roles</li>
  *   <li>Token validation with expiration checking</li>
  *   <li>Claims extraction (username, roles)</li>
- *   <li>HMAC-SHA256 signing algorithm</li>
+ *   <li>HMAC-SHA256 signature verification</li>
  * </ul>
+ *
+ * <p>Note: Token generation is handled by the Auth Service.
+ * This service only validates tokens to authorize API access.
  *
  * <p>Configuration:
  * <pre>
  * jwt:
- *   secret: your-secret-key-min-256-bits  # Must be at least 256 bits
- *   expiration-ms: 86400000                # 24 hours in milliseconds
+ *   secret: your-secret-key-min-256-bits  # Must match Auth Service secret
  * </pre>
  *
  * @author Hassan Rawashdeh
@@ -41,42 +37,11 @@ import java.util.stream.Collectors;
 public class JwtTokenProvider {
 
     private final SecretKey secretKey;
-    private final long expirationMs;
 
-    public JwtTokenProvider(
-            @Value("${jwt.secret}") String secret,
-            @Value("${jwt.expiration-ms:86400000}") long expirationMs) {
+    public JwtTokenProvider(@Value("${jwt.secret}") String secret) {
         // Convert secret string to SecretKey (HMAC-SHA256)
         this.secretKey = Keys.hmacShaKeyFor(secret.getBytes(StandardCharsets.UTF_8));
-        this.expirationMs = expirationMs;
-        log.info("JWT Token Provider initialized with expiration: {}ms", expirationMs);
-    }
-
-    /**
-     * Generate JWT token from authentication object.
-     *
-     * @param authentication Spring Security authentication object
-     * @return JWT token string
-     */
-    public String generateToken(Authentication authentication) {
-        String username = authentication.getName();
-        String roles = authentication.getAuthorities().stream()
-                .map(GrantedAuthority::getAuthority)
-                .collect(Collectors.joining(","));
-
-        Instant now = Instant.now();
-        Instant expiry = now.plusMillis(expirationMs);
-
-        String token = Jwts.builder()
-                .subject(username)
-                .claim("roles", roles)
-                .issuedAt(Date.from(now))
-                .expiration(Date.from(expiry))
-                .signWith(secretKey)
-                .compact();
-
-        log.debug("Generated JWT token for user: {} with roles: {}", username, roles);
-        return token;
+        log.info("JWT Token Validator initialized (token generation handled by Auth Service)");
     }
 
     /**

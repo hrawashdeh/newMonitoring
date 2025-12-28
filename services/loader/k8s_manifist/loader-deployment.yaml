@@ -26,8 +26,11 @@ spec:
     spec:
       containers:
       - name: signal-loader
-        image: signal-loader:0.0.1-SNAPSHOT  # Build locally: mvn spring-boot:build-image
-        imagePullPolicy: Never  # NEVER pull from registry (local development only)
+        # Image version is set by deployment script (scripts/deploy-signal-loader.sh)
+        # Never use :latest in production - always use timestamped versions
+        # Example: signal-loader:1.0.0-1766772210
+        image: loader-service:0.0.1-SNAPSHOT
+        imagePullPolicy: IfNotPresent  # Use local image if available
         ports:
         - name: http
           containerPort: 8080

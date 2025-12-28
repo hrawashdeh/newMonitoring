@@ -201,6 +201,74 @@ public class Loader {
     @Builder.Default
     private boolean enabled = true;
 
+    /**
+     * Aggregation period in seconds for signal data.
+     * Used by detection and scanning logic.
+     */
+    @Column(name = "aggregation_period_seconds")
+    private Integer aggregationPeriodSeconds;
+
+    /**
+     * Timestamp when this loader was created.
+     */
+    @Column(name = "created_at")
+    private Instant createdAt;
+
+    /**
+     * Timestamp when this loader was last updated.
+     */
+    @Column(name = "updated_at")
+    private Instant updatedAt;
+
+    // ==================== APPROVAL WORKFLOW ====================
+
+    /**
+     * Approval workflow status.
+     * All new loaders start as PENDING_APPROVAL and require admin approval.
+     *
+     * <p><b>Critical Security:</b> This field cannot be changed via regular update endpoint.
+     * Only dedicated approve/reject endpoints can modify this value.
+     */
+    @Enumerated(EnumType.STRING)
+    @Column(name = "approval_status", nullable = false, length = 20)
+    @Builder.Default
+    private ApprovalStatus approvalStatus = ApprovalStatus.PENDING_APPROVAL;
+
+    /**
+     * Username of admin who approved this loader.
+     * Must be set when approval_status = APPROVED.
+     */
+    @Column(name = "approved_by", length = 128)
+    private String approvedBy;
+
+    /**
+     * Timestamp when this loader was approved.
+     * Must be set when approval_status = APPROVED.
+     */
+    @Column(name = "approved_at")
+    private Instant approvedAt;
+
+    /**
+     * Username of admin who rejected this loader.
+     * Must be set when approval_status = REJECTED.
+     */
+    @Column(name = "rejected_by", length = 128)
+    private String rejectedBy;
+
+    /**
+     * Timestamp when this loader was rejected.
+     * Must be set when approval_status = REJECTED.
+     */
+    @Column(name = "rejected_at")
+    private Instant rejectedAt;
+
+    /**
+     * Reason for rejection (required when rejected).
+     * Helps loader creator understand what needs to be fixed.
+     */
+    @Column(name = "rejection_reason", length = 500)
+    private String rejectionReason;
+
     // ==================== RELATIONSHIPS ====================
 
     /**
@@ -211,4 +279,26 @@ public class Loader {
     @JoinColumn(name = "source_database_id", nullable = false,
                 foreignKey = @ForeignKey(name = "fk_loader_source_database"))
     private SourceDatabase sourceDatabase;
+
+    // ==================== LIFECYCLE CALLBACKS ====================
+
+    /**
+     * Automatically set createdAt and updatedAt timestamps before persisting a new entity.
+     * Called by JPA before INSERT operation.
+     */
+    @PrePersist
+    protected void onCreate() {
+        Instant now = Instant.now();
+        this.createdAt = now;
+        this.updatedAt = now;
+    }
+
+    /**
+     * Automatically update updatedAt timestamp before updating an existing entity.
+     * Called by JPA before UPDATE operation.
+     */
+    @PreUpdate
+    protected void onUpdate() {
+        this.updatedAt = Instant.now();
+    }
 }

@@ -59,11 +59,7 @@ etl:
         SELECT
           FLOOR(UNIX_TIMESTAMP(timestamp) / 60) * 60 AS load_time_stamp,
           action AS segment_1,
-          CASE
-            WHEN user_id BETWEEN 1 AND 3333 THEN 'Tier-1'
-            WHEN user_id BETWEEN 3334 AND 6666 THEN 'Tier-2'
-            ELSE 'Tier-3'
-          END AS segment_2,
+          NULL AS segment_2,
           NULL AS segment_3,
           NULL AS segment_4,
           NULL AS segment_5,
@@ -99,12 +95,7 @@ etl:
         SELECT
           FLOOR(UNIX_TIMESTAMP(timestamp) / 60) * 60 AS load_time_stamp,
           location AS segment_1,
-          CASE
-            WHEN temperature < 0 THEN 'Freezing'
-            WHEN temperature < 10 THEN 'Cold'
-            WHEN temperature < 25 THEN 'Moderate'
-            ELSE 'Hot'
-          END AS segment_2,
+          NULL AS segment_2,
           NULL AS segment_3,
           NULL AS segment_4,
           NULL AS segment_5,

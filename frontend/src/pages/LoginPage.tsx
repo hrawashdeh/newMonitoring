@@ -1,13 +1,11 @@
-import { useState } from 'react';
-import { useNavigate } from 'react-router-dom';
+import { useState, useRef } from 'react';
 import { authApi } from '../api/auth';
 import { Button } from '../components/ui/button';
 import { Input } from '../components/ui/input';
 
 export default function LoginPage() {
-  const navigate = useNavigate();
   const [username, setUsername] = useState('');
-  const [password, setPassword] = useState('');
+  const passwordRef = useRef<HTMLInputElement>(null);
   const [error, setError] = useState('');
   const [loading, setLoading] = useState(false);
 
@@ -16,16 +14,32 @@ export default function LoginPage() {
     setError('');
     setLoading(true);
 
+    const password = passwordRef.current?.value || '';
+
+    console.log('[Login] Attempting login for user:', username);
+    console.log('[Login] API endpoint:', '/api/v1/auth/login');
+
     try {
       const response = await authApi.login({ username, password });
+
+      console.log('[Login] Success! Received token and roles:', response.roles);
 
       // Store token and user info
       authApi.storeAuth(response.token, response.username, response.roles);
 
-      // Redirect to loaders page
-      navigate('/loaders');
+      console.log('[Login] Redirecting to home page');
+
+      // Redirect to home page (use window.location to force full page reload)
+      window.location.href = '/';
     } catch (err: any) {
-      console.error('Login error:', err);
+      console.error('[Login] Error occurred:', {
+        status: err.response?.status,
+        statusText: err.response?.statusText,
+        data: err.response?.data,
+        message: err.message,
+        fullError: err
+      });
+
       setError(
         err.response?.data?.message ||
         err.message ||
@@ -65,13 +79,13 @@ export default function LoginPage() {
               Password
             </label>
             <Input
+              ref={passwordRef}
               id="password"
               type="password"
               placeholder="Enter password"
-              value={password}
-              onChange={(e) => setPassword(e.target.value)}
               required
               disabled={loading}
+              autoComplete="current-password"
             />
           </div>
 
@@ -85,13 +99,6 @@ export default function LoginPage() {
             {loading ? 'Signing in...' : 'Sign In'}
           </Button>
         </form>
-
-        <div className="text-sm text-muted-foreground text-center pt-4 border-t">
-          <p>Default credentials:</p>
-          <p className="font-mono mt-1">admin / admin123</p>
-          <p className="font-mono">operator / operator123</p>
-          <p className="font-mono">viewer / viewer123</p>
-        </div>
       </div>
     </div>
   );

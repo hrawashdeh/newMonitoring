@@ -23,8 +23,11 @@ spec:
 
       containers:
       - name: etl-initializer
+        # Image version is set by deployment script (scripts/deploy-etl-initializer.sh)
+        # Never use :latest in production - always use timestamped versions
+        # Example: etl-initializer:1.0.0-1766772210
         image: etl-initializer:0.0.1-SNAPSHOT
-        imagePullPolicy: Never  # Local development only
+        imagePullPolicy: IfNotPresent  # Use local image if available
 
         # Inject configuration from sealed secret
         envFrom:

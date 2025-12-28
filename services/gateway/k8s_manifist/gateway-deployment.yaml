@@ -1,0 +1,129 @@
+---
+# Gateway Service Deployment
+# Spring Cloud Gateway for centralized API routing, rate limiting, and circuit breaking
+# Namespace: monitoring-app
+# Replicas: 2 for high availability
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  name: gateway-service
+  namespace: monitoring-app
+  labels:
+    app: gateway-service
+    version: v1
+    component: api-gateway
+spec:
+  replicas: 2
+  selector:
+    matchLabels:
+      app: gateway-service
+  template:
+    metadata:
+      labels:
+        app: gateway-service
+        version: v1
+        component: api-gateway
+    spec:
+      containers:
+      - name: gateway-service
+        # Image version is set by deployment script (scripts/deploy-gateway.sh)
+        # Never use :latest in production - always use timestamped versions
+        # Example: gateway-service:1.0.0-1766772210
+        image: gateway-service:0.0.1-SNAPSHOT
+        imagePullPolicy: IfNotPresent  # Use local image if available
+        ports:
+        - containerPort: 8888
+          name: http
+          protocol: TCP
+
+        env:
+        # Spring Profile
+        - name: SPRING_PROFILES_ACTIVE
+          value: "prod"
+
+        # Redis Configuration (for rate limiting)
+        - name: REDIS_HOST
+          value: "redis-master.monitoring-infra.svc.cluster.local"
+        - name: REDIS_PORT
+          value: "6379"
+        - name: REDIS_PASSWORD
+          valueFrom:
+            secretKeyRef:
+              name: app-secrets
+              key: REDIS_PASSWORD
+
+        # JWT Secret (for future JWT validation filter)
+        - name: JWT_SECRET
+          valueFrom:
+            secretKeyRef:
+              name: app-secrets
+              key: JWT_SECRET
+
+        resources:
+          requests:
+            memory: "512Mi"
+            cpu: "250m"
+          limits:
+            memory: "1Gi"
+            cpu: "500m"
+
+        # Liveness Probe - restart if unhealthy
+        livenessProbe:
+          httpGet:
+            path: /actuator/health
+            port: 8888
+          initialDelaySeconds: 60
+          periodSeconds: 10
+          timeoutSeconds: 3
+          failureThreshold: 3
+          successThreshold: 1
+
+        # Readiness Probe - route traffic only when ready
+        readinessProbe:
+          httpGet:
+            path: /actuator/health
+            port: 8888
+          initialDelaySeconds: 30
+          periodSeconds: 5
+          timeoutSeconds: 3
+          failureThreshold: 3
+          successThreshold: 1
+
+---
+# ClusterIP Service - Internal access within cluster
+apiVersion: v1
+kind: Service
+metadata:
+  name: gateway-service
+  namespace: monitoring-app
+  labels:
+    app: gateway-service
+spec:
+  type: ClusterIP
+  selector:
+    app: gateway-service
+  ports:
+  - name: http
+    port: 8888
+    targetPort: 8888
+    protocol: TCP
+
+---
+# NodePort Service - External access for development/testing
+apiVersion: v1
+kind: Service
+metadata:
+  name: gateway-service-nodeport
+  namespace: monitoring-app
+  labels:
+    app: gateway-service
+spec:
+  type: NodePort
+  selector:
+    app: gateway-service
+  ports:
+  - name: http
+    port: 8888
+    targetPort: 8888
+    nodePort: 30088
+    protocol: TCP
