@@ -1,0 +1,177 @@
+apiVersion: v1
+kind: ConfigMap
+metadata:
+  name: otel-collector-config
+  namespace: monitoring-infra
+data:
+  otel-collector-config.yaml: |
+    receivers:
+      otlp:
+        protocols:
+          grpc:
+            endpoint: 0.0.0.0:4317
+          http:
+            endpoint: 0.0.0.0:4318
+
+    processors:
+      batch:
+        timeout: 10s
+        send_batch_size: 1024
+
+      resource:
+        attributes:
+        - key: deployment.environment
+          value: dev
+          action: upsert
+        - key: cluster.name
+          value: monitoring-cluster
+          action: upsert
+
+      attributes:
+        actions:
+        # Map X-Operation-Name from HTTP headers to operation.name
+        - key: operation.name
+          from_attribute: http.request.header.x-operation-name
+          action: insert
+        # Ensure operation.name exists (default to unknown)
+        - key: operation.name
+          value: unknown
+          action: insert
+
+      # Memory limiter to prevent OOM
+      memory_limiter:
+        check_interval: 1s
+        limit_mib: 512
+        spike_limit_mib: 128
+
+    exporters:
+      # OTLP to Elastic APM Server
+      otlp/elastic:
+        endpoint: "http://monitoring-apm-apm-http.monitoring-infra.svc.cluster.local:8200"
+        tls:
+          insecure: true
+
+      # Prometheus exporter (scrape endpoint)
+      prometheus:
+        endpoint: "0.0.0.0:8889"
+        namespace: otel
+        const_labels:
+          cluster: monitoring-cluster
+
+      # Debug logging
+      logging:
+        loglevel: info
+        sampling_initial: 5
+        sampling_thereafter: 200
+
+    service:
+      pipelines:
+        traces:
+          receivers: [otlp]
+          processors: [memory_limiter, batch, resource, attributes]
+          exporters: [otlp/elastic, logging]
+
+        metrics:
+          receivers: [otlp]
+          processors: [memory_limiter, batch, resource, attributes]
+          exporters: [prometheus, logging]
+
+      telemetry:
+        logs:
+          level: info
+        metrics:
+          level: detailed
+          address: 0.0.0.0:8888
+
+---
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  name: otel-collector
+  namespace: monitoring-infra
+  labels:
+    app: otel-collector
+spec:
+  replicas: 2
+  selector:
+    matchLabels:
+      app: otel-collector
+  template:
+    metadata:
+      labels:
+        app: otel-collector
+    spec:
+      containers:
+      - name: otel-collector
+        image: otel/opentelemetry-collector-contrib:0.91.0
+        args:
+        - "--config=/conf/otel-collector-config.yaml"
+        ports:
+        - name: otlp-grpc
+          containerPort: 4317
+          protocol: TCP
+        - name: otlp-http
+          containerPort: 4318
+          protocol: TCP
+        - name: prometheus
+          containerPort: 8889
+          protocol: TCP
+        - name: metrics
+          containerPort: 8888
+          protocol: TCP
+        volumeMounts:
+        - name: config
+          mountPath: /conf
+        resources:
+          requests:
+            memory: 512Mi
+            cpu: 500m
+          limits:
+            memory: 1Gi
+            cpu: 1000m
+        livenessProbe:
+          httpGet:
+            path: /
+            port: 13133
+          initialDelaySeconds: 30
+          periodSeconds: 10
+        readinessProbe:
+          httpGet:
+            path: /
+            port: 13133
+          initialDelaySeconds: 10
+          periodSeconds: 5
+      volumes:
+      - name: config
+        configMap:
+          name: otel-collector-config
+
+---
+apiVersion: v1
+kind: Service
+metadata:
+  name: otel-collector
+  namespace: monitoring-infra
+  labels:
+    app: otel-collector
+spec:
+  type: ClusterIP
+  selector:
+    app: otel-collector
+  ports:
+  - name: otlp-grpc
+    port: 4317
+    targetPort: 4317
+    protocol: TCP
+  - name: otlp-http
+    port: 4318
+    targetPort: 4318
+    protocol: TCP
+  - name: prometheus
+    port: 8889
+    targetPort: 8889
+    protocol: TCP
+  - name: metrics
+    port: 8888
+    targetPort: 8888
+    protocol: TCP

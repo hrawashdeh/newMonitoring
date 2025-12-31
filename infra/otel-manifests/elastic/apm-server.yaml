@@ -1,0 +1,56 @@
+apiVersion: apm.k8s.elastic.co/v1
+kind: ApmServer
+metadata:
+  name: monitoring-apm
+  namespace: monitoring-infra
+  labels:
+    app: apm-server
+spec:
+  version: 8.11.0
+  count: 1
+  elasticsearchRef:
+    name: monitoring-es
+  config:
+    # Enable OTLP receivers for OpenTelemetry integration
+    apm-server:
+      rum:
+        enabled: false
+      auth:
+        anonymous:
+          enabled: true  # For dev; use API keys in prod
+      # OTLP receivers (gRPC and HTTP)
+      otlp:
+        grpc:
+          enabled: true
+          endpoint: "0.0.0.0:8200"
+        http:
+          enabled: true
+          endpoint: "0.0.0.0:8200"
+    output.elasticsearch:
+      # Data streams for traces
+      indices:
+        - index: "traces-apm-%{[observer.version]}-%{+yyyy.MM.dd}"
+          when.contains:
+            processor.event: "span"
+        - index: "traces-apm.sampled-%{[observer.version]}-%{+yyyy.MM.dd}"
+          when.contains:
+            processor.event: "transaction"
+  http:
+    service:
+      spec:
+        type: ClusterIP
+        ports:
+        - name: https
+          port: 8200
+          targetPort: 8200
+  podTemplate:
+    spec:
+      containers:
+      - name: apm-server
+        resources:
+          requests:
+            memory: 512Mi
+            cpu: 500m
+          limits:
+            memory: 1Gi
+            cpu: 1000m

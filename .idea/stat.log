@@ -2767,3 +2767,15 @@
 {"ts":1767191695714,"action":"IDE_DEACTIVATED"}
 {"ts":1767191775652,"action":"IDE_ACTIVATED"}
 {"ts":1767191809991,"action":"IDE_DEACTIVATED"}
+{"ts":1767191853348,"action":"IDE_ACTIVATED"}
+{"ts":1767191876044,"action":"IDE_DEACTIVATED"}
+{"ts":1767192085535,"action":"IDE_ACTIVATED"}
+{"ts":1767192152030,"action":"IDE_DEACTIVATED"}
+{"ts":1767192560126,"action":"IDE_ACTIVATED"}
+{"ts":1767192564804,"action":"IDE_DEACTIVATED"}
+{"ts":1767192576477,"action":"IDE_ACTIVATED"}
+{"ts":1767192592979,"action":"FILE_OPENED","file":"/infra_installer.sh","tags":{"FILE_LINE_OF_CODE":"477"}}
+{"ts":1767192603035,"action":"FILE_CLOSED","file":"/infra_installer.sh","tags":{"FILE_LINE_OF_CODE":"477"}}
+{"ts":1767192603088,"action":"FILE_OPENED","file":"/app_installer.sh","tags":{"FILE_LINE_OF_CODE":"807"}}
+{"ts":1767192660528,"action":"IDE_DEACTIVATED"}
+{"ts":1767192675759,"action":"IDE_ACTIVATED"}

@@ -1,0 +1,24 @@
+apiVersion: monitoring.coreos.com/v1
+kind: ServiceMonitor
+metadata:
+  name: otel-collector-metrics
+  namespace: monitoring-infra
+  labels:
+    app: otel-collector
+    release: monitoring  # Must match Prometheus Operator label selector
+spec:
+  selector:
+    matchLabels:
+      app: otel-collector
+  endpoints:
+  - port: prometheus
+    interval: 15s
+    path: /metrics
+    relabelings:
+    # Preserve service.name and operation.name labels
+    - sourceLabels: [service_name]
+      targetLabel: service_name
+      action: replace
+    - sourceLabels: [operation_name]
+      targetLabel: operation_name
+      action: replace

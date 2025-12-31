@@ -1,0 +1,41 @@
+apiVersion: kibana.k8s.elastic.co/v1
+kind: Kibana
+metadata:
+  name: monitoring-kibana
+  namespace: monitoring-infra
+  labels:
+    app: kibana
+spec:
+  version: 8.11.0
+  count: 1
+  elasticsearchRef:
+    name: monitoring-es
+  config:
+    server.publicBaseUrl: "http://localhost:5601"
+  http:
+    service:
+      spec:
+        type: NodePort
+        ports:
+        - name: http
+          port: 5601
+          targetPort: 5601
+          nodePort: 30561
+  podTemplate:
+    spec:
+      containers:
+      - name: kibana
+        resources:
+          requests:
+            memory: 1Gi
+            cpu: 500m
+          limits:
+            memory: 2Gi
+            cpu: 1000m
+        env:
+        # Kibana encryption key from secret
+        - name: XPACK_ENCRYPTEDSAVEDOBJECTS_ENCRYPTIONKEY
+          valueFrom:
+            secretKeyRef:
+              name: infra-secrets
+              key: KIBANA_ENCRYPTION_KEY

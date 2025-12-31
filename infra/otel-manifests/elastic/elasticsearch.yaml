@@ -1,0 +1,40 @@
+apiVersion: elasticsearch.k8s.elastic.co/v1
+kind: Elasticsearch
+metadata:
+  name: monitoring-es
+  namespace: monitoring-infra
+  labels:
+    app: elasticsearch
+spec:
+  version: 8.11.0
+  nodeSets:
+  - name: default
+    count: 1
+    config:
+      node.store.allow_mmap: false
+      # 24-hour retention via ILM (configured separately via script)
+      xpack.monitoring.collection.enabled: true
+    podTemplate:
+      spec:
+        containers:
+        - name: elasticsearch
+          resources:
+            requests:
+              memory: 2Gi
+              cpu: 1000m
+            limits:
+              memory: 4Gi
+              cpu: 2000m
+          env:
+          - name: ES_JAVA_OPTS
+            value: "-Xms1g -Xmx1g"
+    volumeClaimTemplates:
+    - metadata:
+        name: elasticsearch-data
+      spec:
+        accessModes:
+        - ReadWriteOnce
+        resources:
+          requests:
+            storage: 50Gi
+        storageClassName: local-path
