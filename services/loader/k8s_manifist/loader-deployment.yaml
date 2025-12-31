@@ -54,6 +54,22 @@ spec:
             fieldRef:
               fieldPath: metadata.name
 
+        # OpenTelemetry configuration
+        - name: OTEL_SERVICE_NAME
+          value: "signal-loader"
+        - name: OTEL_EXPORTER_OTLP_ENDPOINT
+          value: "http://otel-collector.monitoring-infra.svc.cluster.local:4317"
+        - name: OTEL_RESOURCE_ATTRIBUTES
+          value: "deployment.environment=dev,service.namespace=monitoring-app"
+        - name: OTEL_TRACES_SAMPLER
+          value: "always_on"  # 100% sampling for dev
+        - name: OTEL_METRICS_EXPORTER
+          value: "otlp"
+        - name: OTEL_LOGS_EXPORTER
+          value: "none"  # Logs go to stdout, collected by Filebeat
+        - name: DEPLOYMENT_ENVIRONMENT
+          value: "dev"
+
         # JVM settings
         - name: JAVA_OPTS
           value: "-Xms512m -Xmx2304m -XX:+UseG1GC"

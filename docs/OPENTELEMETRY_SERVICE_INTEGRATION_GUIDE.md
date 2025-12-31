@@ -209,19 +209,28 @@ env:
 
 ### ✅ Loader Service (signal-loader)
 
-**Status**: Example implementation complete
+**Status**: ✅ COMPLETE - Implementation finished (2025-12-31)
 
 **Files Modified**:
-1. `services/loader/pom.xml` - Added OpenTelemetry dependencies
-2. `services/loader/src/main/java/com/tiqmo/monitoring/loader/filter/OperationContextFilter.java` - Created
-3. `services/loader/src/main/resources/application.yaml` - Added OTel config
-4. `services/loader/src/main/resources/logback-spring.xml` - Added trace MDC keys
-5. `services/loader/k8s_manifist/loader-deployment.yaml` - Added OTel env vars
+1. ✅ `services/loader/pom.xml` - Added OpenTelemetry dependencies (versions 1.33.0 / 1.32.0)
+2. ✅ `services/loader/src/main/java/com/tiqmo/monitoring/loader/filter/OperationContextFilter.java` - Created
+3. ✅ `services/loader/src/main/resources/application.yaml` - Added OTel config
+4. ✅ `services/loader/src/main/resources/logback-spring.xml` - Added trace MDC keys (trace.id, span.id, operation.name)
+5. ✅ `services/loader/k8s_manifist/loader-deployment.yaml` - Added OTel env vars
+
+**Implementation Details**:
+- OpenTelemetry SDK 1.33.0 with OTLP gRPC exporter
+- OperationContextFilter extracts X-Operation-Name header
+- Automatic trace.id and span.id injection to MDC
+- 100% trace sampling (always_on) for development
+- Service name: signal-loader
+- OTLP endpoint: otel-collector.monitoring-infra.svc.cluster.local:4317
 
 **Commands to deploy**:
 ```bash
 cd /Volumes/Files/Projects/newLoader/services/loader
 mvn clean package -Dmaven.test.skip=true
+cp target/loader-0.0.1-SNAPSHOT.jar target/signal-loader-0.0.1-SNAPSHOT.jar
 docker build -t signal-loader:latest .
 kubectl rollout restart deployment/signal-loader -n monitoring-app
 kubectl rollout status deployment/signal-loader -n monitoring-app --timeout=120s

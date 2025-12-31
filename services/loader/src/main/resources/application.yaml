@@ -86,3 +86,27 @@ management:
         enabled: true
     tags:
       application: ${spring.application.name}
+
+# OpenTelemetry Configuration
+otel:
+  sdk:
+    disabled: false
+  resource:
+    attributes:
+      service.name: ${OTEL_SERVICE_NAME:signal-loader}
+      service.namespace: monitoring-app
+      deployment.environment: ${DEPLOYMENT_ENVIRONMENT:dev}
+
+  exporter:
+    otlp:
+      endpoint: ${OTEL_EXPORTER_OTLP_ENDPOINT:http://otel-collector.monitoring-infra.svc.cluster.local:4317}
+      protocol: grpc
+      timeout: 10s
+
+  traces:
+    sampler:
+      probability: 1.0  # 100% sampling for dev; reduce in production
+
+  metrics:
+    export:
+      interval: 60s
