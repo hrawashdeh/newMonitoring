@@ -36,6 +36,21 @@ public class LoadersStatsDto {
     private Integer failed;
 
     /**
+     * Number of loaders pending approval
+     */
+    private Integer pendingApproval;
+
+    /**
+     * Number of approved loaders
+     */
+    private Integer approved;
+
+    /**
+     * Number of rejected loaders
+     */
+    private Integer rejected;
+
+    /**
      * Trend data (optional)
      */
     private TrendDto trend;

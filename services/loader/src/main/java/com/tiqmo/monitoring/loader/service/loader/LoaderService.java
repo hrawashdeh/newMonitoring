@@ -1,5 +1,7 @@
 package com.tiqmo.monitoring.loader.service.loader;
 
+import com.fasterxml.jackson.databind.ObjectMapper;
+import com.tiqmo.monitoring.loader.domain.approval.entity.ApprovalRequest;
 import com.tiqmo.monitoring.loader.domain.loader.entity.*;
 import com.tiqmo.monitoring.loader.domain.loader.repo.ApprovalAuditLogRepository;
 import com.tiqmo.monitoring.loader.domain.loader.repo.LoaderRepository;
@@ -9,6 +11,7 @@ import com.tiqmo.monitoring.loader.dto.loader.ActivityEventDto;
 import com.tiqmo.monitoring.loader.dto.loader.EtlLoaderDto;
 import com.tiqmo.monitoring.loader.dto.loader.LoadersStatsDto;
 import com.tiqmo.monitoring.loader.exception.BusinessException;
+import com.tiqmo.monitoring.loader.service.approval.ApprovalService;
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
 import org.slf4j.MDC;
@@ -38,6 +41,8 @@ public class LoaderService {
     private final LoaderRepository repo;
     private final SourceDatabaseRepository sourceDbRepo;
     private final ApprovalAuditLogRepository auditLogRepo;
+    private final ApprovalService approvalService;
+    private final ObjectMapper objectMapper;
 
     /**
      * Finds all loaders.
@@ -97,18 +102,19 @@ public class LoaderService {
     }
 
     /**
-     * Creates a new loader.
+     * Creates a new loader (submits approval request).
      *
      * @param dto Loader DTO
-     * @return Created loader DTO
+     * @param requestedBy Username of the requester
+     * @return Approval request details (not the loader itself)
      * @throws BusinessException if validation fails or loader already exists
      */
     @Transactional
-    public EtlLoaderDto create(EtlLoaderDto dto) {
+    public ApprovalRequest create(EtlLoaderDto dto, String requestedBy) {
         MDC.put("loaderCode", dto.getLoaderCode());
 
         try {
-            log.info("Creating new loader: {}", dto.getLoaderCode());
+            log.info("Submitting loader creation approval request: {} | requestedBy={}", dto.getLoaderCode(), requestedBy);
 
             // Validation
             validateLoaderDto(dto);
@@ -123,102 +129,111 @@ public class LoaderService {
                 );
             }
 
-            Loader saved = repo.save(toEntity(dto));
-            log.info("Loader created successfully: {} | id={}", saved.getLoaderCode(), saved.getId());
+            // Convert DTO to JSON for approval request
+            String requestData = objectMapper.writeValueAsString(dto);
 
-            return toDto(saved);
+            // Submit approval request
+            ApprovalRequest approvalRequest = approvalService.submitApprovalRequest(
+                ApprovalRequest.EntityType.LOADER,
+                dto.getLoaderCode(),
+                ApprovalRequest.RequestType.CREATE,
+                requestData,
+                null, // No current data for CREATE
+                "New loader: " + dto.getLoaderCode(),
+                requestedBy,
+                ApprovalRequest.Source.WEB_UI,
+                null
+            );
 
+            log.info("Loader creation approval request submitted: {} | approvalRequestId={}", dto.getLoaderCode(), approvalRequest.getId());
+
+            return approvalRequest;
+
+        } catch (Exception e) {
+            if (e instanceof BusinessException) {
+                throw (BusinessException) e;
+            }
+            log.error("Failed to submit loader creation approval request", e);
+            throw new BusinessException(
+                ErrorCode.INTERNAL_ERROR,
+                "Failed to submit approval request: " + e.getMessage()
+            );
         } finally {
             MDC.remove("loaderCode");
         }
     }
 
     /**
-     * Updates or creates a loader (upsert operation).
+     * Updates or creates a loader (submits approval request).
      *
      * @param dto Loader DTO
-     * @return Updated/created loader DTO
+     * @param requestedBy Username of the requester
+     * @return Approval request details
      * @throws BusinessException if validation fails
      */
     @Transactional
-    public EtlLoaderDto upsert(EtlLoaderDto dto) {
+    public ApprovalRequest upsert(EtlLoaderDto dto, String requestedBy) {
         MDC.put("loaderCode", dto.getLoaderCode());
 
         try {
-            log.info("Upserting loader: {}", dto.getLoaderCode());
+            log.info("Submitting loader upsert approval request: {} | requestedBy={}", dto.getLoaderCode(), requestedBy);
 
             // Validation
             validateLoaderDto(dto);
 
-            Loader entity = repo.findByLoaderCode(dto.getLoaderCode())
-                .orElseGet(() -> {
-                    log.debug("Loader not found, creating new: {}", dto.getLoaderCode());
-                    return new Loader();
-                });
+            Loader existingLoader = repo.findByLoaderCode(dto.getLoaderCode()).orElse(null);
+            boolean isNew = existingLoader == null;
 
-            boolean isNew = entity.getId() == null;
+            // Convert DTOs to JSON
+            String requestData = objectMapper.writeValueAsString(dto);
+            String currentData = isNew ? null : objectMapper.writeValueAsString(toDto(existingLoader));
 
-            // Fetch source database
-            if (dto.getSourceDatabaseId() != null) {
-                SourceDatabase sourceDb = sourceDbRepo.findById(dto.getSourceDatabaseId())
-                        .orElseThrow(() -> new BusinessException(
-                                ErrorCode.VALIDATION_INVALID_VALUE,
-                                "Source database with ID " + dto.getSourceDatabaseId() + " not found",
-                                "sourceDatabaseId"
-                        ));
-                entity.setSourceDatabase(sourceDb);
+            // Submit approval request
+            ApprovalRequest approvalRequest = approvalService.submitApprovalRequest(
+                ApprovalRequest.EntityType.LOADER,
+                dto.getLoaderCode(),
+                isNew ? ApprovalRequest.RequestType.CREATE : ApprovalRequest.RequestType.UPDATE,
+                requestData,
+                currentData,
+                isNew ? "New loader: " + dto.getLoaderCode() : "Update loader: " + dto.getLoaderCode(),
+                requestedBy,
+                ApprovalRequest.Source.WEB_UI,
+                null
+            );
+
+            log.info("Loader {} approval request submitted: {} | approvalRequestId={}",
+                isNew ? "creation" : "update", dto.getLoaderCode(), approvalRequest.getId());
+
+            return approvalRequest;
+
+        } catch (Exception e) {
+            if (e instanceof BusinessException) {
+                throw (BusinessException) e;
             }
-
-            // Parse purge strategy
-            if (dto.getPurgeStrategy() != null && !dto.getPurgeStrategy().isBlank()) {
-                try {
-                    entity.setPurgeStrategy(PurgeStrategy.valueOf(dto.getPurgeStrategy()));
-                } catch (IllegalArgumentException e) {
-                    throw new BusinessException(
-                            ErrorCode.VALIDATION_INVALID_VALUE,
-                            "Invalid purge strategy: " + dto.getPurgeStrategy() + ". Must be one of: FAIL_ON_DUPLICATE, PURGE_AND_RELOAD, SKIP_DUPLICATES",
-                            "purgeStrategy"
-                    );
-                }
-            }
-
-            entity.setLoaderCode(dto.getLoaderCode());
-            entity.setLoaderSql(dto.getLoaderSql());
-            entity.setMinIntervalSeconds(dto.getMinIntervalSeconds());
-            entity.setMaxIntervalSeconds(dto.getMaxIntervalSeconds());
-            entity.setMaxQueryPeriodSeconds(dto.getMaxQueryPeriodSeconds());
-            entity.setMaxParallelExecutions(dto.getMaxParallelExecutions());
-            entity.setEnabled(dto.getEnabled() != null ? dto.getEnabled() : true);
-            entity.setSourceTimezoneOffsetHours(dto.getSourceTimezoneOffsetHours() != null ? dto.getSourceTimezoneOffsetHours() : 0);
-            entity.setAggregationPeriodSeconds(dto.getAggregationPeriodSeconds());
-
-            Loader saved = repo.save(entity);
-
-            if (isNew) {
-                log.info("Loader created via upsert: {} | id={}", saved.getLoaderCode(), saved.getId());
-            } else {
-                log.info("Loader updated via upsert: {} | id={}", saved.getLoaderCode(), saved.getId());
-            }
-
-            return toDto(saved);
-
+            log.error("Failed to submit loader upsert approval request", e);
+            throw new BusinessException(
+                ErrorCode.INTERNAL_ERROR,
+                "Failed to submit approval request: " + e.getMessage()
+            );
         } finally {
             MDC.remove("loaderCode");
         }
     }
 
     /**
-     * Deletes a loader by code.
+     * Deletes a loader by code (submits approval request).
      *
      * @param loaderCode Loader code
+     * @param requestedBy Username of the requester
+     * @return Approval request details
      * @throws BusinessException if loader not found
      */
     @Transactional
-    public void deleteByCode(String loaderCode) {
+    public ApprovalRequest deleteByCode(String loaderCode, String requestedBy) {
         MDC.put("loaderCode", loaderCode);
 
         try {
-            log.info("Deleting loader: {}", loaderCode);
+            log.info("Submitting loader deletion approval request: {} | requestedBy={}", loaderCode, requestedBy);
 
             // Validation
             if (loaderCode == null || loaderCode.isBlank()) {
@@ -239,9 +254,35 @@ public class LoaderService {
                     );
                 });
 
-            repo.delete(loader);
-            log.info("Loader deleted successfully: {}", loaderCode);
+            // Convert current loader to JSON
+            String currentData = objectMapper.writeValueAsString(toDto(loader));
 
+            // Submit approval request
+            ApprovalRequest approvalRequest = approvalService.submitApprovalRequest(
+                ApprovalRequest.EntityType.LOADER,
+                loaderCode,
+                ApprovalRequest.RequestType.DELETE,
+                "{}",  // No new data for DELETE
+                currentData,
+                "Delete loader: " + loaderCode,
+                requestedBy,
+                ApprovalRequest.Source.WEB_UI,
+                null
+            );
+
+            log.info("Loader deletion approval request submitted: {} | approvalRequestId={}", loaderCode, approvalRequest.getId());
+
+            return approvalRequest;
+
+        } catch (Exception e) {
+            if (e instanceof BusinessException) {
+                throw (BusinessException) e;
+            }
+            log.error("Failed to submit loader deletion approval request", e);
+            throw new BusinessException(
+                ErrorCode.INTERNAL_ERROR,
+                "Failed to submit approval request: " + e.getMessage()
+            );
         } finally {
             MDC.remove("loaderCode");
         }
@@ -414,14 +455,29 @@ public class LoaderService {
         // TODO: In future, calculate failed loaders based on execution history
         int failed = 0;
 
-        log.info("Loader stats - Total: {}, Active: {}, Paused: {}, Failed: {}",
-                total, active, paused, failed);
+        // Count loaders by approval status
+        long pendingApproval = allLoaders.stream()
+                .filter(l -> l.getApprovalStatus() == ApprovalStatus.PENDING_APPROVAL)
+                .count();
+        long approved = allLoaders.stream()
+                .filter(l -> l.getApprovalStatus() == ApprovalStatus.APPROVED)
+                .count();
+        long rejected = allLoaders.stream()
+                .filter(l -> l.getApprovalStatus() == ApprovalStatus.REJECTED)
+                .count();
+
+        log.info("Loader stats - Total: {}, Active: {}, Paused: {}, Failed: {}, " +
+                        "Pending Approval: {}, Approved: {}, Rejected: {}",
+                total, active, paused, failed, pendingApproval, approved, rejected);
 
         return LoadersStatsDto.builder()
                 .total(total)
                 .active((int) active)
                 .paused((int) paused)
                 .failed(failed)
+                .pendingApproval((int) pendingApproval)
+                .approved((int) approved)
+                .rejected((int) rejected)
                 // TODO: Add trend calculation based on historical data
                 .build();
     }

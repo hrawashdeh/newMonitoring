@@ -25,7 +25,7 @@ spec:
         # Never use :latest in production - always use timestamped versions
         # Example: data-generator:1.0.0-1766772210
         image: data-generator:0.0.1-SNAPSHOT
-        imagePullPolicy: Always  # Enterprise-grade: always check for new versions
+        imagePullPolicy: IfNotPresent  # Use local image if available (Docker Desktop)
 
         ports:
           - name: http

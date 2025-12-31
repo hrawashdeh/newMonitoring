@@ -25,6 +25,7 @@ spring:
         # Route 1: Auth Service (must come before /api/** to match first)
         - id: auth-service
           uri: http://auth-service.monitoring-app.svc.cluster.local:8081
+          order: 1
           predicates:
             - Path=/api/v1/auth/**
           filters:
@@ -38,9 +39,27 @@ spring:
                 name: authServiceCircuitBreaker
                 fallbackUri: forward:/fallback/auth
 
-        # Route 2: Loader Service (catches all other /api/** requests)
+        # Route 2: Import/Export Service (must come before /api/** to match first)
+        - id: import-export-service
+          uri: http://import-export-service.monitoring-app.svc.cluster.local:8080
+          order: 2
+          predicates:
+            - Path=/api/import/**
+          filters:
+            - name: RequestRateLimiter
+              args:
+                redis-rate-limiter.replenishRate: 10
+                redis-rate-limiter.burstCapacity: 20
+                redis-rate-limiter.requestedTokens: 1
+            - name: CircuitBreaker
+              args:
+                name: importExportServiceCircuitBreaker
+                fallbackUri: forward:/fallback/import
+
+        # Route 3: Loader Service (catches all other /api/** requests)
         - id: loader-service
           uri: http://signal-loader.monitoring-app.svc.cluster.local:8080
+          order: 3
           predicates:
             - Path=/api/**
           filters:
@@ -95,6 +114,8 @@ resilience4j:
     instances:
       authServiceCircuitBreaker:
         baseConfig: default
+      importExportServiceCircuitBreaker:
+        baseConfig: default
       loaderServiceCircuitBreaker:
         baseConfig: default
 
@@ -104,6 +125,8 @@ resilience4j:
         timeoutDuration: 5s
     instances:
       authServiceCircuitBreaker:
+        baseConfig: default
+      importExportServiceCircuitBreaker:
         baseConfig: default
       loaderServiceCircuitBreaker:
         baseConfig: default

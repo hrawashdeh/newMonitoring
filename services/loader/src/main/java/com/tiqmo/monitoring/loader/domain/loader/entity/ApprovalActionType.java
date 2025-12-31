@@ -31,5 +31,12 @@ public enum ApprovalActionType {
      * Loader was modified significantly and requires re-approval.
      * Transition: APPROVED → PENDING_APPROVAL
      */
-    REQUIRES_REAPPROVAL
+    REQUIRES_REAPPROVAL,
+
+    /**
+     * Admin revoked approval from an approved loader.
+     * Transition: APPROVED → PENDING_APPROVAL
+     * Used when security issue discovered or loader needs re-review.
+     */
+    REVOKED
 }

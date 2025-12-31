@@ -46,5 +46,7 @@ public class LoaderData {
         private String purgeStrategy;
         private Integer consecutiveZeroRecordRuns;
         private Boolean enabled;
+        private Integer aggregationPeriodSeconds;
+        private Integer sourceTimezoneOffsetHours;
     }
 }

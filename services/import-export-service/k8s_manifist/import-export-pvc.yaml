@@ -1,0 +1,23 @@
+apiVersion: v1
+kind: PersistentVolumeClaim
+metadata:
+  name: import-export-storage
+  namespace: monitoring-app
+  labels:
+    app: import-export-service
+spec:
+  accessModes:
+    - ReadWriteOnce
+  resources:
+    requests:
+      storage: 5Gi
+  storageClassName: hostpath  # For docker-desktop
+---
+# Config for file paths (optional - using default /app/imports)
+apiVersion: v1
+kind: ConfigMap
+metadata:
+  name: import-export-config
+  namespace: monitoring-app
+data:
+  FILE_STORAGE_PATH: "/app/imports"

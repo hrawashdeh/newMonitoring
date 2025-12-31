@@ -17,6 +17,7 @@ import {
   LogOut,
   Bell,
   FileText,
+  CheckCircle,
 } from 'lucide-react';
 
 interface FeatureCard {
@@ -48,6 +49,14 @@ export default function HomePage() {
       path: '/loaders',
       available: true,
       badge: 'Active',
+    },
+    {
+      title: 'Pending Approvals',
+      description: 'Review and approve pending changes to loaders, dashboards, and other entities',
+      icon: <CheckCircle className="h-8 w-8" />,
+      path: '/approvals',
+      available: true,
+      badge: 'Admin',
     },
     {
       title: 'System Monitoring',

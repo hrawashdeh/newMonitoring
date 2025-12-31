@@ -203,6 +203,13 @@ public class Loader {
     @Builder.Default
     private boolean enabled = true;
 
+    /**
+     * Aggregation period in seconds for signal data.
+     * Used by detection and scanning logic.
+     */
+    @Column(name = "aggregation_period_seconds")
+    private Integer aggregationPeriodSeconds;
+
     // ==================== RELATIONSHIPS ====================
 
     /**

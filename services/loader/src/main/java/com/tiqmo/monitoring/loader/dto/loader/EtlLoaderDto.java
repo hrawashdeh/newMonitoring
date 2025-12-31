@@ -48,9 +48,12 @@ public class EtlLoaderDto {
 
     private Boolean enabled;
 
-    // Source database ID for create/update operations
-    @NotNull(message = "Source database is required")
+    // Source database ID for create/update operations (UI form submission)
     private Long sourceDatabaseId;
+
+    // Source database Code for Excel import (e.g., "TEST_MYSQL")
+    // If both sourceDatabaseId and sourceDatabaseCode are provided, code takes precedence
+    private String sourceDatabaseCode;
 
     // Purge strategy for handling duplicate data
     private String purgeStrategy; // "FAIL_ON_DUPLICATE" | "PURGE_AND_RELOAD" | "SKIP_DUPLICATES"

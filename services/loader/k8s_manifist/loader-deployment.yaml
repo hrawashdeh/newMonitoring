@@ -29,7 +29,7 @@ spec:
         # Image version is set by deployment script (scripts/deploy-signal-loader.sh)
         # Never use :latest in production - always use timestamped versions
         # Example: signal-loader:1.0.0-1766772210
-        image: loader-service:0.0.1-SNAPSHOT
+        image: signal-loader:0.0.1-SNAPSHOT
         imagePullPolicy: IfNotPresent  # Use local image if available
         ports:
         - name: http
@@ -43,10 +43,10 @@ spec:
 
         # Additional env vars (non-secret)
         env:
-        # Override profile to dev (allows non-read-only source databases for testing)
+        # Set profile to prod for JSON logging (Elasticsearch-compatible)
         # Schema is managed by etl_initializer (Flyway), not Hibernate
         - name: SPRING_PROFILES_ACTIVE
-          value: "dev"
+          value: "prod"
 
         # Replica identification for distributed execution
         - name: LOADER_REPLICA_NAME

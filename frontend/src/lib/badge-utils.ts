@@ -42,12 +42,48 @@ export function getZeroRecordRunsVariant(count: number): BadgeProps['variant'] {
 }
 
 /**
+ * Get badge variant for approval status
+ * @param status - Approval status
+ * @returns Badge variant based on approval state
+ */
+export function getApprovalStatusVariant(status?: string): BadgeProps['variant'] {
+  switch (status) {
+    case 'APPROVED':
+      return 'success'; // Green - Approved
+    case 'PENDING_APPROVAL':
+      return 'default'; // Orange/Amber - Waiting
+    case 'REJECTED':
+      return 'destructive'; // Red - Rejected
+    default:
+      return 'secondary'; // Gray - Unknown
+  }
+}
+
+/**
+ * Get human-readable text for approval status
+ * @param status - Approval status
+ * @returns Display text
+ */
+export function getApprovalStatusText(status?: string): string {
+  switch (status) {
+    case 'APPROVED':
+      return 'Approved';
+    case 'PENDING_APPROVAL':
+      return 'Pending Approval';
+    case 'REJECTED':
+      return 'Rejected';
+    default:
+      return 'Unknown';
+  }
+}
+
+/**
  * Badge Color Standards
  *
- * - success (green): Positive status, enabled, healthy
- * - destructive (red): Negative status, disabled, critical
- * - default (orange/amber): Warning, moderate severity
- * - secondary (gray): Neutral, informational
+ * - success (green): Positive status, enabled, healthy, approved
+ * - destructive (red): Negative status, disabled, critical, rejected
+ * - default (orange/amber): Warning, moderate severity, pending
+ * - secondary (gray): Neutral, informational, unknown
  * - outline: Secondary actions, less prominent
  */
 export const BadgeColorStandards = {
@@ -57,4 +93,7 @@ export const BadgeColorStandards = {
   WARNING: 'default',
   NORMAL: 'secondary',
   INFO: 'outline',
+  APPROVED: 'success',
+  PENDING: 'default',
+  REJECTED: 'destructive',
 } as const;

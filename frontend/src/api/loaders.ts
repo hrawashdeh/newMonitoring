@@ -109,21 +109,10 @@ export const loadersApi = {
    * Validates syntax and execution before creating/updating a loader
    */
   async testQuery(request: TestQueryRequest): Promise<TestQueryResponse> {
-    // DEBUG: Remove after debugging
-    console.log('DEBUG [loaders.ts]: testQuery called');
-    console.log('DEBUG [loaders.ts]: Endpoint:', API_ENDPOINTS.TEST_QUERY);
-    console.log('DEBUG [loaders.ts]: Request payload:', request);
-
-    try {
-      const response = await apiClient.post<TestQueryResponse>(
-        API_ENDPOINTS.TEST_QUERY,
-        request
-      );
-      console.log('DEBUG [loaders.ts]: Response received:', response.data); // DEBUG: Remove after debugging
-      return response.data;
-    } catch (error) {
-      console.error('DEBUG [loaders.ts]: API call failed:', error); // DEBUG: Remove after debugging
-      throw error;
-    }
+    const response = await apiClient.post<TestQueryResponse>(
+      API_ENDPOINTS.TEST_QUERY,
+      request
+    );
+    return response.data;
   },
 };

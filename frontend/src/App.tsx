@@ -6,8 +6,10 @@ import LoaderDetailsPage from './pages/LoaderDetailsPage';
 import LoadersListPage from './pages/LoadersListPage';
 import NewLoaderPage from './pages/NewLoaderPage';
 import EditLoaderPage from './pages/EditLoaderPage';
+import ApprovalsPage from './pages/ApprovalsPage';
 import { VersionNotification } from './components/VersionNotification';
 import { Toaster } from './components/ui/toaster';
+import { Footer } from './components/Footer';
 
 function App() {
   const location = useLocation();
@@ -23,73 +25,86 @@ function App() {
   };
 
   return (
-    <div className="min-h-screen bg-background">
+    <div className="min-h-screen bg-background flex flex-col">
       <VersionNotification />
       <Toaster />
-      <Routes key={location.pathname}>
-        <Route path="/login" element={<LoginPage />} />
-        <Route
-          path="/"
-          element={
-            isAuthenticated() ? (
-              <HomePage />
-            ) : (
-              <Navigate to="/login" replace />
-            )
-          }
-        />
-        <Route
-          path="/loaders"
-          element={
-            isAuthenticated() ? (
-              <LoadersOverviewPage />
-            ) : (
-              <Navigate to="/login" replace />
-            )
-          }
-        />
-        <Route
-          path="/loaders/list"
-          element={
-            isAuthenticated() ? (
-              <LoadersListPage />
-            ) : (
-              <Navigate to="/login" replace />
-            )
-          }
-        />
-        <Route
-          path="/loaders/new"
-          element={
-            isAuthenticated() ? (
-              <NewLoaderPage />
-            ) : (
-              <Navigate to="/login" replace />
-            )
-          }
-        />
-        <Route
-          path="/loaders/:loaderCode/edit"
-          element={
-            isAuthenticated() ? (
-              <EditLoaderPage />
-            ) : (
-              <Navigate to="/login" replace />
-            )
-          }
-        />
-        <Route
-          path="/loaders/:loaderCode"
-          element={
-            isAuthenticated() ? (
-              <LoaderDetailsPage />
-            ) : (
-              <Navigate to="/login" replace />
-            )
-          }
-        />
-        <Route path="*" element={<Navigate to="/" replace />} />
-      </Routes>
+      <div className="flex-1">
+        <Routes key={location.pathname}>
+          <Route path="/login" element={<LoginPage />} />
+          <Route
+            path="/"
+            element={
+              isAuthenticated() ? (
+                <HomePage />
+              ) : (
+                <Navigate to="/login" replace />
+              )
+            }
+          />
+          <Route
+            path="/loaders"
+            element={
+              isAuthenticated() ? (
+                <LoadersOverviewPage />
+              ) : (
+                <Navigate to="/login" replace />
+              )
+            }
+          />
+          <Route
+            path="/loaders/list"
+            element={
+              isAuthenticated() ? (
+                <LoadersListPage />
+              ) : (
+                <Navigate to="/login" replace />
+              )
+            }
+          />
+          <Route
+            path="/loaders/new"
+            element={
+              isAuthenticated() ? (
+                <NewLoaderPage />
+              ) : (
+                <Navigate to="/login" replace />
+              )
+            }
+          />
+          <Route
+            path="/loaders/:loaderCode/edit"
+            element={
+              isAuthenticated() ? (
+                <EditLoaderPage />
+              ) : (
+                <Navigate to="/login" replace />
+              )
+            }
+          />
+          <Route
+            path="/loaders/:loaderCode"
+            element={
+              isAuthenticated() ? (
+                <LoaderDetailsPage />
+              ) : (
+                <Navigate to="/login" replace />
+              )
+            }
+          />
+          <Route
+            path="/approvals"
+            element={
+              isAuthenticated() ? (
+                <ApprovalsPage />
+              ) : (
+                <Navigate to="/login" replace />
+              )
+            }
+          />
+          <Route path="*" element={<Navigate to="/" replace />} />
+        </Routes>
+      </div>
+      <Footer />
     </div>
   );
 }

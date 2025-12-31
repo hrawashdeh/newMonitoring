@@ -1,212 +1,152 @@
 <?xml version="1.0" encoding="UTF-8"?>
 <configuration>
-    <!-- Load log rotation config from Spring application.yaml -->
-    <springProperty scope="context" name="LOG_ROTATION_SIZE"
-                    source="logging.rotation.max-file-size"
-                    defaultValue="100MB"/>
-    <springProperty scope="context" name="LOG_ROTATION_DAYS"
-                    source="logging.rotation.max-days"
-                    defaultValue="30"/>
-    <springProperty scope="context" name="LOG_LEVEL"
-                    source="logging.level.root"
-                    defaultValue="INFO"/>
+    <!--
+        Enhanced Logging Configuration with Elasticsearch Support
 
-    <!-- Console appender with pattern layout -->
-    <appender name="CONSOLE" class="ch.qos.logback.core.ConsoleAppender">
-        <encoder>
-            <pattern>
-                %d{yyyy-MM-dd HH:mm:ss.SSS} [%thread] %-5level %logger{36} - [requestId=%X{requestId}] [correlationId=%X{correlationId}] [loaderCode=%X{loaderCode}] - %msg%n
-            </pattern>
-        </encoder>
-    </appender>
+        Profiles:
+        - local: Human-readable console + file logging (original behavior)
+        - dev/default: Human-readable console logging (Kubernetes)
+        - prod/production: JSON structured logging for Elasticsearch/ELK
 
-    <!-- File appenders - Only enabled for local profile (disabled in Kubernetes/dev) -->
+        Features:
+        - MDC fields: requestId, correlationId, loaderCode, username, endpoint
+        - Profile-based log formats
+        - File rotation with size and time-based policies
+        - Separate log files for API, errors, loader execution, SQL
+        - Elasticsearch-compatible JSON in production
+
+        Author: Hassan Rawashdeh
+        Date: 2025-12-31
+    -->
+
+    <!-- Load Spring properties -->
+    <springProperty scope="context" name="APP_NAME" source="spring.application.name" defaultValue="loader-service"/>
+    <springProperty scope="context" name="LOG_ROTATION_SIZE" source="logging.rotation.max-file-size" defaultValue="100MB"/>
+    <springProperty scope="context" name="LOG_ROTATION_DAYS" source="logging.rotation.max-days" defaultValue="30"/>
+    <springProperty scope="context" name="LOG_LEVEL" source="logging.level.root" defaultValue="INFO"/>
+    <property name="LOG_PATH" value="${LOG_PATH:-./logs}"/>
+
+    <!-- ============================================ -->
+    <!-- LOCAL PROFILE (Human-readable console + files) -->
+    <!-- ============================================ -->
     <springProfile name="local">
-    <!-- File appender with rotation for application logs -->
-    <appender name="FILE" class="ch.qos.logback.core.rolling.RollingFileAppender">
-        <file>logs/application.log</file>
+        <!-- Console appender with colored pattern -->
+        <appender name="CONSOLE" class="ch.qos.logback.core.ConsoleAppender">
+            <encoder>
+                <pattern>%d{yyyy-MM-dd HH:mm:ss.SSS} [%thread] %-5level %logger{36} - [requestId=%X{requestId}] [correlationId=%X{correlationId}] [loaderCode=%X{loaderCode}] - %msg%n</pattern>
+            </encoder>
+        </appender>
 
-        <rollingPolicy class="ch.qos.logback.core.rolling.SizeAndTimeBasedRollingPolicy">
-            <!-- Daily rollover with size-based splitting -->
-            <fileNamePattern>logs/archive/application-%d{yyyy-MM-dd}.%i.log.gz</fileNamePattern>
+        <!-- File appender with rotation for application logs -->
+        <appender name="FILE" class="ch.qos.logback.core.rolling.RollingFileAppender">
+            <file>logs/application.log</file>
+            <rollingPolicy class="ch.qos.logback.core.rolling.SizeAndTimeBasedRollingPolicy">
+                <fileNamePattern>logs/archive/application-%d{yyyy-MM-dd}.%i.log.gz</fileNamePattern>
+                <maxFileSize>${LOG_ROTATION_SIZE}</maxFileSize>
+                <maxHistory>${LOG_ROTATION_DAYS}</maxHistory>
+                <totalSizeCap>10GB</totalSizeCap>
+                <cleanHistoryOnStart>true</cleanHistoryOnStart>
+            </rollingPolicy>
+            <encoder>
+                <pattern>%d{yyyy-MM-dd HH:mm:ss.SSS} [%thread] %-5level %logger{36} - [requestId=%X{requestId}] [correlationId=%X{correlationId}] [loaderCode=%X{loaderCode}] - %msg%n</pattern>
+            </encoder>
+        </appender>
 
-            <!-- Each file max size (from Spring config) -->
-            <maxFileSize>${LOG_ROTATION_SIZE}</maxFileSize>
+        <!-- Separate API log file -->
+        <appender name="API_LOG" class="ch.qos.logback.core.rolling.RollingFileAppender">
+            <file>logs/api.log</file>
+            <rollingPolicy class="ch.qos.logback.core.rolling.SizeAndTimeBasedRollingPolicy">
+                <fileNamePattern>logs/archive/api-%d{yyyy-MM-dd}.%i.log.gz</fileNamePattern>
+                <maxFileSize>${LOG_ROTATION_SIZE}</maxFileSize>
+                <maxHistory>${LOG_ROTATION_DAYS}</maxHistory>
+                <totalSizeCap>20GB</totalSizeCap>
+                <cleanHistoryOnStart>true</cleanHistoryOnStart>
+            </rollingPolicy>
+            <encoder>
+                <pattern>%d{yyyy-MM-dd HH:mm:ss.SSS} - %msg%n</pattern>
+            </encoder>
+            <filter class="ch.qos.logback.core.filter.EvaluatorFilter">
+                <evaluator>
+                    <expression>message.contains("API_REQUEST") || message.contains("API_RESPONSE") || message.contains("API_ERROR") || message.contains("HTTP_CLIENT")</expression>
+                </evaluator>
+                <onMismatch>DENY</onMismatch>
+                <onMatch>ACCEPT</onMatch>
+            </filter>
+        </appender>
 
-            <!-- Keep logs for X days (from Spring config) -->
-            <maxHistory>${LOG_ROTATION_DAYS}</maxHistory>
+        <!-- Separate error log file -->
+        <appender name="ERROR_LOG" class="ch.qos.logback.core.rolling.RollingFileAppender">
+            <file>logs/error.log</file>
+            <rollingPolicy class="ch.qos.logback.core.rolling.SizeAndTimeBasedRollingPolicy">
+                <fileNamePattern>logs/archive/error-%d{yyyy-MM-dd}.%i.log.gz</fileNamePattern>
+                <maxFileSize>${LOG_ROTATION_SIZE}</maxFileSize>
+                <maxHistory>${LOG_ROTATION_DAYS}</maxHistory>
+                <totalSizeCap>5GB</totalSizeCap>
+                <cleanHistoryOnStart>true</cleanHistoryOnStart>
+            </rollingPolicy>
+            <encoder>
+                <pattern>%d{yyyy-MM-dd HH:mm:ss.SSS} [%thread] %-5level %logger{36} - [requestId=%X{requestId}] [correlationId=%X{correlationId}] - %msg%n%ex{full}</pattern>
+            </encoder>
+            <filter class="ch.qos.logback.classic.filter.ThresholdFilter">
+                <level>WARN</level>
+            </filter>
+        </appender>
 
-            <!-- Total size cap (10GB) -->
-            <totalSizeCap>10GB</totalSizeCap>
+        <!-- Loader execution log file -->
+        <appender name="LOADER_LOG" class="ch.qos.logback.core.rolling.RollingFileAppender">
+            <file>logs/loader-execution.log</file>
+            <rollingPolicy class="ch.qos.logback.core.rolling.SizeAndTimeBasedRollingPolicy">
+                <fileNamePattern>logs/archive/loader-execution-%d{yyyy-MM-dd}.%i.log.gz</fileNamePattern>
+                <maxFileSize>${LOG_ROTATION_SIZE}</maxFileSize>
+                <maxHistory>${LOG_ROTATION_DAYS}</maxHistory>
+                <totalSizeCap>10GB</totalSizeCap>
+                <cleanHistoryOnStart>true</cleanHistoryOnStart>
+            </rollingPolicy>
+            <encoder>
+                <pattern>%d{yyyy-MM-dd HH:mm:ss.SSS} - [requestId=%X{requestId}] [loaderCode=%X{loaderCode}] - %msg%n</pattern>
+            </encoder>
+            <filter class="ch.qos.logback.core.filter.EvaluatorFilter">
+                <evaluator>
+                    <expression>logger.contains("execution") || logger.contains("scheduler") || logger.contains("backfill")</expression>
+                </evaluator>
+                <onMismatch>DENY</onMismatch>
+                <onMatch>ACCEPT</onMatch>
+            </filter>
+        </appender>
 
-            <!-- Clean up on startup -->
-            <cleanHistoryOnStart>true</cleanHistoryOnStart>
-        </rollingPolicy>
+        <!-- SQL query log file -->
+        <appender name="SQL_LOG" class="ch.qos.logback.core.rolling.RollingFileAppender">
+            <file>logs/sql.log</file>
+            <rollingPolicy class="ch.qos.logback.core.rolling.SizeAndTimeBasedRollingPolicy">
+                <fileNamePattern>logs/archive/sql-%d{yyyy-MM-dd}.%i.log.gz</fileNamePattern>
+                <maxFileSize>${LOG_ROTATION_SIZE}</maxFileSize>
+                <maxHistory>7</maxHistory>
+                <totalSizeCap>2GB</totalSizeCap>
+                <cleanHistoryOnStart>true</cleanHistoryOnStart>
+            </rollingPolicy>
+            <encoder>
+                <pattern>%d{yyyy-MM-dd HH:mm:ss.SSS} - %msg%n</pattern>
+            </encoder>
+        </appender>
 
-        <encoder>
-            <pattern>
-                %d{yyyy-MM-dd HH:mm:ss.SSS} [%thread] %-5level %logger{36} - [requestId=%X{requestId}] [correlationId=%X{correlationId}] [loaderCode=%X{loaderCode}] - %msg%n
-            </pattern>
-        </encoder>
-    </appender>
-
-    <!-- Separate API log file (only API_REQUEST, API_RESPONSE, API_ERROR) -->
-    <appender name="API_LOG" class="ch.qos.logback.core.rolling.RollingFileAppender">
-        <file>logs/api.log</file>
-
-        <rollingPolicy class="ch.qos.logback.core.rolling.SizeAndTimeBasedRollingPolicy">
-            <fileNamePattern>logs/archive/api-%d{yyyy-MM-dd}.%i.log.gz</fileNamePattern>
-            <maxFileSize>${LOG_ROTATION_SIZE}</maxFileSize>
-            <maxHistory>${LOG_ROTATION_DAYS}</maxHistory>
-            <totalSizeCap>20GB</totalSizeCap>
-            <cleanHistoryOnStart>true</cleanHistoryOnStart>
-        </rollingPolicy>
-
-        <encoder>
-            <pattern>
-                %d{yyyy-MM-dd HH:mm:ss.SSS} - %msg%n
-            </pattern>
-        </encoder>
-
-        <!-- Only log API_REQUEST, API_RESPONSE, API_ERROR, HTTP_CLIENT messages -->
-        <filter class="ch.qos.logback.core.filter.EvaluatorFilter">
-            <evaluator>
-                <expression>
-                    message.contains("API_REQUEST") ||
-                    message.contains("API_RESPONSE") ||
-                    message.contains("API_ERROR") ||
-                    message.contains("HTTP_CLIENT")
-                </expression>
-            </evaluator>
-            <onMismatch>DENY</onMismatch>
-            <onMatch>ACCEPT</onMatch>
-        </filter>
-    </appender>
-
-    <!-- Separate error log file (only ERROR and WARN levels) -->
-    <appender name="ERROR_LOG" class="ch.qos.logback.core.rolling.RollingFileAppender">
-        <file>logs/error.log</file>
-
-        <rollingPolicy class="ch.qos.logback.core.rolling.SizeAndTimeBasedRollingPolicy">
-            <fileNamePattern>logs/archive/error-%d{yyyy-MM-dd}.%i.log.gz</fileNamePattern>
-            <maxFileSize>${LOG_ROTATION_SIZE}</maxFileSize>
-            <maxHistory>${LOG_ROTATION_DAYS}</maxHistory>
-            <totalSizeCap>5GB</totalSizeCap>
-            <cleanHistoryOnStart>true</cleanHistoryOnStart>
-        </rollingPolicy>
-
-        <encoder>
-            <pattern>
-                %d{yyyy-MM-dd HH:mm:ss.SSS} [%thread] %-5level %logger{36} - [requestId=%X{requestId}] [correlationId=%X{correlationId}] - %msg%n%ex{full}
-            </pattern>
-        </encoder>
-
-        <!-- Only log ERROR and WARN levels -->
-        <filter class="ch.qos.logback.classic.filter.ThresholdFilter">
-            <level>WARN</level>
-        </filter>
-    </appender>
-
-    <!-- Loader execution log file (for scheduler and execution tracking) -->
-    <appender name="LOADER_LOG" class="ch.qos.logback.core.rolling.RollingFileAppender">
-        <file>logs/loader-execution.log</file>
-
-        <rollingPolicy class="ch.qos.logback.core.rolling.SizeAndTimeBasedRollingPolicy">
-            <fileNamePattern>logs/archive/loader-execution-%d{yyyy-MM-dd}.%i.log.gz</fileNamePattern>
-            <maxFileSize>${LOG_ROTATION_SIZE}</maxFileSize>
-            <maxHistory>${LOG_ROTATION_DAYS}</maxHistory>
-            <totalSizeCap>10GB</totalSizeCap>
-            <cleanHistoryOnStart>true</cleanHistoryOnStart>
-        </rollingPolicy>
-
-        <encoder>
-            <pattern>
-                %d{yyyy-MM-dd HH:mm:ss.SSS} - [requestId=%X{requestId}] [loaderCode=%X{loaderCode}] - %msg%n
-            </pattern>
-        </encoder>
-
-        <!-- Only log from loader execution packages -->
-        <filter class="ch.qos.logback.core.filter.EvaluatorFilter">
-            <evaluator>
-                <expression>
-                    logger.contains("execution") ||
-                    logger.contains("scheduler") ||
-                    logger.contains("backfill")
-                </expression>
-            </evaluator>
-            <onMismatch>DENY</onMismatch>
-            <onMatch>ACCEPT</onMatch>
-        </filter>
-    </appender>
-
-    <!-- SQL query log file (for debugging) -->
-    <appender name="SQL_LOG" class="ch.qos.logback.core.rolling.RollingFileAppender">
-        <file>logs/sql.log</file>
-
-        <rollingPolicy class="ch.qos.logback.core.rolling.SizeAndTimeBasedRollingPolicy">
-            <fileNamePattern>logs/archive/sql-%d{yyyy-MM-dd}.%i.log.gz</fileNamePattern>
-            <maxFileSize>${LOG_ROTATION_SIZE}</maxFileSize>
-            <maxHistory>7</maxHistory>
-            <totalSizeCap>2GB</totalSizeCap>
-            <cleanHistoryOnStart>true</cleanHistoryOnStart>
-        </rollingPolicy>
-
-        <encoder>
-            <pattern>
-                %d{yyyy-MM-dd HH:mm:ss.SSS} - %msg%n
-            </pattern>
-        </encoder>
-    </appender>
-
-    </springProfile>
-
-    <!-- Dev/Kubernetes profile loggers (console only) -->
-    <springProfile name="!local">
-        <logger name="org.hibernate.SQL" level="DEBUG" additivity="false">
-            <appender-ref ref="CONSOLE"/>
-        </logger>
-
-        <logger name="org.hibernate.type.descriptor.sql.BasicBinder" level="TRACE" additivity="false">
-            <appender-ref ref="CONSOLE"/>
-        </logger>
-
-        <logger name="org.springframework.transaction" level="DEBUG" additivity="false">
-            <appender-ref ref="CONSOLE"/>
-        </logger>
-
-        <logger name="com.zaxxer.hikari" level="INFO" additivity="false">
-            <appender-ref ref="CONSOLE"/>
-        </logger>
-
-        <!-- Root logger for dev/kubernetes (console only) -->
-        <root level="${LOG_LEVEL}">
-            <appender-ref ref="CONSOLE"/>
-        </root>
-    </springProfile>
-
-    <!-- Local profile loggers (console + files) -->
-    <springProfile name="local">
+        <!-- Package-specific loggers for local -->
         <logger name="org.hibernate.SQL" level="DEBUG" additivity="false">
             <appender-ref ref="CONSOLE"/>
             <appender-ref ref="SQL_LOG"/>
         </logger>
-
         <logger name="org.hibernate.type.descriptor.sql.BasicBinder" level="TRACE" additivity="false">
             <appender-ref ref="CONSOLE"/>
             <appender-ref ref="SQL_LOG"/>
         </logger>
-
         <logger name="org.springframework.transaction" level="DEBUG" additivity="false">
             <appender-ref ref="CONSOLE"/>
             <appender-ref ref="FILE"/>
         </logger>
-
         <logger name="com.zaxxer.hikari" level="INFO" additivity="false">
             <appender-ref ref="CONSOLE"/>
             <appender-ref ref="FILE"/>
         </logger>
 
-        <!-- Root logger for local (console + files) -->
         <root level="${LOG_LEVEL}">
             <appender-ref ref="CONSOLE"/>
             <appender-ref ref="FILE"/>
@@ -215,4 +155,108 @@
             <appender-ref ref="LOADER_LOG"/>
         </root>
     </springProfile>
+
+    <!-- ============================================ -->
+    <!-- DEV/DEFAULT PROFILE (Human-readable console) -->
+    <!-- ============================================ -->
+    <springProfile name="dev,default">
+        <appender name="CONSOLE" class="ch.qos.logback.core.ConsoleAppender">
+            <encoder>
+                <pattern>%d{yyyy-MM-dd HH:mm:ss.SSS} [%thread] %-5level %logger{36} - [requestId=%X{requestId}] [correlationId=%X{correlationId}] [loaderCode=%X{loaderCode}] - %msg%n</pattern>
+            </encoder>
+        </appender>
+
+        <logger name="org.hibernate.SQL" level="DEBUG" additivity="false">
+            <appender-ref ref="CONSOLE"/>
+        </logger>
+        <logger name="org.hibernate.type.descriptor.sql.BasicBinder" level="TRACE" additivity="false">
+            <appender-ref ref="CONSOLE"/>
+        </logger>
+        <logger name="org.springframework.transaction" level="DEBUG" additivity="false">
+            <appender-ref ref="CONSOLE"/>
+        </logger>
+        <logger name="com.zaxxer.hikari" level="INFO" additivity="false">
+            <appender-ref ref="CONSOLE"/>
+        </logger>
+
+        <root level="${LOG_LEVEL}">
+            <appender-ref ref="CONSOLE"/>
+        </root>
+    </springProfile>
+
+    <!-- ============================================ -->
+    <!-- PRODUCTION PROFILE (Elasticsearch JSON logging) -->
+    <!-- ============================================ -->
+    <springProfile name="prod,production">
+        <!-- Console JSON Appender for Kubernetes/Elasticsearch -->
+        <appender name="CONSOLE_JSON" class="ch.qos.logback.core.ConsoleAppender">
+            <encoder class="net.logstash.logback.encoder.LogstashEncoder">
+                <!-- Include MDC fields -->
+                <includeMdcKeyName>requestId</includeMdcKeyName>
+                <includeMdcKeyName>correlationId</includeMdcKeyName>
+                <includeMdcKeyName>loaderCode</includeMdcKeyName>
+                <includeMdcKeyName>username</includeMdcKeyName>
+                <includeMdcKeyName>endpoint</includeMdcKeyName>
+                <includeMdcKeyName>method</includeMdcKeyName>
+                <includeMdcKeyName>statusCode</includeMdcKeyName>
+                <includeMdcKeyName>duration</includeMdcKeyName>
+                <includeMdcKeyName>sourceDatabase</includeMdcKeyName>
+                <includeMdcKeyName>approvalRequestId</includeMdcKeyName>
+                <includeMdcKeyName>importLabel</includeMdcKeyName>
+                <includeMdcKeyName>entityType</includeMdcKeyName>
+                <includeMdcKeyName>entityId</includeMdcKeyName>
+
+                <!-- Custom fields -->
+                <customFields>{"service_name":"${APP_NAME}","environment":"production"}</customFields>
+
+                <!-- Shorten logger names -->
+                <shortenedLoggerNameLength>36</shortenedLoggerNameLength>
+
+                <!-- Stack trace configuration -->
+                <throwableConverter class="net.logstash.logback.stacktrace.ShortenedThrowableConverter">
+                    <maxDepthPerThrowable>30</maxDepthPerThrowable>
+                    <maxLength>2048</maxLength>
+                    <shortenedClassNameLength>20</shortenedClassNameLength>
+                    <exclude>sun\.reflect\..*</exclude>
+                    <exclude>net\.sf\.cglib\..*</exclude>
+                    <exclude>org\.springframework\.aop\..*</exclude>
+                    <rootCauseFirst>true</rootCauseFirst>
+                </throwableConverter>
+            </encoder>
+        </appender>
+
+        <!-- Package-specific loggers for production -->
+        <logger name="com.tiqmo.monitoring.loader" level="INFO"/>
+        <logger name="org.springframework.web" level="WARN"/>
+        <logger name="org.hibernate" level="WARN"/>
+        <logger name="org.hibernate.SQL" level="DEBUG"/>
+        <logger name="org.hibernate.type.descriptor.sql.BasicBinder" level="TRACE"/>
+        <logger name="com.zaxxer.hikari" level="INFO"/>
+
+        <root level="INFO">
+            <appender-ref ref="CONSOLE_JSON"/>
+        </root>
+    </springProfile>
+
+    <!-- ============================================ -->
+    <!-- Common Logger Configurations (All Profiles) -->
+    <!-- ============================================ -->
+
+    <!-- Reduce noise from Spring framework -->
+    <logger name="org.springframework.boot.autoconfigure" level="WARN"/>
+    <logger name="org.springframework.boot.actuate" level="INFO"/>
+    <logger name="org.springframework.data.jpa" level="WARN"/>
+
+    <!-- Security and JWT -->
+    <logger name="org.springframework.security" level="INFO"/>
+    <logger name="io.jsonwebtoken" level="INFO"/>
+
+    <!-- Approval workflow (DEBUG in dev, INFO in prod) -->
+    <logger name="com.tiqmo.monitoring.loader.service.approval" level="INFO"/>
+    <logger name="com.tiqmo.monitoring.loader.api.approval" level="INFO"/>
+
+    <!-- Loader operations -->
+    <logger name="com.tiqmo.monitoring.loader.service.loader" level="INFO"/>
+    <logger name="com.tiqmo.monitoring.loader.api.loader" level="INFO"/>
+
 </configuration>

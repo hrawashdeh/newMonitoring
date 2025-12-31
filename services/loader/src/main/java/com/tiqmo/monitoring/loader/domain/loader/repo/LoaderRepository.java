@@ -2,8 +2,10 @@ package com.tiqmo.monitoring.loader.domain.loader.repo;
 
 import com.tiqmo.monitoring.loader.domain.loader.entity.ApprovalStatus;
 import com.tiqmo.monitoring.loader.domain.loader.entity.Loader;
+import com.tiqmo.monitoring.workflow.domain.VersionStatus;
 import org.springframework.data.jpa.repository.JpaRepository;
 import org.springframework.data.jpa.repository.Query;
+import org.springframework.data.repository.query.Param;
 
 import java.util.List;
 import java.util.Optional;
@@ -37,5 +39,105 @@ public interface LoaderRepository extends JpaRepository<Loader, Long> {
      */
     @Query("SELECT l FROM Loader l JOIN FETCH l.sourceDatabase WHERE l.enabled = true AND l.approvalStatus = :approvalStatus")
     List<Loader> findAllByEnabledTrueAndApprovalStatus(ApprovalStatus approvalStatus);
+
+    // ==================== VERSIONING QUERIES ====================
+
+    /**
+     * Find ACTIVE version by loader code.
+     * Returns the production version currently in use.
+     *
+     * <p><b>Use Case:</b> Draft service needs to find parent version
+     *
+     * @param loaderCode Loader code
+     * @return ACTIVE loader or empty if no active version exists
+     */
+    @Query("SELECT l FROM Loader l WHERE l.loaderCode = :loaderCode AND l.versionStatus = 'ACTIVE'")
+    Optional<Loader> findActiveByLoaderCode(@Param("loaderCode") String loaderCode);
+
+    /**
+     * Find DRAFT or PENDING_APPROVAL version by loader code.
+     * Returns the working draft (only one draft per loader_code).
+     *
+     * <p><b>Use Case:</b> Check if draft exists before creating new one
+     *
+     * @param loaderCode Loader code
+     * @return DRAFT/PENDING loader or empty if no draft exists
+     */
+    @Query("SELECT l FROM Loader l WHERE l.loaderCode = :loaderCode " +
+           "AND l.versionStatus IN ('DRAFT', 'PENDING_APPROVAL')")
+    Optional<Loader> findDraftByLoaderCode(@Param("loaderCode") String loaderCode);
+
+    /**
+     * Find all ACTIVE loaders.
+     *
+     * <p><b>Use Case:</b> Display production loaders
+     *
+     * @return List of all ACTIVE loaders
+     */
+    @Query("SELECT l FROM Loader l WHERE l.versionStatus = 'ACTIVE'")
+    List<Loader> findAllActive();
+
+    /**
+     * Find all PENDING_APPROVAL loaders.
+     *
+     * <p><b>Use Case:</b> Admin approval queue
+     *
+     * @return List of all PENDING_APPROVAL loaders
+     */
+    @Query("SELECT l FROM Loader l WHERE l.versionStatus = 'PENDING_APPROVAL'")
+    List<Loader> findAllPendingApproval();
+
+    /**
+     * Find all DRAFT loaders.
+     *
+     * <p><b>Use Case:</b> Display user's drafts
+     *
+     * @return List of all DRAFT loaders
+     */
+    @Query("SELECT l FROM Loader l WHERE l.versionStatus = 'DRAFT'")
+    List<Loader> findAllDrafts();
+
+    /**
+     * Check if ACTIVE version exists for loader code.
+     *
+     * <p><b>Use Case:</b> Determine if new draft is for new loader or update
+     *
+     * @param loaderCode Loader code
+     * @return true if ACTIVE version exists
+     */
+    @Query("SELECT COUNT(l) > 0 FROM Loader l WHERE l.loaderCode = :loaderCode AND l.versionStatus = 'ACTIVE'")
+    boolean existsActiveByLoaderCode(@Param("loaderCode") String loaderCode);
+
+    /**
+     * Find all loaders by version status.
+     *
+     * <p><b>Use Case:</b> Generic query for specific status
+     *
+     * @param versionStatus Version status to filter by
+     * @return List of loaders with specified status
+     */
+    List<Loader> findByVersionStatus(VersionStatus versionStatus);
+
+    /**
+     * Find loaders created by specific user.
+     *
+     * <p><b>Use Case:</b> User's draft history
+     *
+     * @param createdBy Username
+     * @return List of loaders created by user
+     */
+    List<Loader> findByCreatedBy(String createdBy);
+
+    /**
+     * Count drafts and pending approvals by loader code.
+     *
+     * <p><b>Use Case:</b> Validate one draft per loader_code constraint
+     *
+     * @param loaderCode Loader code
+     * @return Number of drafts/pending (should be 0 or 1)
+     */
+    @Query("SELECT COUNT(l) FROM Loader l WHERE l.loaderCode = :loaderCode " +
+           "AND l.versionStatus IN ('DRAFT', 'PENDING_APPROVAL')")
+    long countDraftsByLoaderCode(@Param("loaderCode") String loaderCode);
 }
 

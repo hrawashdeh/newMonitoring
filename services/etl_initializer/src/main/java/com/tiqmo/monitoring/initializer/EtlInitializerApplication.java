@@ -344,36 +344,122 @@ class FileMonitorService {
                 continue;
             }
 
+            // Check if already has pending approval
+            Integer existingApproval = jdbcTemplate.queryForObject(
+                "SELECT COUNT(*) FROM loader.approval_request " +
+                "WHERE entity_type = 'LOADER' AND entity_id = ? AND approval_status = 'PENDING_APPROVAL'",
+                Integer.class,
+                config.getLoaderCode()
+            );
+
+            if (existingApproval != null && existingApproval > 0) {
+                log.info("Loader {} already has pending approval request, skipping", config.getLoaderCode());
+                continue;
+            }
+
             // Find source database
             SourceDatabase sourceDb = sourceDbRepo.findByDbCode(config.getSourceDbCode())
                 .orElseThrow(() -> new IllegalArgumentException(
                     "Source database not found: " + config.getSourceDbCode()
                 ));
 
-            Loader loader = Loader.builder()
-                .loaderCode(config.getLoaderCode())
-                .loaderSql(config.getLoaderSql())  // Will be encrypted by JPA converter
-                .sourceDatabase(sourceDb)
-                .minIntervalSeconds(config.getMinIntervalSeconds() != null ?
-                    config.getMinIntervalSeconds() : 10)
-                .maxIntervalSeconds(config.getMaxIntervalSeconds() != null ?
-                    config.getMaxIntervalSeconds() : 60)
-                .maxQueryPeriodSeconds(config.getMaxQueryPeriodSeconds() != null ?
-                    config.getMaxQueryPeriodSeconds() : 432000)
-                .maxParallelExecutions(config.getMaxParallelExecutions() != null ?
-                    config.getMaxParallelExecutions() : 1)
-                .loadStatus(config.getLoadStatus() != null ?
-                    LoadStatus.valueOf(config.getLoadStatus().toUpperCase()) : LoadStatus.IDLE)
-                .purgeStrategy(config.getPurgeStrategy() != null ?
-                    PurgeStrategy.valueOf(config.getPurgeStrategy().toUpperCase()) : PurgeStrategy.FAIL_ON_DUPLICATE)
-                .build();
+            try {
+                // Build request data JSON (similar to how LoaderService does it)
+                String requestDataJson = buildLoaderRequestJson(config, sourceDb);
 
-            loaderRepo.save(loader);
-            log.info("Created loader: {} (version {})", config.getLoaderCode(), config.getVersion());
-            count++;
+                // Submit approval request via JDBC
+                String insertApprovalSql = """
+                    INSERT INTO loader.approval_request
+                    (entity_type, entity_id, request_type, approval_status,
+                     requested_by, requested_at, request_data, current_data,
+                     change_summary, source, import_label)
+                    VALUES (?, ?, ?, ?, ?, NOW(), ?::jsonb, NULL, ?, ?, ?)
+                    """;
+
+                jdbcTemplate.update(insertApprovalSql,
+                    "LOADER",  // entity_type
+                    config.getLoaderCode(),  // entity_id
+                    "CREATE",  // request_type
+                    "PENDING_APPROVAL",  // approval_status
+                    "etl-initializer",  // requested_by
+                    requestDataJson,  // request_data
+                    "New loader from ETL data file (version " + config.getVersion() + ")",  // change_summary
+                    "IMPORT",  // source
+                    "etl-data-v" + config.getVersion()  // import_label
+                );
+
+                log.info("Submitted approval request for loader: {} (version {})",
+                    config.getLoaderCode(), config.getVersion());
+                count++;
+
+            } catch (Exception e) {
+                log.error("Failed to submit approval request for loader {}: {}",
+                    config.getLoaderCode(), e.getMessage(), e);
+                throw new RuntimeException("Failed to submit approval request for loader: " + config.getLoaderCode(), e);
+            }
         }
 
         return count;
+    }
+
+    /**
+     * Build JSON request data for loader approval request.
+     * Matches the format expected by LoaderService.
+     */
+    private String buildLoaderRequestJson(LoaderData.LoaderConfig config, SourceDatabase sourceDb) {
+        try {
+            // Build a JSON string matching EtlLoaderDto structure
+            String json = String.format("""
+                {
+                  "loaderCode": "%s",
+                  "loaderSql": "%s",
+                  "sourceDatabaseId": %d,
+                  "minIntervalSeconds": %d,
+                  "maxIntervalSeconds": %d,
+                  "maxQueryPeriodSeconds": %d,
+                  "maxParallelExecutions": %d,
+                  "loadStatus": "%s",
+                  "purgeStrategy": "%s",
+                  "aggregationPeriodSeconds": %s,
+                  "sourceTimezoneOffsetHours": %d,
+                  "enabled": %s
+                }
+                """,
+                escapeJson(config.getLoaderCode()),
+                escapeJson(config.getLoaderSql()),
+                sourceDb.getId(),
+                config.getMinIntervalSeconds() != null ? config.getMinIntervalSeconds() : 10,
+                config.getMaxIntervalSeconds() != null ? config.getMaxIntervalSeconds() : 60,
+                config.getMaxQueryPeriodSeconds() != null ? config.getMaxQueryPeriodSeconds() : 432000,
+                config.getMaxParallelExecutions() != null ? config.getMaxParallelExecutions() : 1,
+                config.getLoadStatus() != null ? config.getLoadStatus().toUpperCase() : "IDLE",
+                config.getPurgeStrategy() != null ? config.getPurgeStrategy().toUpperCase() : "FAIL_ON_DUPLICATE",
+                config.getAggregationPeriodSeconds() != null ? config.getAggregationPeriodSeconds() : "null",
+                config.getSourceTimezoneOffsetHours() != null ? config.getSourceTimezoneOffsetHours() : 0,
+                config.getEnabled() != null ? config.getEnabled() : true
+            );
+
+            return json.trim();
+
+        } catch (Exception e) {
+            log.error("Failed to build JSON for loader {}: {}", config.getLoaderCode(), e.getMessage());
+            throw new RuntimeException("Failed to build JSON for approval request", e);
+        }
+    }
+
+    /**
+     * Escape special characters for JSON string values.
+     */
+    private String escapeJson(String value) {
+        if (value == null) {
+            return "";
+        }
+        return value
+            .replace("\\", "\\\\")
+            .replace("\"", "\\\"")
+            .replace("\n", "\\n")
+            .replace("\r", "\\r")
+            .replace("\t", "\\t");
     }
 
     // ===================== AUTH FILE PROCESSING =====================

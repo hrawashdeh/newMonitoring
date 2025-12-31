@@ -1,6 +1,9 @@
 package com.tiqmo.monitoring.loader.domain.loader.entity;
 
 import com.tiqmo.monitoring.loader.infra.security.EncryptedStringConverter;
+import com.tiqmo.monitoring.workflow.domain.ChangeType;
+import com.tiqmo.monitoring.workflow.domain.VersionStatus;
+import com.tiqmo.monitoring.workflow.domain.WorkflowEntity;
 import jakarta.persistence.*;
 import lombok.*;
 
@@ -34,7 +37,7 @@ import java.time.Instant;
            @Index(name = "idx_loader_enabled", columnList = "enabled"),
            @Index(name = "idx_loader_source_db", columnList = "source_database_id")
        })
-public class Loader {
+public class Loader implements WorkflowEntity {
 
     @Id
     @GeneratedValue(strategy = GenerationType.IDENTITY)
@@ -220,6 +223,135 @@ public class Loader {
     @Column(name = "updated_at")
     private Instant updatedAt;
 
+    // ==================== VERSIONING SYSTEM ====================
+
+    /**
+     * Version status for draft/active/archive workflow.
+     *
+     * <p><b>State Transitions:</b>
+     * <ul>
+     *   <li>DRAFT → PENDING_APPROVAL (user submits for approval)</li>
+     *   <li>PENDING_APPROVAL → ACTIVE (admin approves)</li>
+     *   <li>PENDING_APPROVAL → ARCHIVED (admin rejects, moved to loader_archive)</li>
+     *   <li>ACTIVE → ARCHIVED (new version approved, old active archived)</li>
+     * </ul>
+     *
+     * <p><b>Constraints:</b>
+     * <ul>
+     *   <li>Only ONE ACTIVE version per loader_code</li>
+     *   <li>Only ONE DRAFT/PENDING version per loader_code (cumulative drafts)</li>
+     *   <li>Only ACTIVE versions can be enabled=true</li>
+     * </ul>
+     */
+    @Enumerated(EnumType.STRING)
+    @Column(name = "version_status", nullable = false, length = 20)
+    @Builder.Default
+    private VersionStatus versionStatus = VersionStatus.ACTIVE;
+
+    /**
+     * Sequential version number for this loader_code.
+     * Auto-incremented by database trigger across loader and loader_archive tables.
+     *
+     * <p>Examples:
+     * <ul>
+     *   <li>Version 1: Initial creation</li>
+     *   <li>Version 2: First edit</li>
+     *   <li>Version 3: Second edit</li>
+     * </ul>
+     */
+    @Column(name = "version_number", nullable = false)
+    @Builder.Default
+    private Integer versionNumber = 1;
+
+    /**
+     * ID of the parent version this draft was based on.
+     * Used for cumulative drafts and version comparison.
+     *
+     * <p>For new drafts: parent_version_id = current ACTIVE version's ID
+     * <p>For new loaders: parent_version_id = NULL
+     */
+    @Column(name = "parent_version_id")
+    private Long parentVersionId;
+
+    /**
+     * Username who created this version.
+     *
+     * <p>Examples:
+     * <ul>
+     *   <li>"admin" - created by admin user via UI</li>
+     *   <li>"operator" - created by operator via UI</li>
+     *   <li>"etl-initializer" - created by ETL initializer service</li>
+     *   <li>"excel-import" - created via Excel import</li>
+     * </ul>
+     */
+    @Column(name = "created_by", nullable = false, length = 100)
+    @Builder.Default
+    private String createdBy = "system";
+
+    /**
+     * Username who last modified this draft before submission.
+     * Tracks intermediate edits before approval submission.
+     */
+    @Column(name = "modified_by", length = 100)
+    private String modifiedBy;
+
+    /**
+     * Timestamp of last modification before submission.
+     * Tracks when draft was last edited (not the creation time).
+     */
+    @Column(name = "modified_at")
+    private Instant modifiedAt;
+
+    /**
+     * Admin who approved this version (when PENDING → ACTIVE).
+     * Different from old approvedBy field which tracked initial approval.
+     */
+    @Column(name = "approved_by_version", length = 100)
+    private String approvedByVersion;
+
+    /**
+     * Timestamp when this version was approved (when PENDING → ACTIVE).
+     * Different from old approvedAt field which tracked initial approval.
+     */
+    @Column(name = "approved_at_version")
+    private Instant approvedAtVersion;
+
+    /**
+     * Human-readable description of changes in this version.
+     *
+     * <p>Examples:
+     * <ul>
+     *   <li>"Updated SQL query to include new column 'category'"</li>
+     *   <li>"Changed aggregation period from 60 to 300 seconds"</li>
+     *   <li>"Imported from etl-data-v5.yaml"</li>
+     * </ul>
+     *
+     * <p>Can be auto-generated from field diff or user-provided.
+     */
+    @Column(name = "change_summary", columnDefinition = "TEXT")
+    private String changeSummary;
+
+    /**
+     * Type of change that created this version.
+     * Used for audit trail and understanding the source of modifications.
+     */
+    @Enumerated(EnumType.STRING)
+    @Column(name = "change_type", length = 50)
+    private ChangeType changeType;
+
+    /**
+     * Import batch identifier for traceability.
+     *
+     * <p>Examples:
+     * <ul>
+     *   <li>"etl-data-v5" - from ETL initializer YAML file</li>
+     *   <li>"excel-import-2025-12-30" - from Excel upload</li>
+     *   <li>NULL - manual UI edit</li>
+     * </ul>
+     */
+    @Column(name = "import_label", length = 255)
+    private String importLabel;
+
     // ==================== APPROVAL WORKFLOW ====================
 
     /**
@@ -279,6 +411,19 @@ public class Loader {
     @JoinColumn(name = "source_database_id", nullable = false,
                 foreignKey = @ForeignKey(name = "fk_loader_source_database"))
     private SourceDatabase sourceDatabase;
+
+    // ==================== WORKFLOW ENTITY INTERFACE ====================
+
+    /**
+     * Get entity business key (required by WorkflowEntity interface).
+     * Returns the immutable unique identifier for this loader across all versions.
+     *
+     * @return loader_code
+     */
+    @Override
+    public String getEntityCode() {
+        return this.loaderCode;
+    }
 
     // ==================== LIFECYCLE CALLBACKS ====================
 

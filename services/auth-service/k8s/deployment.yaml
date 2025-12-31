@@ -23,7 +23,7 @@ spec:
           # Never use :latest in production - always use timestamped versions
           # Example: auth-service:1.0.0-1766772210
           image: auth-service:latest
-          imagePullPolicy: Always  # Enterprise-grade: always check for new versions
+          imagePullPolicy: IfNotPresent  # Use local image if available (Docker Desktop)
           ports:
             - containerPort: 8081
               name: http

@@ -12,8 +12,15 @@ import {
 import { loadersApi } from '../api/loaders';
 import type { Loader } from '../types/loader';
 import { Button } from '../components/ui/button';
+import { ImportExportModal } from '../components/loaders/ImportExportModal';
 import { Badge } from '../components/ui/badge';
-import { getLoaderStatusVariant, getLoaderStatusText, getZeroRecordRunsVariant } from '../lib/badge-utils';
+import {
+  getLoaderStatusVariant,
+  getLoaderStatusText,
+  getZeroRecordRunsVariant,
+  getApprovalStatusVariant,
+  getApprovalStatusText
+} from '../lib/badge-utils';
 import {
   Table,
   TableBody,
@@ -30,7 +37,6 @@ import {
   RefreshCw,
   SlidersHorizontal,
   Download,
-  Upload,
   BookOpen,
   HelpCircle,
   Pause,
@@ -45,6 +51,8 @@ import {
   MoreHorizontal,
   ChevronDown,
   ChevronRight,
+  CheckCircle,
+  XCircle,
 } from 'lucide-react';
 import { useToast } from '../hooks/use-toast';
 import {
@@ -56,7 +64,7 @@ import {
 import { useMutation, useQueryClient } from '@tanstack/react-query';
 import { LoaderAction, LoaderActionButton } from '../components/loaders/LoaderActionButton';
 import { LoaderDetailPanel } from '../components/loaders/LoaderDetailPanel';
-import { useState } from 'react';
+import { useState, useMemo } from 'react';
 
 // Helper function to format seconds into human-readable format
 function formatSeconds(seconds: number): string {
@@ -81,6 +89,8 @@ function createLoaderActions(
     onShowSignals: (loader: Loader) => void;
     onShowExecutionLog: (loader: Loader) => void;
     onShowAlerts: (loader: Loader) => void;
+    onApprove: (loader: Loader) => void;
+    onReject: (loader: Loader) => void;
   }
 ): LoaderAction[] {
   const enabled = loader.enabled;
@@ -153,6 +163,32 @@ function createLoaderActions(
       enabled: !!loader._links?.viewAlerts,
       disabledReason: !loader._links?.viewAlerts ? 'Insufficient permissions' : undefined,
     },
+    {
+      id: 'approve',
+      icon: CheckCircle,
+      label: 'Approve Loader',
+      onClick: () => handlers.onApprove(loader),
+      enabled: !!loader._links?.approveLoader && loader.approvalStatus === 'PENDING_APPROVAL',
+      iconColor: 'text-green-600',
+      disabledReason: !loader._links?.approveLoader
+        ? 'Insufficient permissions (ADMIN only)'
+        : loader.approvalStatus !== 'PENDING_APPROVAL'
+        ? 'Loader not in PENDING_APPROVAL status'
+        : undefined,
+    },
+    {
+      id: 'reject',
+      icon: XCircle,
+      label: 'Reject Loader',
+      onClick: () => handlers.onReject(loader),
+      enabled: !!loader._links?.rejectLoader && loader.approvalStatus === 'PENDING_APPROVAL',
+      iconColor: 'text-red-600',
+      disabledReason: !loader._links?.rejectLoader
+        ? 'Insufficient permissions (ADMIN only)'
+        : loader.approvalStatus !== 'PENDING_APPROVAL'
+        ? 'Loader not in PENDING_APPROVAL status'
+        : undefined,
+    },
   ];
 }
 
@@ -168,6 +204,8 @@ const getColumns = (
     onShowSignals: (loader: Loader) => void;
     onShowExecutionLog: (loader: Loader) => void;
     onShowAlerts: (loader: Loader) => void;
+    onApprove: (loader: Loader) => void;
+    onReject: (loader: Loader) => void;
   }
 ): ColumnDef<Loader>[] => [
   {
@@ -225,6 +263,33 @@ const getColumns = (
       return (
         <Badge variant={getLoaderStatusVariant(enabled)}>
           {getLoaderStatusText(enabled)}
+        </Badge>
+      );
+    },
+  },
+  {
+    accessorKey: 'approvalStatus',
+    header: 'Approval',
+    cell: ({ row }) => {
+      const status = row.getValue('approvalStatus') as string | undefined;
+      const isProtected = protectedFields.includes('approvalStatus');
+
+      if (isProtected) {
+        return (
+          <span className="text-xs text-muted-foreground italic flex items-center gap-1">
+            <EyeOff className="h-3 w-3 text-amber-600" />
+            Hidden
+          </span>
+        );
+      }
+
+      if (!status) {
+        return <span className="text-muted-foreground">-</span>;
+      }
+
+      return (
+        <Badge variant={getApprovalStatusVariant(status)}>
+          {getApprovalStatusText(status)}
         </Badge>
       );
     },
@@ -370,7 +435,22 @@ export default function LoadersListPage() {
   const { toast } = useToast();
   const queryClient = useQueryClient();
   const username = localStorage.getItem('auth_username') || 'User';
+  const userRole = localStorage.getItem('auth_role') || 'VIEWER';
+
+  // Debug logging for auth
+  console.log('[issue_blocked_imp] LoadersListPage - User auth loaded:', {
+    username,
+    userRole,
+    auth_username_raw: localStorage.getItem('auth_username'),
+    auth_role_raw: localStorage.getItem('auth_role'),
+    auth_user_raw: localStorage.getItem('auth_user'),
+    timestamp: new Date().toISOString()
+  });
+
   const [expandedRows, setExpandedRows] = useState<Set<string>>(new Set());
+  const [exportModalOpen, setExportModalOpen] = useState(false);
+  const [enabledFilter, setEnabledFilter] = useState<'all' | 'enabled' | 'disabled'>('all');
+  const [approvalFilter, setApprovalFilter] = useState<'all' | 'APPROVED' | 'PENDING_APPROVAL' | 'REJECTED'>('all');
 
   const { data, isLoading, error, refetch, isRefetching } = useQuery({
     queryKey: ['loaders'],
@@ -392,6 +472,8 @@ export default function LoadersListPage() {
     });
   };
 
+  // Column filters are now handled by TanStack Table
+
   // Mutation for toggling loader enabled status
   const toggleEnabledMutation = useMutation({
     mutationFn: async (loader: Loader) => {
@@ -409,6 +491,48 @@ export default function LoadersListPage() {
       toast({
         title: 'Error',
         description: `Failed to update loader: ${error instanceof Error ? error.message : 'Unknown error'}`,
+        variant: 'destructive',
+      });
+    },
+  });
+
+  // Mutation for approving loader
+  const approveMutation = useMutation({
+    mutationFn: async (loader: Loader) => {
+      return loadersApi.approveLoader(loader.loaderCode);
+    },
+    onSuccess: () => {
+      queryClient.invalidateQueries({ queryKey: ['loaders'] });
+      toast({
+        title: 'Loader Approved',
+        description: 'Loader has been approved successfully',
+      });
+    },
+    onError: (error) => {
+      toast({
+        title: 'Error',
+        description: `Failed to approve loader: ${error instanceof Error ? error.message : 'Unknown error'}`,
+        variant: 'destructive',
+      });
+    },
+  });
+
+  // Mutation for rejecting loader
+  const rejectMutation = useMutation({
+    mutationFn: async ({ loader, reason }: { loader: Loader; reason: string }) => {
+      return loadersApi.rejectLoader(loader.loaderCode, reason);
+    },
+    onSuccess: () => {
+      queryClient.invalidateQueries({ queryKey: ['loaders'] });
+      toast({
+        title: 'Loader Rejected',
+        description: 'Loader has been rejected',
+      });
+    },
+    onError: (error) => {
+      toast({
+        title: 'Error',
+        description: `Failed to reject loader: ${error instanceof Error ? error.message : 'Unknown error'}`,
         variant: 'destructive',
       });
     },
@@ -453,12 +577,43 @@ export default function LoadersListPage() {
       });
       // TODO: Navigate to alerts page
     },
+    onApprove: (loader: Loader) => {
+      if (confirm(`Approve loader "${loader.loaderCode}"?`)) {
+        approveMutation.mutate(loader);
+      }
+    },
+    onReject: (loader: Loader) => {
+      const reason = prompt(`Enter rejection reason for "${loader.loaderCode}":`);
+      if (reason && reason.trim()) {
+        rejectMutation.mutate({ loader, reason: reason.trim() });
+      } else if (reason !== null) {
+        toast({
+          title: 'Rejection Canceled',
+          description: 'Rejection reason is required',
+          variant: 'destructive',
+        });
+      }
+    },
   };
 
   const columns = getColumns(expandedRows, toggleRow, protectedFields, actionHandlers);
 
+  // Apply page-level filters
+  const filteredLoaders = useMemo(() => {
+    return loaders.filter((loader) => {
+      // Enabled filter
+      if (enabledFilter === 'enabled' && !loader.enabled) return false;
+      if (enabledFilter === 'disabled' && loader.enabled) return false;
+
+      // Approval filter
+      if (approvalFilter !== 'all' && loader.approvalStatus !== approvalFilter) return false;
+
+      return true;
+    });
+  }, [loaders, enabledFilter, approvalFilter]);
+
   const table = useReactTable({
-    data: loaders,
+    data: filteredLoaders,
     columns,
     getCoreRowModel: getCoreRowModel(),
     getFilteredRowModel: getFilteredRowModel(),
@@ -474,42 +629,13 @@ export default function LoadersListPage() {
   };
 
   const handleExport = () => {
-    // Generate CSV
-    const headers = [
-      'Loader Code',
-      'Status',
-      'Min Interval (s)',
-      'Max Interval (s)',
-      'Max Parallel',
-      'Query Period (s)',
-    ];
-
-    const rows = loaders.map((loader) => [
-      loader.loaderCode,
-      loader.enabled ? 'ENABLED' : 'DISABLED',
-      loader.minIntervalSeconds.toString(),
-      loader.maxIntervalSeconds.toString(),
-      loader.maxParallelExecutions.toString(),
-      loader.maxQueryPeriodSeconds.toString(),
-    ]);
-
-    const csvContent = [headers, ...rows]
-      .map((row) => row.join(','))
-      .join('\n');
-
-    // Download file
-    const blob = new Blob([csvContent], { type: 'text/csv' });
-    const url = URL.createObjectURL(blob);
-    const link = document.createElement('a');
-    link.href = url;
-    link.download = `loaders-${new Date().toISOString().split('T')[0]}.csv`;
-    link.click();
-    URL.revokeObjectURL(url);
-
-    toast({
-      title: 'Export successful',
-      description: `Exported ${loaders.length} loader(s) to CSV`,
+    console.log('[issue_blocked_imp] Opening Import/Export modal:', {
+      userRole,
+      username,
+      filteredLoadersCount: filteredLoaders.length,
+      timestamp: new Date().toISOString()
     });
+    setExportModalOpen(true);
   };
 
   if (isLoading) {
@@ -600,18 +726,8 @@ export default function LoadersListPage() {
           secondaryActions={[
             {
               icon: Download,
-              label: 'Export to CSV',
+              label: 'Import / Export',
               onClick: handleExport,
-            },
-            {
-              icon: Upload,
-              label: 'Import from File',
-              onClick: () =>
-                toast({
-                  title: 'Coming soon',
-                  description: 'Import functionality will be available in a future release',
-                }),
-              disabled: true,
             },
             { divider: true },
             {
@@ -631,6 +747,48 @@ export default function LoadersListPage() {
             },
           ]}
         />
+
+        {/* Filters */}
+        <div className="flex gap-4 mb-6">
+          <div className="flex-1">
+            <label className="text-sm font-medium mb-2 block">Status Filter</label>
+            <select
+              value={enabledFilter}
+              onChange={(e) => setEnabledFilter(e.target.value as any)}
+              className="w-full p-2 border rounded-md bg-background"
+            >
+              <option value="all">All Loaders</option>
+              <option value="enabled">Enabled Only</option>
+              <option value="disabled">Disabled Only</option>
+            </select>
+          </div>
+          <div className="flex-1">
+            <label className="text-sm font-medium mb-2 block">Approval Filter</label>
+            <select
+              value={approvalFilter}
+              onChange={(e) => setApprovalFilter(e.target.value as any)}
+              className="w-full p-2 border rounded-md bg-background"
+            >
+              <option value="all">All Status</option>
+              <option value="APPROVED">Approved</option>
+              <option value="PENDING_APPROVAL">Pending Approval</option>
+              <option value="REJECTED">Rejected</option>
+            </select>
+          </div>
+          {(enabledFilter !== 'all' || approvalFilter !== 'all') && (
+            <div className="flex items-end">
+              <Button
+                variant="outline"
+                onClick={() => {
+                  setEnabledFilter('all');
+                  setApprovalFilter('all');
+                }}
+              >
+                Clear Filters
+              </Button>
+            </div>
+          )}
+        </div>
 
       <div className="rounded-md border">
         <Table>
@@ -723,6 +881,15 @@ export default function LoadersListPage() {
           </Button>
         </div>
       </div>
+
+      {/* Import/Export Modal */}
+      <ImportExportModal
+        open={exportModalOpen}
+        onClose={() => setExportModalOpen(false)}
+        loaders={filteredLoaders}
+        protectedFields={protectedFields}
+        userRole={userRole}
+      />
     </div>
   );
 }

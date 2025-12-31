@@ -16,19 +16,21 @@ export default function LoginPage() {
 
     const password = passwordRef.current?.value || '';
 
-    console.log('[Login] Attempting login for user:', username);
-    console.log('[Login] API endpoint:', '/api/v1/auth/login');
-
     try {
+      console.log('[issue_blocked_imp] Login attempt:', { username, timestamp: new Date().toISOString() });
       const response = await authApi.login({ username, password });
 
-      console.log('[Login] Success! Received token and roles:', response.roles);
+      console.log('[issue_blocked_imp] Login response received:', {
+        username: response.username,
+        roles: response.roles,
+        hasToken: !!response.token,
+        timestamp: new Date().toISOString()
+      });
 
       // Store token and user info
       authApi.storeAuth(response.token, response.username, response.roles);
 
-      console.log('[Login] Redirecting to home page');
-
+      console.log('[issue_blocked_imp] Redirecting to home page');
       // Redirect to home page (use window.location to force full page reload)
       window.location.href = '/';
     } catch (err: any) {
@@ -37,7 +39,6 @@ export default function LoginPage() {
         statusText: err.response?.statusText,
         data: err.response?.data,
         message: err.message,
-        fullError: err
       });
 
       setError(

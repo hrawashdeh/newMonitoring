@@ -1,0 +1,1723 @@
+The ordering reflects how the service would realistically be designed, implemented, secured, and operated.
+
+Loader Service – Dependency-Ordered User Story Titles
+Phase 1 — Foundations & Core Definitions (Must Exist First)
+
+Title
+
+Abstract Database Connectivity Using Configuration
+
+Story
+
+As a loader service, I want to use environment-injected configuration for the platform database connection, and use database-stored source connection profiles for runtime source access, so that I can run in Kubernetes across environments without hardcoding endpoints or credentials.
+
+What This Story Covers in Your Current Design
+
+1) Control-Plane Database Connectivity (PostgreSQL)
+
+Requirements
+
+Loader connects to its internal PostgreSQL using:
+
+SPRING_DATASOURCE_URL
+
+SPRING_DATASOURCE_USERNAME
+
+SPRING_DATASOURCE_PASSWORD 
+
+These values are injected from Kubernetes Secret (envFrom). 
+
+Acceptance Criteria
+
+If any required SPRING_DATASOURCE_* value is missing → service fails fast and logs a sanitized configuration error.
+
+2) Source Database Connectivity (MySQL / Future PostgreSQL)
+
+Requirements
+
+Source DB connections are not defined in YAML; they are stored in loader.source_databases with fields:
+
+db_code, ip, port, db_type, db_name, user_name, pass_word 
+
+Password is encrypted transparently using @Convert(EncryptedStringConverter.class) 
+
+Loader definitions reference a source DB record via source_database_id 
+
+Acceptance Criteria
+
+Given a loader references a source_database_id
+When a load job executes
+Then the runtime source connection must be resolved from loader.source_databases.
+
+If the referenced source DB record is missing → job fails with clear reason (no credentials printed).
+
+3) Connection Pool & Tuning (Source Side)
+
+Your dev YAML indicates a source MySQL pool tuning structure exists under sources.mysql.pool (min/max pool, idle timeout, connection timeout, leak detection). 
+So this story should include:
+
+Acceptance Criteria
+
+Pool defaults apply if tuning values are not provided.
+
+Leak detection stays disabled by default (0), enabled only for debugging. 
+
+Security Notes (As Implemented)
+
+Sensitive source credentials are not stored as plaintext (pass_word encrypted at rest via converter). 
+
+Kubernetes Secret handling is standardized (single secret injected). 
+
+The secret template explicitly enforces “don’t commit secrets” and supports Sealed Secrets. 
+
+
+User Story: Load Database Credentials Securely at Runtime
+
+Story
+As the loader service, I need to retrieve database credentials securely at runtime from the mechanisms already implemented (Kubernetes Secrets for the control database and encrypted database fields for source databases), so that credentials are never hard-coded, exposed, or logged during loader execution.
+
+Functional Requirements
+- Control-plane database credentials are resolved exclusively from environment variables injected at runtime.
+- Source database credentials are resolved from note persisted connection records with encrypted password fields.
+- Credentials are loaded only when required for connection creation.
+- Missing or invalid credentials cause a controlled failure (startup failure for control DB, job failure for source DB).
+
+Technical Requirements
+- Control database credentials are not handled or transformed by application code.
+- Source database passwords are decrypted transparently via the existing persistence-layer converter.
+- Decrypted credentials exist only in memory and only for the duration of connection creation.
+- No credential caching, rotation, or mutation logic is implemented.
+
+Security Requirements
+- No credentials are embedded in source code or configuration files.
+- Password values are never written to logs or error messages.
+- Source database passwords are encrypted at rest.
+- Credential scope is limited to the database connection being created.
+
+Acceptance Criteria
+- If control database environment variables are missing, the service fails to start without exposing secrets.
+- If a source database password is invalid, the job fails and no credentials appear in logs.
+- Direct inspection of persisted source database records does not reveal plaintext passwords.
+- Credentials are not reused beyond the lifetime of a single connection attempt.
+
+Explicit Limitations
+- No external secret manager integration.
+- No runtime credential rotation.
+- No per-job credential isolation beyond existing connection handling.
+
+
+User Story: Prevent Hard-Coded Credentials in Loader Definitions
+
+Story
+As the loader service, I must ensure that loader definitions do not contain any database credentials, so that all sensitive information is managed only through environment-injected configuration or encrypted connection records, and never embedded in loader metadata.
+
+Functional Requirements
+- Loader definitions do not include fields for usernames, passwords, tokens, or connection strings.
+- Loader definitions reference source databases only by identifier (e.g., source_database_id).
+- Any attempt to define credentials within loader-related data structures is not supported by the data model.
+
+Technical Requirements
+- The loader entity/schema contains no credential-related columns.
+- Source database credentials are resolved exclusively through the referenced source database record.
+- Control-plane credentials are resolved exclusively through runtime environment variables.
+- Loader execution logic never accepts credential parameters from loader configuration or job input.
+
+Security Requirements
+- Credentials cannot be persisted as part of loader definitions.
+- Credentials cannot be overridden or injected via loader execution requests.
+- Logs related to loader definitions never include sensitive connection details.
+
+Acceptance Criteria
+- Inspecting the loader definition table/entity shows no credential fields.
+- Loader execution succeeds using referenced source database records without loader-level credentials.
+- Attempts to introduce credential fields into loader definitions are blocked by schema/design.
+- Loader-related logs and errors contain no credential data.
+
+Explicit Limitations
+- Enforcement is structural (by schema and code design), not via runtime validation rules.
+- No dynamic validation exists to scan for credentials in free-text fields beyond existing model constraints.
+
+
+
+
+User Story: Support Multiple Source Databases per Loader
+
+Story
+As the loader service, I must support executing different loaders against different source databases by resolving the source database dynamically at runtime based on the loader configuration, so that a single loader service instance can operate across multiple external systems.
+
+Functional Requirements
+- Each loader references exactly one source database per execution.
+- Different loaders may reference different source databases.
+- Source database selection is resolved using the source_database_id defined in the loader configuration.
+- The loader service can execute loaders targeting different source databases without redeployment.
+
+Technical Requirements
+- Source database connection details are stored in the existing source database entity/table.
+- Loader entities contain a foreign key or reference to a source database record.
+- At job execution time, the loader resolves its source database using this reference.
+- Connection creation uses the resolved source database configuration without modifying loader logic.
+
+Security Requirements
+- Each source database uses its own credential set.
+- Credentials are isolated per source database record.
+- A loader cannot access a source database other than the one explicitly referenced.
+- No cross-database credential reuse is introduced by the loader service.
+
+Acceptance Criteria
+- Given two loaders referencing two different source databases,
+  when both loaders execute,
+  then each connects to its respective source database successfully.
+- Given a loader with an invalid or missing source_database_id,
+  when execution starts,
+  then the job fails with a configuration error.
+- Inspecting loader definitions shows only references to source databases, not connection details.
+- Execution logs indicate which source database identifier was used, without exposing credentials.
+
+Explicit Limitations
+- A single loader execution cannot span multiple source databases.
+- No dynamic switching of source databases occurs within a single job.
+- Loaders cannot override or parameterize source database selection at runtime.
+
+----------------
+
+User Story: Enforce Read-Only Access to Source Databases
+
+Story
+As the loader service, I must ensure that access to source databases is read-only, so that loader executions cannot modify external systems and the service remains safe to operate against production data sources.
+
+Functional Requirements
+- Source database interactions are limited to executing the loader-defined extraction query.
+- The loader service does not perform INSERT/UPDATE/DELETE operations against source databases as part of normal execution.
+
+Technical Requirements
+- The service connects to source databases using the credentials stored in the source database connection records.
+- The service does not implement any code-level enforcement that blocks non-SELECT statements.
+- The service relies on the configured database user privileges to prevent write operations at the database level.
+
+Security Requirements
+- Source database user accounts must be provisioned with read-only permissions (DBA-managed).
+- If a loader query attempts a write operation, the database must reject it based on permissions.
+- Logs must not include credentials or sensitive connection details when permission errors occur.
+
+Acceptance Criteria
+- Given the source database user has read-only privileges,
+  when a loader executes a SELECT-based extraction query,
+  then the query succeeds and data is read.
+- Given the source database user has read-only privileges,
+  when a loader query attempts INSERT/UPDATE/DELETE,
+  then the query fails with a permission error and the job is marked FAILED.
+- Reviewing the service code and configuration shows no implementation of write operations to source databases as part of the loader flow.
+
+Explicit Limitations
+- Read-only enforcement is external (database permissions), not enforced by application validation.
+- The loader service does not currently validate or lint loader queries to guarantee they are SELECT-only.
+
+
+------------
+
+User Story: Externalize Loader Configuration from Code
+
+Story
+As the loader service owner/operator, I need loader behavior and operational parameters to be configurable outside the compiled code (via application configuration, environment variables, and persisted loader records), so that changes to scheduling, locking, encryption keys, and loader definitions can be applied without modifying source code.
+
+Functional Requirements
+- Global service behavior is configurable via application configuration (e.g., scheduling defaults, locking thresholds, thread pool sizing).
+- Sensitive runtime keys (e.g., encryption key) are provided via environment variables rather than hard-coded values.
+- Loader definitions (e.g., which source database to use and what SQL/query to run) are managed as persisted records and can be administered via the service’s admin/API layer rather than changing code.
+- The service uses the active runtime profile to select appropriate configuration values per environment.
+
+Technical Requirements
+- The service reads runtime configuration from application YAML/properties and supports placeholder expansion from environment variables.
+- The following operational parameters are configurable outside code:
+  - replica identity (replica-name)
+  - default lookback window
+  - execution thread pool size
+  - execution timeout
+  - lock stale threshold
+  - released lock retention period
+  - lock cleanup schedule (cron expression)
+  - actuator exposure settings
+  - logging level and log rotation settings
+- Encryption key for sensitive columns is sourced from an environment variable (ENCRYPTION_KEY) and not embedded in code.
+- Loader and source database configuration are persisted and managed via repositories/entities exposed through admin controllers (configuration is data-driven, not code-driven).
+
+Security Requirements
+- No secrets (encryption key, database passwords) are committed in code or stored as plaintext configuration defaults for production.
+- Configuration that affects security posture (e.g., actuator exposure, health details visibility) remains externalized and environment-controlled.
+- Administrative configuration changes are performed through the service API/admin layer with appropriate access controls (documented separately under security stories).
+
+Acceptance Criteria
+- Changing execution/locking parameters can be achieved by updating runtime configuration (YAML/env) without code modification.
+- Changing the encryption key is done via ENCRYPTION_KEY injection and does not require code changes.
+- Adding or updating a loader definition (query/source reference/interval-related fields where applicable) is possible via persisted configuration and API/admin management rather than editing code.
+- Service startup reflects the configured values for the active runtime profile.
+
+Explicit Limitations
+- This story documents externalization via configuration and persisted records only; it does not introduce a new configuration store.
+- Configuration changes still require a deployment restart to take effect when they are loaded at startup (no hot-reload implied unless already implemented).
+
+
+
+---------------------
+
+User Story: Define a Loader with Configurable Source Database
+
+Story
+As a system administrator, I want to create a loader by selecting an existing source database configuration, so that the loader can execute its SQL against the correct source system without embedding connection details in the loader definition.
+
+Functional Requirements
+- A loader must have a unique loader_code.
+- A loader must reference a source database via source_database_id (Many loaders can reference the same source database).
+- A loader may store a loader SQL statement (loader_sql) that will be executed against the selected source database.
+- Loader SQL is stored encrypted at rest and decrypted only when needed for execution/display to authorized users.
+- Loader has an enabled flag to control whether it can run.
+
+Technical Requirements
+- Persist the loader as a row in schema loader.loader.
+- Enforce uniqueness of loader_code at the database level.
+- Persist the association to the source database using a foreign key to loader.source_databases(id).
+- Maintain the JPA relationship Loader -> SourceDatabase via ManyToOne mapping.
+- Ensure loader_sql uses the existing application-layer encryption/decryption mechanism (no plaintext storage).
+- Maintain created_at and updated_at timestamps through entity lifecycle callbacks.
+
+Security Requirements
+- Loader definition must not contain credentials (credentials remain in SourceDatabase and are excluded from API responses where applicable).
+- loader_sql must not be logged in plaintext.
+- Source database selection must expose connection metadata without exposing password.
+
+Acceptance Criteria
+- Given a valid loader_code, loader_sql, and selected source_database_id,
+  when the loader is created,
+  then the loader is persisted and can be retrieved with its source database reference.
+- Given a duplicate loader_code,
+  when the loader is created,
+  then the operation fails due to uniqueness constraint.
+- Given no source_database_id is provided,
+  when the loader is created,
+  then creation is rejected (source database is required by the loader model).
+- When viewing loader details,
+  then source database metadata is displayed but password is not exposed.
+- When retrieving the loader record from the database,
+  then loader_sql is stored encrypted at rest.
+
+Explicit Limitations
+- Source database selection is by reference (source_database_id); direct per-loader connection overrides are not supported.
+- This story does not introduce new source database creation; it assumes source databases are already managed separately.
+
+---------------------
+User Story: Register a Loader with a Parameterized Extraction Query
+
+Story
+As a system administrator, I want to register a loader with an extraction SQL that includes supported time placeholders, so that each execution can extract a controlled time window based on the loader’s last load timestamp and the current execution window.
+
+Functional Requirements
+- A loader must store an extraction query as loader_sql.
+- The extraction query supports the following time filter placeholders:
+  - :fromTime (query start time, derived from last load timestamp)
+  - :toTime (query end time, derived from current time or bounded by max query period)
+- The extraction query must be associated to a loader that also references a source database (via source_database_id).
+- The loader_sql value is stored encrypted at rest and is decrypted transparently when loaded for execution.
+- Query have fixed structure and order of columns
+
+Technical Requirements
+- Persist loader_sql as TEXT in the loader table and encrypt/decrypt using the existing JPA EncryptedStringConverter.
+- Placeholders are treated as named parameters and must be resolved at execution time by the loader runtime (no hard-coded literals required inside the SQL).
+- The query string supports UTF-8 content (including Arabic characters).
+
+Security Requirements
+- loader_sql must not contain credentials or connection strings.
+- loader_sql must not be logged in plaintext during registration or execution.
+- Any error reporting must avoid exposing decrypted SQL or sensitive parameter values beyond what is required for debugging.
+
+Acceptance Criteria
+- Given a loader_sql containing :fromTime and :toTime,
+  when the loader is saved,
+  then loader_sql is persisted encrypted at rest.
+- Given a registered loader with loader_sql containing :fromTime and :toTime,
+  when the loader executes,
+  then both placeholders are bound to execution window values and the query runs against the referenced source database.
+- Given a loader_sql that omits required placeholders for incremental loading (where applicable to that loader’s design),
+  when the loader executes,
+  then execution fails with a clear configuration/validation error (without exposing decrypted SQL).
+- When inspecting logs,
+  then no plaintext credentials and no plaintext loader_sql are present.
+
+Explicit Limitations
+- Only the documented time placeholders (:fromTime, :toTime) are supported by the loader model; other parameter conventions are not implied.
+- This story documents placeholder support in loader_sql; it does not introduce a generic templating engine.
+
+---------------------
+User Story: Associate a Loader with a Logical Business Domain
+
+Story
+As an administrator, I want to logically group loaders by a “business domain”, so that operations and governance can reason about ownership and impact at a domain level.
+
+Current Implementation (as found in code/schema)
+- There is NO explicit “business domain” attribute stored for a loader in the current loader table definition.
+  - The loader table currently stores: loader_code, loader_sql, scheduling fields, runtime status fields, enabled flag, and source_database_id relationship. :contentReference[oaicite:0]{index=0}
+- Therefore, any “business domain” association can only be represented implicitly (e.g., naming convention in loader_code) and is not enforced or queryable as a structured field.
+
+Functional Requirements (as-is)
+- A loader can be “logically” associated to a domain only through conventions outside the database model (e.g., prefix/suffix in loader_code).
+- No domain-level filtering/searching is supported by the loader persistence model because no domain column exists.
+
+Technical Requirements (as-is)
+- No database column, foreign key, enum, or reference table exists for business domains on loader.loader. :contentReference[oaicite:1]{index=1}
+- No constraints exist to validate domain membership.
+
+Security Requirements (as-is)
+- No additional security behavior exists around domain ownership boundaries because domains are not modeled.
+
+Acceptance Criteria (reverse-documented)
+- When a loader is created/updated, the system persists loader_code and other loader properties, but does not persist any explicit domain attribute. :contentReference[oaicite:2]{index=2}
+- The only stable identifier that can be used to infer a “domain” is loader_code, by convention. :contentReference[oaicite:3]{index=3}
+
+Explicit Limitations
+- This capability is NOT implemented as a first-class feature in the current codebase/schema.
+- Domain association cannot be enforced, audited, or permission-scoped at the domain level without introducing new fields/tables (which would be a future enhancement, not reverse documentation).
+
+---------------------
+User Story: Support Versioning of Loader Definitions
+
+Story
+As an administrator, I want loader definition changes to be traceable over time, so that we can understand when a loader configuration was modified and what its current effective configuration is.
+
+Current Implementation (reverse-documented)
+- The loader definition is stored as a single row in the loader table/entity.
+- Updates overwrite the existing loader definition in-place (no historical copy is retained).
+- The only built-in “versioning” signals are audit timestamps (created_at, updated_at) and (where present) updated_by.
+- There is no loader_definition_versions table, no revision number column, and no snapshot mechanism in the current schema.
+
+Functional Requirements (as-is)
+- The system records when a loader was created (created_at).
+- The system records when a loader configuration was last modified (updated_at).
+- The system exposes the latest (current) loader configuration as the effective definition.
+
+Technical Requirements (as-is)
+- created_at is set automatically on insert.
+- updated_at is set automatically on update (reflecting the last modification time).
+- No history table, no revision ID, and no diff tracking is implemented for loader definitions.
+
+Security Requirements (as-is)
+- No additional security controls exist specifically for version history because version history is not stored.
+- Any audit visibility is limited to timestamps/updated_by fields that exist in the loader row.
+
+Acceptance Criteria (reverse-documented)
+- When a loader definition is created, created_at is populated.
+- When any loader configuration field is modified, updated_at changes accordingly.
+- After multiple edits, only the latest loader definition is retained and retrievable (previous versions are not available).
+
+Explicit Limitations
+- True versioning (multiple historical versions, rollback, diff, approval workflow) is NOT implemented.
+- “Versioning” is limited to last-modified metadata only.
+
+---------------------
+Phase 2 — Execution Model & Job Control Core
+---------------------
+User Story: Create a Job Record for Each Loader Execution
+
+Story
+As the loader service, I want to create a persistent execution record for every loader run, so that each execution is traceable with its time window, status, results, and error details.
+
+Functional Requirements (as implemented)
+- For every loader execution, create a LoadHistory record at the start with status RUNNING. :contentReference[oaicite:0]{index=0}
+- The execution record stores the attempted query window (queryFromTime, queryToTime). :contentReference[oaicite:1]{index=1}
+- The execution record stores actual loaded window when available (actualFromTime, actualToTime). :contentReference[oaicite:2]{index=2}
+- On successful completion, update the same record to SUCCESS and persist counts/duration. :contentReference[oaicite:3]{index=3}
+- On failure, update the same record to FAILED and persist error_message and stack_trace. :contentReference[oaicite:4]{index=4}
+
+Technical Requirements (as implemented)
+- Execution history is stored in table loader.load_history. :contentReference[oaicite:5]{index=5}
+- LoadHistory includes: loader_code, status, start_time, end_time, query_from_time, query_to_time, actual_from_time, actual_to_time, records_loaded, records_ingested, error_message, stack_trace, replica_name, metadata. :contentReference[oaicite:6]{index=6}
+- A createRunningHistory(...) builder constructs the initial RUNNING record including replica_name and source database code. :contentReference[oaicite:7]{index=7}
+- The record is updated in-place via repository save on success/failure paths. :contentReference[oaicite:8]{index=8} :contentReference[oaicite:9]{index=9}
+- A loader_execution_lock row may reference the associated load_history_id for the lock period. :contentReference[oaicite:10]{index=10}
+
+Security Requirements (as implemented)
+- The execution record stores error_message/stack_trace for debugging; no credential fields exist in LoadHistory. :contentReference[oaicite:11]{index=11}
+- The execution record identifies the executing replica (replica_name) for distributed traceability. :contentReference[oaicite:12]{index=12}
+
+Acceptance Criteria
+- When executeLoader(loaderCode) is called and the loader exists, a LoadHistory record is created with status RUNNING and query window fields populated. :contentReference[oaicite:13]{index=13} :contentReference[oaicite:14]{index=14}
+- When execution succeeds, the same LoadHistory record is saved with status SUCCESS, end_time, duration, and record counts. :contentReference[oaicite:15]{index=15}
+- When execution fails, the same LoadHistory record is saved with status FAILED, end_time, duration, and error details. :contentReference[oaicite:16]{index=16}
+
+Explicit Limitations
+- The service models “job record” as LoadHistory (execution history), not a separate generic job table.
+- The stored stack_trace increases sensitivity of this table and should be handled accordingly (access-controlled) but access control is not described by this story.
+
+---------------------
+User Story: Track Job Status Transitions (Pending, Running, Completed, Failed)
+
+Story
+As the loader service, I need to track execution status transitions for jobs so that each run has a clear lifecycle state that can be queried and displayed in the admin execution history.
+
+Current Implementation (reverse-documented)
+There are TWO status lifecycles in the codebase:
+
+A) Loader execution history (LoadHistory.status)
+- Status values are: RUNNING, SUCCESS, FAILED, PARTIAL. :contentReference[oaicite:0]{index=0}
+- “PENDING” is NOT part of LoadHistory status; a LoadHistory record is created directly in RUNNING at execution start (documented in the previous story).
+
+B) Backfill jobs (BackfillJobStatus)
+- Status values include: PENDING, RUNNING, SUCCESS, FAILED, CANCELLED. :contentReference[oaicite:1]{index=1}
+- This is the only implemented lifecycle that includes “PENDING”.
+
+Functional Requirements (as implemented)
+- For normal loader executions (LoadHistory):
+  - The job lifecycle is tracked using LoadExecutionStatus with at least:
+    - RUNNING (in-progress)
+    - SUCCESS (completed)
+    - FAILED (failed)
+    - PARTIAL (completed with partial outcome) :contentReference[oaicite:2]{index=2}
+- For backfill jobs:
+  - The job lifecycle supports:
+    - PENDING (queued)
+    - RUNNING (executing)
+    - SUCCESS (completed)
+    - FAILED (failed)
+    - CANCELLED (user cancelled) :contentReference[oaicite:3]{index=3}
+
+Technical Requirements (as implemented)
+- LoadHistory.status is persisted as an enum string in loader.load_history.status. :contentReference[oaicite:4]{index=4}
+- Backfill job status is represented by BackfillJobStatus enum including PENDING and CANCELLED. :contentReference[oaicite:5]{index=5}
+- Admin querying supports filtering execution history by status (e.g., FAILED). :contentReference[oaicite:6]{index=6}
+
+Security Requirements (as implemented)
+- Status tracking does not store credentials; error details are stored separately (error_message/stack_trace) and must be treated as sensitive operational data.
+
+Acceptance Criteria
+- Execution History (LoadHistory):
+  - When querying execution history by status FAILED, only FAILED records are returned. :contentReference[oaicite:7]{index=7}
+  - LoadHistory.status supports RUNNING, SUCCESS, FAILED, PARTIAL (no PENDING). :contentReference[oaicite:8]{index=8}
+- Backfill Jobs:
+  - Backfill job status supports PENDING, RUNNING, SUCCESS, FAILED, CANCELLED. :contentReference[oaicite:9]{index=9}
+
+Explicit Limitations
+- The “Pending, Running, Completed, Failed” lifecycle is not uniformly implemented across all job types:
+  - Normal loader executions have no PENDING state (they start at RUNNING).
+  - “Completed” is represented as SUCCESS (and possibly PARTIAL) depending on the job type. :contentReference[oaicite:10]{index=10}
+
+---------------------
+User Story: Execute a Loader on Demand
+
+Story
+As an operator/admin, I want to manually trigger a loader execution on demand, so that I can run the loader immediately without waiting for its scheduled interval.
+
+Functional Requirements (as implemented / documented)
+- The service exposes an operational API to run a loader manually:
+  - POST /api/v1/loaders/{code}/run :contentReference[oaicite:0]{index=0}
+- Manual execution starts immediately and creates an execution record (LoadHistory) with status RUNNING at the beginning of execution. :contentReference[oaicite:1]{index=1}
+- Manual execution calculates a time window for the run based on the loader state before querying the source database. :contentReference[oaicite:2]{index=2}
+- The manual run API returns an execution response including:
+  - executionId, status, startTime :contentReference[oaicite:3]{index=3}
+
+Technical Requirements (as implemented / documented)
+- The core execution entrypoint is executeLoader(Loader loader) which:
+  - Validates loader is not null and binds loaderCode into MDC. :contentReference[oaicite:4]{index=4}
+  - Calculates a TimeWindow before creating execution history. :contentReference[oaicite:5]{index=5}
+  - Creates and persists a LoadHistory record with RUNNING status at start. :contentReference[oaicite:6]{index=6}
+  - Executes the real pipeline using executeLoaderReal(loader, window, historyId). :contentReference[oaicite:7]{index=7}
+  - Updates history to SUCCESS or FAILED at completion (in-place). :contentReference[oaicite:8]{index=8}
+- The loader runtime tracks execution context using replica name (replicaNameProvider). :contentReference[oaicite:9]{index=9}
+
+Security / Access Behavior (as currently documented in UI spec)
+- Manual execution (Force Start / Run) is enabled only when a run link/action is available and the loader state/permission permits it. :contentReference[oaicite:10]{index=10}
+- Force Start / Run is disabled when:
+  - Loader is RUNNING (cannot start while running)
+  - Loader is DISABLED (cannot start while paused)
+  - User lacks permission (button disabled) :contentReference[oaicite:11]{index=11}
+
+Acceptance Criteria
+- Given I call POST /api/v1/loaders/{code}/run for an existing loader,
+  when the request is accepted,
+  then execution starts immediately and an execution response is returned with status RUNNING and a startTime. :contentReference[oaicite:12]{index=12}
+- Given a manual run is triggered,
+  when execution begins,
+  then a LoadHistory record is created with RUNNING status and the calculated query window is recorded. :contentReference[oaicite:13]{index=13}
+- Given the loader is already RUNNING or DISABLED,
+  when attempting to force start from the UI,
+  then the action is disabled. :contentReference[oaicite:14]{index=14}
+
+Explicit Limitations
+- This story documents “Run Loader Manually” via /run; a separate “forceStart /execute” endpoint is referenced as backend-pending in UI notes and is not treated as implemented behavior here. :contentReference[oaicite:15]{index=15}
+
+
+---------------------
+User Story: Execute a Loader Based on a Configured Schedule
+
+Story
+As the loader service, I want to execute eligible loaders automatically on a fixed scheduling loop, so that enabled and approved loaders run without manual intervention when they are due based on their configured minimum interval.
+
+Functional Requirements (as implemented)
+- The service runs a main scheduling cycle on a fixed delay (every 10 seconds) after an initial delay. :contentReference[oaicite:0]{index=0}
+- In each scheduling cycle, the scheduler selects only loaders that are:
+  - enabled = true
+  - approvalStatus = APPROVED
+  (PENDING_APPROVAL and REJECTED are skipped). :contentReference[oaicite:1]{index=1}
+- The scheduler evaluates whether a loader is due for execution:
+  - due if lastLoadTimestamp is null (never executed)
+  - or due if (now - lastLoadTimestamp) >= minIntervalSeconds :contentReference[oaicite:2]{index=2}
+- Due loaders are processed in a priority order (IDLE > RUNNING > FAILED) before execution attempts. :contentReference[oaicite:3]{index=3}
+- The scheduler attempts to execute due loaders and continues with the next loader if one fails during processing. :contentReference[oaicite:4]{index=4}
+- The scheduler applies an execution timeout (in hours) and cancels the execution thread if the timeout is exceeded. :contentReference[oaicite:5]{index=5}
+- The scheduler uses a lock manager to register/unregister the execution and releases the lock in a finally block to prevent deadlocks. :contentReference[oaicite:6]{index=6}
+
+Technical Requirements (as implemented)
+- Main scheduling method: scheduleLoaders() annotated with @Scheduled(fixedDelay = 10000, initialDelay = 5000). :contentReference[oaicite:7]{index=7}
+- Due calculation uses loader.getLastLoadTimestamp() and loader.getMinIntervalSeconds(). :contentReference[oaicite:8]{index=8}
+- Execution is submitted to an executor service (Future) and waited on with future.get(timeoutHours, TimeUnit.HOURS). :contentReference[oaicite:9]{index=9}
+- On TimeoutException, the scheduler cancels the future with future.cancel(true). :contentReference[oaicite:10]{index=10}
+- Lock cleanup jobs exist and are scheduled separately:
+  - released lock cleanup via configurable cron loader.locking.cleanup-schedule (default 2 AM). :contentReference[oaicite:11]{index=11}
+  - stale lock cleanup every 30 minutes. :contentReference[oaicite:12]{index=12}
+
+Security Requirements (as implemented)
+- Scheduler executes only APPROVED loaders to prevent unauthorized SQL/code execution. :contentReference[oaicite:13]{index=13}
+- Scheduler’s error logging is loader-code based and does not include credentials. :contentReference[oaicite:14]{index=14}
+
+Acceptance Criteria
+- Given a loader is enabled and APPROVED,
+  when the scheduler cycle runs,
+  then the loader is considered for execution. :contentReference[oaicite:15]{index=15}
+- Given a loader has never been executed (lastLoadTimestamp == null),
+  when the scheduler evaluates it,
+  then it is due and can be executed. :contentReference[oaicite:16]{index=16}
+- Given a loader has lastLoadTimestamp set,
+  when (now - lastLoadTimestamp) >= minIntervalSeconds,
+  then it is due for execution. :contentReference[oaicite:17]{index=17}
+- Given a loader execution exceeds the configured timeout,
+  when the timeout is reached,
+  then the scheduler cancels the execution thread. :contentReference[oaicite:18]{index=18}
+- Given a scheduler execution attempt completes (success/failure/timeout),
+  then the scheduler unregisters the execution and releases the lock. :contentReference[oaicite:19]{index=19}
+
+Explicit Limitations
+- Scheduling is implemented as a fixed-delay polling loop (every 10 seconds), not as per-loader cron scheduling. :contentReference[oaicite:20]{index=20}
+- The “configured schedule” for execution frequency is expressed via per-loader minIntervalSeconds + lastLoadTimestamp, not via cron per loader. :contentReference[oaicite:21]{index=21}
+
+---------------------
+User Story: Track Last Successful Load Time per Loader
+
+Story
+As the loader service, I need to persist the last successful execution timestamp per loader, so that operations can see when a loader last completed successfully and the scheduler can determine the correct incremental watermark for the next run.
+
+Functional Requirements (as implemented)
+- Each loader maintains a “data watermark” timestamp:
+  - last_load_timestamp = the last timestamp of source data successfully processed (used as the start point for the next query). :contentReference[oaicite:0]{index=0}
+- Each loader maintains a “success completion” timestamp:
+  - last_success_timestamp = the system time when execution completed successfully (used for “Last Success” display/monitoring). :contentReference[oaicite:1]{index=1}
+- If last_success_timestamp is NULL, the loader is treated as “never succeeded” for UI/ops purposes. :contentReference[oaicite:2]{index=2}
+
+Technical Requirements (as implemented)
+- last_load_timestamp is updated after a successful run to the maximum timestamp found in the loaded result set (fallback to previous watermark if no results). :contentReference[oaicite:3]{index=3}
+- last_success_timestamp is updated to the current time when execution completes successfully. :contentReference[oaicite:4]{index=4}
+- Scheduler “due” evaluation uses lastLoadTimestamp and minIntervalSeconds (i.e., it relies on persisted last load timestamp as part of scheduling logic). :contentReference[oaicite:5]{index=5} :contentReference[oaicite:6]{index=6}
+
+Security Requirements (as implemented)
+- These timestamps store operational metadata only (no credentials).
+- The timestamps are safe to expose in UI and APIs as part of loader status reporting.
+
+Acceptance Criteria
+- Given a loader execution completes successfully,
+  when the service finalizes the run,
+  then last_load_timestamp is advanced to the maximum timestamp in the retrieved dataset. :contentReference[oaicite:7]{index=7}
+- Given a loader execution completes successfully,
+  when the service finalizes the run,
+  then last_success_timestamp is set to the current system time. :contentReference[oaicite:8]{index=8}
+- Given a loader has never succeeded (last_success_timestamp is NULL),
+  when the loader is displayed in UI,
+  then it is shown as “Never” / “No data loaded yet”. :contentReference[oaicite:9]{index=9}
+
+Explicit Limitations
+- last_load_timestamp and last_success_timestamp represent two different concepts:
+  - last_load_timestamp = data watermark (source data time)
+  - last_success_timestamp = execution completion time (system clock) :contentReference[oaicite:10]{index=10}
+
+---------------------
+User Story: Load Data Incrementally Based on Time Windows
+
+Story
+As the loader service, I want each loader execution to query data using a calculated [fromTime, toTime) window derived from the loader’s persisted watermark and configuration, so that data is loaded incrementally in bounded chunks and the service never queries future data.
+
+Functional Requirements (as implemented)
+- For each execution, calculate a TimeWindow (fromTime, toTime) used for query execution.
+- Determine fromTime as follows:
+  - If lastLoadTimestamp is null (first run): fromTime = now - defaultLookbackHours
+  - If lastLoadTimestamp is in the future (clock skew): fromTime = now - defaultLookbackHours
+  - Otherwise: fromTime = lastLoadTimestamp
+- Determine toTime as:
+  - idealToTime = fromTime + maxQueryPeriodSeconds
+  - toTime = min(idealToTime, now) (cap at current time to avoid querying future data)
+- If fromTime >= toTime, enforce a minimal 1-second window (toTime = fromTime + 1 second).
+- TimeWindow is defined as:
+  - fromTime inclusive
+  - toTime exclusive
+
+Technical Requirements (as implemented)
+- TimeWindow calculation is performed by a TimeWindowCalculator implementation.
+- default-lookback-hours is injected from configuration (loader.execution.default-lookback-hours) with a default value of 24 hours.
+- maxQueryPeriodSeconds is required and must be a positive value; otherwise calculation fails.
+- The calculated window is recorded in execution history as query_from_time and query_to_time.
+- The loader SQL may contain placeholders :fromTime and :toTime; if both placeholders are missing, the system logs a warning but does not block execution.
+
+Security Requirements (as implemented)
+- The window logic prevents querying future time ranges by capping toTime at “now”.
+- The watermark-based fromTime reduces re-reading large historical datasets beyond the configured lookback (except first run and clock-skew case).
+
+Acceptance Criteria
+- Given a loader with lastLoadTimestamp = null,
+  when a run starts,
+  then fromTime = now - defaultLookbackHours and toTime <= now.
+- Given a loader with lastLoadTimestamp <= now,
+  when a run starts,
+  then fromTime = lastLoadTimestamp and toTime = min(fromTime + maxQueryPeriodSeconds, now).
+- Given a loader with lastLoadTimestamp > now,
+  when a run starts,
+  then fromTime = now - defaultLookbackHours and a clock-skew warning is logged.
+- Given a computed window where fromTime >= toTime,
+  when a run starts,
+  then the window is corrected to a 1-second duration.
+- Given loader SQL without :fromTime and :toTime,
+  when preparing query parameters,
+  then a warning is logged and execution proceeds.
+
+Explicit Limitations
+- This story documents time-window calculation; it does not guarantee the SQL actually filters by the window (placeholder presence is not enforced—only warned).
+- Window sizing is controlled by maxQueryPeriodSeconds (bounded chunking), not by per-loader cron expressions.
+
+---------------------
+User Story: Prevent Concurrent Execution of the Same Loader
+
+Story
+As the loader service, I want to prevent concurrent execution of the same loader across multiple pods/replicas (beyond the configured per-loader parallel limit), so that duplicate runs do not occur due to scheduler contention or repeated triggers.
+
+Functional Requirements (as implemented)
+- Before starting execution, the service attempts to acquire a distributed execution lock for the loader. :contentReference[oaicite:0]{index=0}
+- A loader execution is permitted only if the number of active locks for that loader is less than loader.maxParallelExecutions. :contentReference[oaicite:1]{index=1}
+- If lock acquisition fails (limit reached), the execution is skipped (no duplicate execution proceeds). :contentReference[oaicite:2]{index=2}
+- Each permitted execution creates a lock record with a unique lockId and replicaName. :contentReference[oaicite:3]{index=3}
+- Locks are released by setting released=true and releasedAt=now, and the release operation is idempotent (warns if already released/not found). :contentReference[oaicite:4]{index=4}
+- The lock manager also enforces a global concurrency limit (total active locks < 100). :contentReference[oaicite:5]{index=5} :contentReference[oaicite:6]{index=6}
+
+Technical Requirements (as implemented)
+- Distributed locks are stored in loader.loader_execution_lock. :contentReference[oaicite:7]{index=7}
+- Lock record fields include lock_id (unique), loader_code, replica_name, acquired_at, released (boolean), released_at, and load_history_id. :contentReference[oaicite:8]{index=8}
+- Lock acquisition strategy is INSERT + COUNT(active locks) and is designed to work across multiple replicas/pods. :contentReference[oaicite:9]{index=9}
+- Lock acquisition supports “maxParallelExecutions” per loader:
+  - If maxParallelExecutions=1 → only one active lock is allowed.
+  - If maxParallelExecutions>1 → up to that many parallel executions are allowed. :contentReference[oaicite:10]{index=10} :contentReference[oaicite:11]{index=11}
+- Lock manager can register/unregister execution threads (Future) by lockId to allow cancelling hung executions during stale-lock cleanup. :contentReference[oaicite:12]{index=12} :contentReference[oaicite:13]{index=13}
+
+Security Requirements (as implemented)
+- Concurrency control prevents accidental duplicate reads/loads caused by multi-pod schedulers or repeated triggers. :contentReference[oaicite:14]{index=14}
+- Lock entries record replica_name, enabling audit of which pod executed the loader. :contentReference[oaicite:15]{index=15}
+
+Acceptance Criteria (verified by existing tests)
+- Given a loader with maxParallelExecutions=1,
+  when multiple pods attempt to acquire the lock concurrently,
+  then only one lock is active in the database and duplicate execution is prevented. :contentReference[oaicite:16]{index=16}
+- Given a loader with maxParallelExecutions=3,
+  when 5 concurrent attempts occur,
+  then at most 3 active locks exist and at least 1 attempt succeeds. :contentReference[oaicite:17]{index=17}
+- Given a pod releases its lock,
+  when another pod attempts to acquire,
+  then acquisition succeeds and only one active lock remains for maxParallelExecutions=1. :contentReference[oaicite:18]{index=18}
+
+Explicit Limitations (as implemented)
+- The lock model allows controlled parallelism (maxParallelExecutions), so the guarantee is:
+  “prevent concurrent execution beyond configured limit,” not “always single execution.”
+- Stale lock cleanup is required to recover from pod crashes; stale locks are considered after a configurable threshold and may trigger thread cancellation. :contentReference[oaicite:19]{index=19} :contentReference[oaicite:20]{index=20}
+
+---------------------
+User Story: Support Multiple Loaders Running Concurrently
+
+Story
+As the loader service, I need to run multiple different loaders concurrently (up to configured limits), so that the platform can process workloads in parallel without waiting for a single loader to finish before starting others.
+
+Functional Requirements (as implemented)
+- The scheduler evaluates multiple eligible loaders in each scheduling cycle and may start execution for more than one loader in parallel. :contentReference[oaicite:0]{index=0}
+- Each loader’s execution concurrency is controlled independently using the per-loader maxParallelExecutions lock limit. :contentReference[oaicite:1]{index=1} :contentReference[oaicite:2]{index=2}
+- Concurrency across the service is bounded by the configured execution thread pool size. :contentReference[oaicite:3]{index=3}
+- A global active-lock limit exists to prevent excessive concurrent executions platform-wide. :contentReference[oaicite:4]{index=4} :contentReference[oaicite:5]{index=5}
+
+Technical Requirements (as implemented)
+- The scheduler uses an ExecutorService and submits loader executions as Future tasks. :contentReference[oaicite:6]{index=6}
+- Execution parallelism is controlled via:
+  - loader.execution.threadPoolSize (thread pool size) :contentReference[oaicite:7]{index=7}
+  - loader.maxParallelExecutions (per-loader parallelism cap enforced by DB lock counting) :contentReference[oaicite:8]{index=8} :contentReference[oaicite:9]{index=9}
+  - total active locks < 100 (global cap) :contentReference[oaicite:10]{index=10}
+- Distributed execution locks are persisted in loader.loader_execution_lock to coordinate concurrency across replicas/pods. :contentReference[oaicite:11]{index=11}
+
+Security Requirements (as implemented)
+- Distributed locking ensures concurrency is coordinated across replicas so parallel runs do not cause duplicate execution of the same loader beyond its configured limit. :contentReference[oaicite:12]{index=12}
+- Each lock records replica_name, enabling operational traceability of concurrent executions. :contentReference[oaicite:13]{index=13}
+
+Acceptance Criteria
+- Given two different loaders are enabled and APPROVED and are due,
+  when the scheduler cycle runs,
+  then both loaders can start execution concurrently as separate Future tasks, subject to threadPoolSize. :contentReference[oaicite:14]{index=14} :contentReference[oaicite:15]{index=15} :contentReference[oaicite:16]{index=16}
+- Given a loader has maxParallelExecutions=1,
+  when multiple attempts occur while it is running,
+  then only one active execution proceeds for that loader, while other loaders may still run concurrently. :contentReference[oaicite:17]{index=17}
+- Given the service has reached the global active-lock limit,
+  when additional executions attempt to acquire locks,
+  then lock acquisition fails and new executions do not start until capacity is freed. :contentReference[oaicite:18]{index=18} :contentReference[oaicite:19]{index=19}
+
+Explicit Limitations
+- Concurrency is limited by threadPoolSize and the global active-lock cap; the service does not guarantee that all due loaders will start immediately in the same cycle. :contentReference[oaicite:20]{index=20} :contentReference[oaicite:21]{index=21}
+- Scheduler is a polling loop (fixed delay); due loaders are picked up on subsequent cycles if capacity is not available. :contentReference[oaicite:22]{index=22}
+
+---------------------
+
+User Story: Enforce Maximum Concurrent Jobs per Runner
+
+Story
+As the loader service, I need to enforce a maximum number of concurrent loader executions per application instance (runner), so that a single pod does not start more parallel executions than it can safely process.
+
+Functional Requirements (as implemented)
+- Each runner enforces a hard cap on concurrent executions using a fixed-size execution thread pool.
+- The cap is configured via loader.execution.threadPoolSize (default 10). :contentReference[oaicite:0]{index=0}
+- When the runner is at capacity (all threads busy), additional executions must wait in the executor queue until a thread becomes available (no additional threads are created).
+
+Technical Requirements (as implemented)
+- Execution concurrency is enforced by a fixed thread pool created via Executors.newFixedThreadPool(poolSize). :contentReference[oaicite:1]{index=1}
+- poolSize is loaded from ExecutionProperties.threadPoolSize (binds to loader.execution.*). :contentReference[oaicite:2]{index=2}
+- Threads are named "loader-exec-N" to improve debugging and operational visibility. :contentReference[oaicite:3]{index=3}
+
+Security Requirements (as implemented)
+- Concurrency limitation reduces the risk of resource exhaustion in a single pod (CPU/memory/thread explosion) by preventing unbounded parallel execution.
+
+Acceptance Criteria
+- Given loader.execution.threadPoolSize = 10,
+  when more than 10 loader executions are submitted on the same runner at the same time,
+  then no more than 10 executions run concurrently; extra submissions are queued by the executor. :contentReference[oaicite:4]{index=4}
+- Given the service starts with default configuration,
+  when the ExecutorService is created,
+  then the log indicates the configured pool size and threads follow the "loader-exec-N" naming convention. :contentReference[oaicite:5]{index=5}
+
+Explicit Limitations
+- “Runner” concurrency is enforced only at the per-instance level via threadPoolSize; there is no separate per-runner job quota model beyond the executor pool. :contentReference[oaicite:6]{index=6}
+- Cross-runner (multi-pod) global concurrency is controlled elsewhere (distributed locks / global lock caps) and is not part of this story.
+
+---------------------
+User Story: Detect and Handle Stuck or Long-Running Jobs
+
+Story
+As the loader service, I need to detect long-running or stuck loader executions and handle them by timing out or cleaning up stale execution locks, so that the scheduler can recover from hung threads and crashed pods without permanently blocking future executions.
+
+Functional Requirements (as implemented)
+- The scheduler enforces a configurable execution timeout (in hours) per loader run; if exceeded, the execution thread is cancelled (interrupted). :contentReference[oaicite:0]{index=0}
+- The lock manager detects “stale” (hung/abandoned) executions by finding active locks older than a configured stale threshold (hours). :contentReference[oaicite:1]{index=1}
+- For each stale lock, the lock manager attempts to cancel the associated execution thread (Future) before releasing locks in the database. :contentReference[oaicite:2]{index=2}
+- After cancelling threads (where possible), the lock manager releases/cleans stale lock records to unblock future executions. :contentReference[oaicite:3]{index=3}
+- Only stale locks older than the threshold are cleaned; fresh locks are not removed. :contentReference[oaicite:4]{index=4}
+
+Technical Requirements (as implemented)
+- Scheduler execution is submitted to an ExecutorService as a Future; it waits using future.get(timeoutHours, TimeUnit.HOURS). :contentReference[oaicite:5]{index=5}
+- On TimeoutException, scheduler cancels the execution using future.cancel(true) and proceeds to finally-block cleanup. :contentReference[oaicite:6]{index=6}
+- The lock manager maintains an in-memory map (activeExecutions) from lockId to Future to allow thread cancellation during stale lock cleanup. :contentReference[oaicite:7]{index=7}
+- Each scheduled execution registers its Future using lockManager.registerExecution(lockId, future) and unregisters it in finally using lockManager.unregisterExecution(lockId). :contentReference[oaicite:8]{index=8} :contentReference[oaicite:9]{index=9} :contentReference[oaicite:10]{index=10}
+- Stale lock cleanup:
+  - Computes staleThreshold = now - (staleLockThresholdHours * 3600)
+  - Retrieves unreleased locks acquired before staleThreshold
+  - Cancels associated Futures (if present and not done)
+  - Removes them from activeExecutions
+  - Runs repository cleanupStaleLocks(staleThreshold, releasedAt) to release/remove stale locks in DB. :contentReference[oaicite:11]{index=11}
+- Unit tests validate stale lock cleanup removes old locks and retains fresh locks. :contentReference[oaicite:12]{index=12} :contentReference[oaicite:13]{index=13}
+
+Security Requirements (as implemented)
+- Stale lock cleanup prevents a hung execution from blocking the loader indefinitely, reducing operational denial-of-service risk caused by stuck threads or crashed pods. :contentReference[oaicite:14]{index=14}
+- Cancellation logs reference lockId/loaderCode/acquiredAt and do not expose credentials. :contentReference[oaicite:15]{index=15}
+
+Acceptance Criteria
+- Given a scheduler-run loader exceeds executionTimeoutHours,
+  when the timeout is reached,
+  then the scheduler cancels the Future with future.cancel(true) and releases the lock in the finally block. :contentReference[oaicite:16]{index=16}
+- Given an unreleased lock older than staleLockThresholdHours exists,
+  when cleanupStaleLocks runs,
+  then the lock manager cancels the associated Future (if present and not done) and cleans the stale lock in the database. :contentReference[oaicite:17]{index=17}
+- Given only fresh locks exist (younger than the threshold),
+  when cleanupStaleLocks runs,
+  then no locks are removed (cleaned = 0). :contentReference[oaicite:18]{index=18}
+- Given one fresh lock and one stale lock exist,
+  when cleanupStaleLocks runs,
+  then only the stale lock is removed and the fresh lock remains. :contentReference[oaicite:19]{index=19}
+
+Explicit Limitations
+- Thread cancellation is “best effort”:
+  - If the Future is missing from activeExecutions (e.g., pod restart) or already done, only DB lock cleanup can occur. :contentReference[oaicite:20]{index=20}
+- Cancellation uses thread interruption (future.cancel(true)); if the execution code ignores interrupts, the thread may not stop immediately.
+
+---------------------
+Phase 3 — Data Handling & Integrity Guarantees
+
+User Story: Validate Source Query Schema Before Execution
+
+Story
+As the loader system, I want to validate that a loader’s SQL query conforms to the required ETL output schema (required column set and structural rules) before it can be used operationally, so that misconfigured loaders are detected early and do not fail at runtime due to missing columns or incompatible query structure.
+
+Functional Requirements (as implemented)
+- Validate loader SQL in the UI as the user edits it and present validation feedback in real time. :contentReference[oaicite:0]{index=0}
+- Validation rules include:
+  - Required columns: LOAD_TIME_STAMP, SEGMENT_1..10, REC_COUNT, SUM_VAL, AVG_VAL, MAX_VAL, MIN_VAL :contentReference[oaicite:1]{index=1}
+  - GROUP BY clause must be present :contentReference[oaicite:2]{index=2}
+  - Time parameters must be present (:fromTime, :toTime) :contentReference[oaicite:3]{index=3}
+  - Aggregation functions must be present (COUNT, SUM, AVG, MAX, MIN) :contentReference[oaicite:4]{index=4}
+- Provide clear error messaging to indicate what schema requirements are missing. :contentReference[oaicite:5]{index=5}
+
+Technical Requirements (as implemented)
+- SQL validation is triggered on every SQL change (useEffect) by calling validateSqlQuery(value). :contentReference[oaicite:6]{index=6}
+- Validation result structure supports isValid + errors + warnings and is rendered in the editor panel. :contentReference[oaicite:7]{index=7} :contentReference[oaicite:8]{index=8}
+- A “Test Query” action exists in the UI and requires a selected sourceDatabaseId, but backend execution is marked as pending in the documented status. :contentReference[oaicite:9]{index=9} :contentReference[oaicite:10]{index=10}
+
+Security Requirements (as implemented)
+- Early validation reduces the risk of running arbitrary/incorrect SQL patterns by enforcing a constrained ETL query shape (required columns + grouping + time bounds). :contentReference[oaicite:11]{index=11}
+
+Acceptance Criteria
+- Given a user edits loader SQL,
+  when the SQL changes,
+  then validateSqlQuery is executed and validation results are shown. :contentReference[oaicite:12]{index=12}
+- Given a SQL query is missing one or more required schema columns,
+  when validation runs,
+  then isValid=false and errors indicate missing columns. :contentReference[oaicite:13]{index=13}
+- Given a SQL query is missing GROUP BY or :fromTime/:toTime,
+  when validation runs,
+  then isValid=false and errors indicate the missing structural requirements. :contentReference[oaicite:14]{index=14}
+- Given the user clicks “Test Query” without selecting a source database,
+  then the UI blocks the test and returns an explicit message that a source database is required. :contentReference[oaicite:15]{index=15}
+
+Explicit Limitations (as implemented)
+- This validation is implemented in the frontend editor experience; backend “Test Query” execution is explicitly marked as pending (i.e., runtime schema validation is not guaranteed by backend code in the current state). :contentReference[oaicite:16]{index=16}
+
+---------------------
+User Story: Validate Target Schema Compatibility Before Insert
+
+Story
+As the loader execution pipeline, I want the system to ensure the data being ingested is compatible with the fixed target table schema (signals.signals_history) before insert, so that ingestion either succeeds consistently or fails fast with a clear database/application error when incompatibilities exist.
+
+Functional Requirements (as implemented)
+- The target storage schema is fixed and predefined as signals.signals_history, with a stable set of columns used by all loaders. :contentReference[oaicite:0]{index=0}
+- Ingestion writes a list of SignalsHistory entities into signals_history using a repository bulk insert (saveAll). :contentReference[oaicite:1]{index=1}
+- The system permits optional metric fields to be null (rec_count, sum_val, avg_val, max_val, min_val, and segments), as long as required fields are present. :contentReference[oaicite:2]{index=2}
+- Required target columns that must be present on each inserted record:
+  - loader_code (NOT NULL)
+  - load_time_stamp (NOT NULL) :contentReference[oaicite:3]{index=3}
+
+Technical Requirements (as implemented)
+- Compatibility is enforced implicitly by:
+  1) SignalsHistory entity-to-table mapping (JPA), and
+  2) Database constraints/types in signals.signals_history. :contentReference[oaicite:4]{index=4}
+- The insert step is executed after purge-strategy handling and before actual time-range calculation. :contentReference[oaicite:5]{index=5}
+- On schema/type mismatch (e.g., attempting to persist incompatible data types or violating NOT NULL constraints), the insert will fail at the ORM/database layer and the overall execution flow will treat it as a failure (no custom “pre-insert schema probe” is implemented in the shown code path). :contentReference[oaicite:6]{index=6} :contentReference[oaicite:7]{index=7}
+
+Security Requirements (as implemented)
+- A fixed, narrow target schema reduces the chance of writing arbitrary structures into storage; all ingested results are normalized into the same table/columns. :contentReference[oaicite:8]{index=8}
+
+Acceptance Criteria
+- Given a SignalsHistory payload with loader_code and load_time_stamp set,
+  when saveAll(signals) is executed,
+  then the records are persisted into signals.signals_history successfully. :contentReference[oaicite:9]{index=9}
+- Given optional metric/segment fields are null,
+  when append/bulkAppend is called,
+
+
+---------------------
+User Story: Guarantee Idempotent Loader Execution
+
+Story
+As the loader platform, I want loader executions to be idempotent (safe to re-run for the same time window) using an explicit purge strategy, so that retries, reprocessing, and partial failures do not create duplicate or inconsistent records in the target table.
+
+Functional Requirements (as implemented)
+- Before inserting results into signals.signals_history, the execution flow applies a configured purge strategy for the loader and the current execution time window. :contentReference[oaicite:0]{index=0}
+- Purge strategies supported:
+  - FAIL_ON_DUPLICATE: detect any existing target rows in the time window and fail the execution with a BusinessException. :contentReference[oaicite:1]{index=1}
+  - PURGE_AND_RELOAD: delete existing target rows in the time window prior to insert. :contentReference[oaicite:2]{index=2}
+  - SKIP_DUPLICATES: do not pre-delete; proceed with insert and rely on “database unique constraints (if any)” to avoid duplicates. :contentReference[oaicite:3]{index=3}
+- Purge strategy is a persisted loader configuration field (purge_strategy) with an enum constraint at the database level. :contentReference[oaicite:4]{index=4} :contentReference[oaicite:5]{index=5}
+
+Technical Requirements (as implemented)
+- Scheduled load pipeline order includes:
+  - set load_history_id on signals
+  - applyPurgeStrategy(loader, window)
+  - saveAll(signals) into signals_history :contentReference[oaicite:6]{index=6}
+- Duplicate detection uses:
+  - findByLoaderCodeAndLoadTimeStampBetween(loaderCode, fromTime, toTime) :contentReference[oaicite:7]{index=7}
+- Purge uses:
+  - deleteByLoaderCodeAndLoadTimeStampBetween(loaderCode, fromTime, toTime) :contentReference[oaicite:8]{index=8}
+- Backfill execution uses the same strategy pattern for a user-provided range, applying purge strategy before saveAll. :contentReference[oaicite:9]{index=9}
+
+Security Requirements (as implemented)
+- FAIL_ON_DUPLICATE is a safe default posture: it prevents silent duplication and forces explicit remediation (e.g., use backfill with PURGE_AND_RELOAD) when duplicates exist. :contentReference[oaicite:10]{index=10}
+- Idempotency controls help reduce accidental data corruption from retries, concurrent triggers, or orphaned partial loads. :contentReference[oaicite:11]{index=11}
+
+Acceptance Criteria
+- Given purgeStrategy = FAIL_ON_DUPLICATE,
+  when scheduled execution runs for a window where target data already exists,
+  then execution fails before insert with a BusinessException indicating duplicate data. :contentReference[oaicite:12]{index=12}
+- Given purgeStrategy = PURGE_AND_RELOAD,
+  when scheduled execution runs for a window where target data already exists,
+  then the service deletes existing rows in that window before inserting new rows. :contentReference[oaicite:13]{index=13}
+- Given purgeStrategy = SKIP_DUPLICATES,
+  when scheduled execution runs for a window that may overlap previous loads,
+  then the service does not delete and proceeds with insert. :contentReference[oaicite:14]{index=14}
+- Given any purge strategy,
+  when applyPurgeStrategy completes,
+  then insert is performed via signalsHistoryRepository.saveAll(signals). :contentReference[oaicite:15]{index=15}
+
+Explicit Limitations (current state)
+- SKIP_DUPLICATES relies on “database unique constraints (if any)” to prevent duplication; the provided schema for signals.signals_history shows indexes but no explicit UNIQUE constraint on (loader_code, load_time_stamp, segment_code). This means SKIP_DUPLICATES may not prevent duplicates unless uniqueness is enforced elsewhere. :contentReference[oaicite:16]{index=16} :contentReference[oaicite:17]{index=17}
+
+---------------------
+User Story: Prevent Duplicate Data Loads Across Executions
+
+Story
+As the loader platform, I want to prevent duplicate target data loads across repeated or overlapping executions by combining (1) bounded time windows, (2) distributed execution locks, and (3) a purge strategy applied before insert, so that repeated runs do not silently create duplicate rows in the target table.
+
+Functional Requirements (as implemented)
+- Each execution uses a calculated [fromTime, toTime) time window to bound what is extracted/ingested. :contentReference[oaicite:0]{index=0} :contentReference[oaicite:1]{index=1}
+- The platform prevents concurrent duplicate runs beyond the configured per-loader parallel limit using a distributed DB lock. :contentReference[oaicite:2]{index=2} :contentReference[oaicite:3]{index=3}
+- Before inserting into signals_history, the service applies a purge strategy for the loader and the execution window to prevent duplicates in that window. :contentReference[oaicite:4]{index=4}
+- Supported purge strategies:
+  - FAIL_ON_DUPLICATE: detect existing rows in the window and fail the execution. :contentReference[oaicite:5]{index=5}
+  - PURGE_AND_RELOAD: delete existing rows in the window then insert new rows. :contentReference[oaicite:6]{index=6}
+  - SKIP_DUPLICATES: do not delete; proceed with insert and rely on DB uniqueness “if any”. :contentReference[oaicite:7]{index=7}
+
+Technical Requirements (as implemented)
+- Duplicate detection is performed by querying existing target rows for (loader_code, load_time_stamp between fromTime and toTime). :contentReference[oaicite:8]{index=8}
+- Purge deletion is performed by deleting target rows for (loader_code, load_time_stamp between fromTime and toTime). :contentReference[oaicite:9]{index=9}
+- Purge strategy is persisted on the loader definition as purge_strategy (enum). :contentReference[oaicite:10]{index=10}
+- The pipeline applies purge before saveAll(signals) into signals_history. :contentReference[oaicite:11]{index=11}
+
+Security Requirements (as implemented)
+- FAIL_ON_DUPLICATE provides a safe default by preventing silent duplication and forcing explicit action when overlap is detected. :contentReference[oaicite:12]{index=12}
+- Distributed locking reduces duplicate loads caused by simultaneous triggers across replicas. :contentReference[oaicite:13]{index=13}
+
+Acceptance Criteria
+- Given purgeStrategy = FAIL_ON_DUPLICATE,
+  when an execution overlaps a previously ingested window for the same loader,
+  then the execution fails before insert with a duplicate-data error. :contentReference[oaicite:14]{index=14}
+- Given purgeStrategy = PURGE_AND_RELOAD,
+  when an execution overlaps a previously ingested window for the same loader,
+  then existing target rows in that window are deleted and replaced by the new insert. :contentReference[oaicite:15]{index=15}
+- Given multiple replicas attempt to run the same loader concurrently beyond its configured limit,
+  when they attempt to acquire the execution lock,
+  then only the allowed number of executions proceed and others are blocked/skipped. :contentReference[oaicite:16]{index=16} :contentReference[oaicite:17]{index=17}
+- Given an execution begins,
+  when it reaches the insert step,
+  then applyPurgeStrategy is executed before saveAll(). :contentReference[oaicite:18]{index=18}
+
+Explicit Limitations (current state)
+- SKIP_DUPLICATES depends on database uniqueness “if any”; the shown signals_history schema defines indexes but does not show an explicit UNIQUE constraint that guarantees de-duplication, meaning duplicates may still occur under SKIP_DUPLICATES unless uniqueness is enforced elsewhere. :contentReference[oaicite:19]{index=19} :contentReference[oaicite:20]{index=20}
+
+---------------------
+User Story: Overwrite Previously Loaded Data for the Same Period
+
+Story
+As the loader platform, I want the system to overwrite (replace) previously ingested target data for the same loader and time window, so that reruns/backfills can correct historical data without leaving duplicates.
+
+Functional Requirements (as implemented)
+- The loader supports an explicit purge strategy that overwrites data for the execution window:
+  - PURGE_AND_RELOAD deletes existing rows for (loader_code, load_time_stamp within the window) and then inserts the new results. :contentReference[oaicite:0]{index=0}
+- The purge strategy is configured per loader using purge_strategy. :contentReference[oaicite:1]{index=1}
+- The overwrite behavior applies to:
+  - Scheduled executions (execution window derived by TimeWindow)
+  - Backfill executions (explicit from/to range) :contentReference[oaicite:2]{index=2}
+
+Technical Requirements (as implemented)
+- Overwrite is implemented as:
+  - deleteByLoaderCodeAndLoadTimeStampBetween(loaderCode, fromTime, toTime) :contentReference[oaicite:3]{index=3}
+  - followed by repository saveAll(signals) into signals_history :contentReference[oaicite:4]{index=4}
+- The pipeline order ensures purge occurs before insert. :contentReference[oaicite:5]{index=5}
+
+Security Requirements (as implemented)
+- Overwrite is constrained to a specific loader_code and time window to prevent broad data deletion.
+- Overwrite behavior is explicit and controlled through purge_strategy, reducing accidental destructive operations.
+
+Acceptance Criteria
+- Given a loader has purgeStrategy = PURGE_AND_RELOAD,
+  and target rows already exist for the same loader_code within [fromTime, toTime),
+  when the loader executes,
+  then the service deletes existing rows in that window and inserts the new rows, resulting in a single “latest” dataset for that period. :contentReference[oaicite:6]{index=6}
+- Given a backfill job runs with purgeStrategy = PURGE_AND_RELOAD for an explicit range,
+  when the backfill executes,
+  then existing rows in that range are overwritten by the new insert. :contentReference[oaicite:7]{index=7}
+
+Explicit Limitations (current state)
+- Overwrite behavior exists only when purgeStrategy is set to PURGE_AND_RELOAD; other strategies either fail on duplicates or proceed without deletion. :contentReference[oaicite:8]{index=8} :contentReference[oaicite:9]{index=9}
+
+---------------------
+User Story: Handle Late-Arriving or Out-of-Order Data
+
+Story
+As the loader platform, I want to detect and recover data that arrives late or appears out-of-order (timestamps older than the current watermark) by scanning for gaps/partial loads and submitting controlled backfills, so that the target dataset can be corrected without breaking idempotency.
+
+Functional Requirements (as implemented)
+- The platform supports automated gap detection and recovery via a scheduled Gap Scanner service. :contentReference[oaicite:0]{index=0}
+- Gap detection scenarios include:
+  - Partial Load: actual_from_time != query_from_time OR actual_to_time != query_to_time
+  - No Data Loaded: actual_from_time IS NULL (zero records loaded despite query success)
+  - Timeline Gaps: gap between consecutive successful loads (previous actual_to_time < current actual_from_time) :contentReference[oaicite:1]{index=1}
+- When gaps are detected, the recovery strategy is to automatically submit backfill jobs with PURGE_AND_RELOAD for the detected gaps. :contentReference[oaicite:2]{index=2}
+- The gap scanner runs on a schedule (every 6 hours) and scans a bounded recent history window (lookback 7 days) to avoid overwhelming the system. :contentReference[oaicite:3]{index=3} :contentReference[oaicite:4]{index=4}
+
+Technical Requirements (as implemented)
+- The scheduler uses a watermark (last_load_timestamp) and advances it after successful runs to the maximum timestamp found in the retrieved dataset. :contentReference[oaicite:5]{index=5}
+- Because the watermark is advanced forward, late-arriving records with timestamps earlier than last_load_timestamp will not be picked up by normal incremental runs unless a backfill is executed for that historical period. :contentReference[oaicite:6]{index=6}
+- Backfill recovery is performed using an overwrite-safe approach (PURGE_AND_RELOAD) for the affected window, which aligns with the platform’s idempotency model. :contentReference[oaicite:7]{index=7}
+
+Security Requirements (as implemented)
+- Automated recovery is constrained by:
+  - a minimum gap size threshold (5 minutes) to prevent “backfill spam” from tiny gaps :contentReference[oaicite:8]{index=8}
+  - a bounded scan lookback (7 days) to limit operational blast radius :contentReference[oaicite:9]{index=9}
+- Recovery uses PURGE_AND_RELOAD for targeted windows, avoiding uncontrolled broad deletes. :contentReference[oaicite:10]{index=10}
+
+Acceptance Criteria
+- Given a loader has a detectable timeline gap in recent load history,
+  when the gap scanner runs,
+  then it submits a backfill job for that gap using PURGE_AND_RELOAD. :contentReference[oaicite:11]{index=11} :contentReference[oaicite:12]{index=12}
+- Given a loader execution produces a partial load (actual window differs from query window) or produces zero records (actual_from_time is NULL),
+  when the gap scanner runs,
+  then it detects the condition and submits a backfill job (subject to MIN_GAP_SIZE). :contentReference[oaicite:13]{index=13} :contentReference[oaicite:14]{index=14}
+- Given an execution completes successfully,
+  when the loader finalizes,
+  then the watermark last_load_timestamp advances to the max timestamp observed in the dataset. :contentReference[oaicite:15]{index=15}
+
+Explicit Limitations (current state)
+- The core incremental scheduler does not include a built-in “lateness buffer” (e.g., always re-reading the last N minutes/hours). Because the watermark advances to the max observed timestamp, late/out-of-order records older than the watermark require backfill-driven correction. :contentReference[oaicite:16]{index=16}
+- The automated recovery focuses on gap/partial-load detection over recent history; it does not explicitly detect “late arrivals” that do not manifest as gaps (e.g., late rows that fall inside already-loaded windows) unless a backfill is triggered for that period. :contentReference[oaicite:17]{index=17}
+
+---------------------
+User Story: Ensure Timezone and Timestamp Normalization
+
+Story
+As the loader execution pipeline, I want all time windows and query parameters to be normalized into a consistent timestamp representation (UTC-based Instants) and then formatted appropriately for each source query context (ISO-8601, MySQL datetime, Unix epoch), so that time filtering behaves predictably across heterogeneous source databases and avoids querying future/out-of-scope data.
+
+Functional Requirements (as implemented)
+- Time windows are represented as Instant-based boundaries (fromTime, toTime) and passed into query placeholder replacement. :contentReference[oaicite:0]{index=0}
+- The system auto-detects the expected timestamp format by inspecting the SQL content and chooses one of:
+  - ISO_8601
+  - MYSQL_DATETIME
+  - UNIX_EPOCH_SECONDS
+  - UNIX_EPOCH_MILLIS :contentReference[oaicite:1]{index=1}
+- The system replaces :fromTime and :toTime placeholders using the detected/selected format. :contentReference[oaicite:2]{index=2}
+- The system supports applying a timezone offset (in hours) to shift the UTC window into the source DB “local time” for query execution by subtracting the offset hours from the Instant window. :contentReference[oaicite:3]{index=3} :contentReference[oaicite:4]{index=4}
+
+Technical Requirements (as implemented)
+- ISO-8601 formatting uses a UTC “Z” suffix with a fixed UTC zone formatter:
+  - pattern: yyyy-MM-dd'T'HH:mm:ss'Z'
+  - zone: ZoneOffset.UTC :contentReference[oaicite:5]{index=5}
+- MySQL datetime formatting uses:
+  - pattern: yyyy-MM-dd HH:mm
+  - zone: ZoneOffset.UTC :contentReference[oaicite:6]{index=6}
+- Unix epoch formatting uses Instant.getEpochSecond() (seconds) or Instant.toEpochMilli() (millis). :contentReference[oaicite:7]{index=7}
+- Format auto-detection rules:
+  - STR_TO_DATE -> MYSQL_DATETIME
+  - UNIX_TIMESTAMP/FROM_UNIXTIME/epoch indicators -> UNIX_EPOCH_SECONDS
+  - TIMESTAMP/TO_TIMESTAMP/CAST AS TIMESTAMP indicators -> ISO_8601
+  - default -> ISO_8601 :contentReference[oaicite:8]{index=8}
+- Timezone offset application:
+  - if timezoneOffsetHours is null or 0: no conversion
+  - else: adjustedFromTime = fromTime - offsetHours; adjustedToTime = toTime - offsetHours; then run standard replacement on adjusted window :contentReference[oaicite:9]{index=9} :contentReference[oaicite:10]{index=10}
+
+Security Requirements (as implemented)
+- Placeholder replacement truncates SQL in logs to reduce log payload size, but it still logs formatted from/to values; therefore timestamps are considered non-secret operational data. :contentReference[oaicite:11]{index=11} :contentReference[oaicite:12]{index=12}
+
+Acceptance Criteria
+- Given SQL contains TIMESTAMP keyword or CAST(... AS TIMESTAMP),
+  when replacePlaceholders() runs,
+  then it formats :fromTime/:toTime as ISO-8601 with a trailing “Z” (UTC). :contentReference[oaicite:13]{index=13} :contentReference[oaicite:14]{index=14}
+- Given SQL contains STR_TO_DATE,
+  when replacePlaceholders() runs,
+  then it formats :fromTime/:toTime as MySQL datetime (yyyy-MM-dd HH:mm). :contentReference[oaicite:15]{index=15} :contentReference[oaicite:16]{index=16}
+- Given SQL contains “epoch” or UNIX_TIMESTAMP/FROM_UNIXTIME indicators,
+  when replacePlaceholders() runs,
+  then it formats :fromTime/:toTime as Unix epoch seconds. :contentReference[oaicite:17]{index=17} :contentReference[oaicite:18]{index=18}
+- Given timezoneOffsetHours is provided and non-zero,
+  when replacePlaceholders(sql, window, timezoneOffsetHours) runs,
+  then it subtracts the offset from the UTC window before formatting, producing a shifted “source DB window”. :contentReference[oaicite:19]{index=19} :contentReference[oaicite:20]{index=20}
+
+Explicit Limitations (current state)
+- Timezone conversion is implemented as a fixed-hour offset adjustment (Integer hours), not as IANA timezone (DST-aware) conversion. :contentReference[oaicite:21]{index=21}
+- Auto-detection defaults to ISO-8601 even if the source database expects a different format, unless the SQL contains detectable keywords/functions. :contentReference[oaicite:22]{index=22}
+
+---------------------
+User Story: Reject Partial or Corrupted Load Results
+
+Story
+As the loader execution pipeline, I want to detect partial loads and reject corrupted load outcomes by marking the execution as FAILED or PARTIAL (with explicit execution history fields), so that incomplete or invalid loads do not silently appear as healthy runs and can be recovered via backfill.
+
+Functional Requirements (as implemented)
+- Execution outcomes are tracked with LoadExecutionStatus, including FAILED and PARTIAL states. :contentReference[oaicite:0]{index=0}
+- When an execution fails due to an exception (including mapping/ingestion failures), the run is recorded as FAILED and the error_message and stack_trace are persisted in load_history. :contentReference[oaicite:1]{index=1}
+- Partial load conditions are explicitly modeled in execution history using:
+  - query_from_time / query_to_time (intended window)
+  - actual_from_time / actual_to_time (what was actually loaded, if any) :contentReference[oaicite:2]{index=2}
+- The platform detects partial/empty loads operationally using gap-scanner rules:
+  - Partial Load: actual_from_time != query_from_time OR actual_to_time != query_to_time
+  - No Data Loaded: actual_from_time IS NULL :contentReference[oaicite:3]{index=3}
+
+Technical Requirements (as implemented)
+- On runtime failure, execution history is updated in-place to FAILED with error details. :contentReference[oaicite:4]{index=4}
+- Execution history persists both the intended query window and the actual loaded window fields, enabling downstream detection and recovery. :contentReference[oaicite:5]{index=5}
+- Gap scanner relies on those fields to identify incomplete outcomes and trigger recovery backfills (PURGE_AND_RELOAD). :contentReference[oaicite:6]{index=6}
+
+Security Requirements (as implemented)
+- Corrupted or failed results do not proceed as “successful” completion; failures persist diagnostic data (error_message/stack_trace) for operators. :contentReference[oaicite:7]{index=7}
+- Partial outcomes are surfaced as operationally detectable states (via history fields and PARTIAL status support). :contentReference[oaicite:8]{index=8} :contentReference[oaicite:9]{index=9}
+
+Acceptance Criteria
+- Given a loader execution throws an exception during query/mapping/ingestion,
+  when the execution completes,
+  then the corresponding LoadHistory record is saved with status FAILED and includes error_message and stack_trace. :contentReference[oaicite:10]{index=10}
+- Given an execution completes with incomplete coverage of the query window,
+  when the run is recorded,
+  then the mismatch is representable via actual_from_time/actual_to_time fields and/or PARTIAL status support. :contentReference[oaicite:11]{index=11} :contentReference[oaicite:12]{index=12}
+- Given a partial load (actual != query) or no-data load (actual_from_time IS NULL) exists in recent history,
+  when the gap scanner runs,
+  then it detects the condition and submits a recovery backfill job (subject to configured thresholds). :contentReference[oaicite:13]{index=13}
+
+Explicit Limitations (current state)
+- “Rejection” of partial loads is not implemented as a hard stop that blocks inserts; partial/empty outcomes are primarily handled by recording actual_* fields and by gap-scanner driven recovery, not by preventing the insert step universally. :contentReference[oaicite:14]{index=14}
+
+---------------------
+User Story: Record Data Gaps Detected During Loading
+
+Story
+As the loader platform, I want the system to record detectable data gaps and incomplete coverage for each execution (intended window vs actual loaded window), so that gaps can be identified, reported, and automatically recovered via backfill workflows.
+
+Functional Requirements (as implemented)
+- Each execution records the intended query window:
+  - query_from_time, query_to_time. :contentReference[oaicite:0]{index=0}
+- Each execution records the actual loaded window when available:
+  - actual_from_time, actual_to_time (or NULL if no data loaded). :contentReference[oaicite:1]{index=1}
+- The system records execution status (RUNNING/SUCCESS/FAILED/PARTIAL) in load_history for operational interpretation of outcomes. :contentReference[oaicite:2]{index=2}
+- Data gaps and incomplete coverage are detected by comparing actual_* against query_* (and by identifying NULL actual_from_time) as part of the Gap Scanner logic. :contentReference[oaicite:3]{index=3}
+
+Technical Requirements (as implemented)
+- Execution history is persisted in loader.load_history and includes both query_* and actual_* timestamps. :contentReference[oaicite:4]{index=4} :contentReference[oaicite:5]{index=5}
+- The Gap Scanner periodically scans recent load history (lookback window) and detects:
+  - Partial Load: actual_from_time != query_from_time OR actual_to_time != query_to_time
+  - No Data Loaded: actual_from_time IS NULL
+  - Timeline Gaps: previous actual_to_time < current actual_from_time. :contentReference[oaicite:6]{index=6}
+- Detected gaps are used to trigger backfill submissions (recovery) rather than being stored in a separate “gaps” table. :contentReference[oaicite:7]{index=7}
+
+Security Requirements (as implemented)
+- Gap recording relies on timestamp metadata only and does not store credentials.
+- Gap-driven recovery is bounded by configured thresholds to reduce operational blast radius (e.g., min gap size, bounded lookback window). :contentReference[oaicite:8]{index=8}
+
+Acceptance Criteria
+- Given a loader execution starts,
+  when the LoadHistory record is created,
+  then query_from_time and query_to_time are persisted for that run. :contentReference[oaicite:9]{index=9}
+- Given a loader execution completes and loads data,
+  when finalizing history,
+  then actual_from_time and actual_to_time are persisted to reflect the loaded coverage. :contentReference[oaicite:10]{index=10}
+- Given a loader execution loads no data,
+  when history is finalized,
+  then actual_from_time remains NULL and can be detected as “No Data Loaded.” :contentReference[oaicite:11]{index=11}
+- Given a partial load (actual != query) or timeline gap exists in recent history,
+  when the Gap Scanner runs,
+  then it detects the gap using recorded timestamps and proceeds with recovery submission logic. :contentReference[oaicite:12]{index=12}
+
+Explicit Limitations (current state)
+- There is no dedicated “gap records” table; gaps are inferred from load_history timestamp fields and scan logic. :contentReference[oaicite:13]{index=13}
+
+---------------------
+User Story: Store Raw Loaded Data Separately from Derived Data
+
+Story
+As the loader platform, I want raw (source-level) loaded data to be stored separately from derived/aggregated data, so that reprocessing, auditing, and downstream derivations can be performed without losing the original source extracts.
+
+Current Implementation Status (based on existing code)
+- NOT IMPLEMENTED in the current solution.
+- The target table used by loaders is signals.signals_history, and it is explicitly described as holding aggregated signal data (i.e., derived/normalized output), not raw extracts. :contentReference[oaicite:0]{index=0}
+- The schema work focuses on normalization (segment_code + segment_combination) and timestamp normalization, which supports derived/aggregated storage rather than raw storage. :contentReference[oaicite:1]{index=1} :contentReference[oaicite:2]{index=2}
+
+Functional Requirements (what exists today)
+- Store normalized/aggregated loader output in signals.signals_history. :contentReference[oaicite:3]{index=3}
+- Store normalized segment combinations in signals.segment_combination for lookup and analysis. :contentReference[oaicite:4]{index=4}
+
+Technical Requirements (what exists today)
+- signals_history is structured to hold aggregated metrics and normalized segment reference (segment_code), not raw row-level source payloads. :contentReference[oaicite:5]{index=5} :contentReference[oaicite:6]{index=6}
+- No “raw_*” table or equivalent raw persistence layer is present in the provided code/migrations.
+
+Security Requirements (what exists today)
+- The current design avoids persisting raw source records, which reduces storage of potentially sensitive source attributes by default (only aggregated/normalized data is stored). :contentReference[oaicite:7]{index=7}
+
+Acceptance Criteria (for current state)
+- Data produced by loaders is persisted into signals.signals_history as aggregated/normalized signals. :contentReference[oaicite:8]{index=8}
+- Segment values are stored/managed via signals.segment_combination rather than embedding 10 segment columns in signals_history. :contentReference[oaicite:9]{index=9} :contentReference[oaicite:10]{index=10}
+
+Explicit Limitations (current state)
+- There is no separate raw storage layer; the solution currently stores only derived/aggregated results (signals_history) plus segment normalization (segment_combination). :contentReference[oaicite:11]{index=11} :contentReference[oaicite:12]{index=12}
+
+---------------------
+Phase 4 — Failure Handling & Control Operations
+---------------------
+User Story: Retry a Failed Loader Execution
+
+Story
+As an operator, I want to retry a failed loader execution by re-submitting the same execution parameters as a new backfill job, so that the platform can re-run the same time range safely without mutating historical failed job records.
+
+Functional Requirements (as implemented)
+- Failed executions (Backfill Jobs with status FAILED) are retryable from the UI via a “Retry” action in the completed jobs list. :contentReference[oaicite:0]{index=0} :contentReference[oaicite:1]{index=1}
+- Retry behavior is implemented as: copy the failed job parameters (loader, from/to, purge strategy) and open the “Submit Backfill Job” form pre-filled. :contentReference[oaicite:2]{index=2}
+- Retrying creates a NEW backfill job record in PENDING status (it does not re-run the same failed jobId). :contentReference[oaicite:3]{index=3}
+- The submitted retry job can then be executed via the normal backfill execution flow.
+
+Technical Requirements (as implemented)
+- Backfill execution can only run jobs in PENDING status; attempting to execute a job that is not PENDING throws a BusinessException. This prevents “re-executing” an existing FAILED jobId. :contentReference[oaicite:4]{index=4}
+- Submit backfill job validates:
+  - loaderCode is provided and exists :contentReference[oaicite:5]{index=5}
+  - fromTime/toTime are provided and toTime > fromTime :contentReference[oaicite:6]{index=6}
+- Submit backfill job persists a new BackfillJob using epoch seconds and defaults purge strategy to PURGE_AND_RELOAD when not provided, and sets status=PENDING. :contentReference[oaicite:7]{index=7}
+- Execution path for backfill jobs:
+  - executeBackfillJob(jobId) loads job, validates PENDING, marks RUNNING, executes, then marks SUCCESS or FAILED. :contentReference[oaicite:8]{index=8} :contentReference[oaicite:9]{index=9}
+
+Security Requirements (as implemented)
+- “Retry” does not mutate the original FAILED job record; it creates a new job request, preserving an audit trail of failures and retries. :contentReference[oaicite:10]{index=10}
+- Status validation (must be PENDING) prevents accidental reruns of non-queued jobs and enforces a consistent lifecycle. :contentReference[oaicite:11]{index=11}
+
+Acceptance Criteria
+- Given a backfill job has status FAILED,
+  when the operator clicks [Retry],
+  then the platform opens the Submit Backfill Job form with the failed job’s parameters copied. :contentReference[oaicite:12]{index=12}
+- Given the operator submits the retry form,
+  when submission succeeds,
+  then a new BackfillJob is created with status=PENDING (new jobId). :contentReference[oaicite:13]{index=13}
+- Given a job is not PENDING (FAILED/SUCCESS/RUNNING/CANCELLED),
+  when executeBackfillJob(jobId) is called,
+  then the service rejects it with BACKFILL_JOB_NOT_PENDING. :contentReference[oaicite:14]{index=14}
+
+Explicit Limitations (current state)
+- There is no “retry-in-place” for an existing FAILED jobId; retry is implemented by re-submitting parameters as a new job. :contentReference[oaicite:15]{index=15} :contentReference[oaicite:16]{index=16}
+
+---------------------
+User Story: Cancel a Running Loader Job
+
+Story
+As an operator, I want to cancel a running loader job so that I can stop a long-running backfill/loader execution without waiting for it to complete.
+
+Current Implementation (reverse-documented)
+- Cancellation is implemented ONLY for PENDING backfill jobs, not for RUNNING jobs. :contentReference[oaicite:0]{index=0} :contentReference[oaicite:1]{index=1}
+- The backend exposes a cancel endpoint for backfill jobs:
+  - POST /backfill/{id}/cancel :contentReference[oaicite:2]{index=2}
+- The service method cancelBackfillJob(jobId) rejects cancellation unless status == PENDING. :contentReference[oaicite:3]{index=3}
+- When cancellation is allowed, the job status is set to CANCELLED and endTime is set to Instant.now(). :contentReference[oaicite:4]{index=4}
+- UI documentation explicitly states “Cancel button (only for PENDING jobs)”. :contentReference[oaicite:5]{index=5}
+
+Functional Requirements (as implemented)
+- Allow cancel for PENDING backfill jobs only:
+  - If job is PENDING → set status = CANCELLED, set endTime, persist.
+  - If job is RUNNING/SUCCESS/FAILED/CANCELLED → reject with BACKFILL_JOB_NOT_PENDING. :contentReference[oaicite:6]{index=6}
+- Return the updated job in the cancel API response.
+
+Technical Requirements (as implemented)
+- cancelBackfillJob(jobId):
+  - Loads BackfillJob by ID or throws BACKFILL_JOB_NOT_FOUND. :contentReference[oaicite:7]{index=7}
+  - Validates job.getStatus() == PENDING; otherwise throws BACKFILL_JOB_NOT_PENDING. :contentReference[oaicite:8]{index=8}
+  - Updates:
+    - status = CANCELLED
+    - endTime = Instant.now()
+  - Saves via backfillJobRepository.save(job). :contentReference[oaicite:9]{index=9}
+- Cancel endpoint:
+  - POST /{id}/cancel routes to backfillService.cancelBackfillJob(id). :contentReference[oaicite:10]{index=10}
+
+Security Requirements (as implemented)
+- Cancellation is state-gated (PENDING only), preventing arbitrary interruption of in-progress operations via this API. :contentReference[oaicite:11]{index=11}
+- The action is auditable via job status transition to CANCELLED + endTime timestamp. :contentReference[oaicite:12]{index=12}
+
+Acceptance Criteria
+- Given a backfill job is PENDING,
+  when POST /backfill/{id}/cancel is called,
+  then the job status becomes CANCELLED and endTime is set and persisted. :contentReference[oaicite:13]{index=13} :contentReference[oaicite:14]{index=14}
+- Given a backfill job is RUNNING (or any status other than PENDING),
+  when POST /backfill/{id}/cancel is called,
+  then the service rejects the request with BACKFILL_JOB_NOT_PENDING. :contentReference[oaicite:15]{index=15}
+- Given the UI shows cancel capability,
+  then it is constrained to PENDING jobs only (as documented). :contentReference[oaicite:16]{index=16}
+
+Explicit Limitations (current state)
+- “Cancel a running job” (interrupting an active execution thread and marking it CANCELLED) is NOT implemented.
+  - The existing cancel path does not cancel RUNNING jobs and does not attempt to interrupt execution threads. :contentReference[oaicite:17]{index=17}
+- The UI mock shows a cancel button next to a RUNNING job in the example list, but the same document clarifies cancellation is only for PENDING jobs; backend behavior matches the “PENDING only” rule. :contentReference[oaicite:18]{index=18} :contentReference[oaicite:19]{index=19}
+
+---------------------
+User Story: Enable or Disable a Loader Without Code Changes
+
+Story
+As an operator/admin, I want to enable or disable a loader through persisted configuration, so that I can pause or resume executions without changing code or redeploying the service.
+
+Functional Requirements (as implemented)
+- Each loader has an enabled flag that controls whether it is eligible for scheduled execution.
+- When enabled = false, the scheduler must skip the loader (it is not considered due, even if its interval has elapsed).
+- When enabled = true, the loader becomes eligible for scheduling again (subject to approval status and due logic).
+- Manual “run” actions are blocked/disabled when the loader is disabled.
+
+Technical Requirements (as implemented)
+- The scheduler queries only enabled loaders during its polling cycle.
+- The enabled flag is stored in the loader’s persisted definition (database-backed) and is read at runtime.
+- Enabling/disabling is performed by updating the loader record (via admin/API layer), not by changing application configuration or code.
+
+Security Requirements (as implemented)
+- Disabling a loader provides an operational safety control to stop execution of potentially unsafe or incorrect loader SQL.
+- Disabled loaders cannot be executed via normal schedule flow.
+
+Acceptance Criteria
+- Given a loader is enabled,
+  when the scheduler cycle runs and the loader is due,
+  then the loader can be executed.
+- Given a loader is disabled,
+  when the scheduler cycle runs,
+  then the loader is not selected/executed even if it is due.
+- Given a loader is disabled,
+  when an operator attempts to run it from the UI,
+  then the run action is disabled/blocked.
+- Given a disabled loader is re-enabled,
+  when the next scheduler cycle runs,
+  then it becomes eligible again (subject to approval status and due logic).
+
+Explicit Limitations (current state)
+- Disabling prevents new runs; it does not terminate an already running execution.
+- Enabling/disabling is a binary control (no “pause until time” or “disable for N hours” behavior is implemented).
+
+---------------------
+User Story: Pause All Pending Jobs When a Loader Is Deactivated
+
+Story
+As the system, when a loader is deactivated, I want all pending jobs for that loader to be paused/cancelled so that no queued executions run while the loader is disabled.
+
+Current Implementation Status (reverse-documented)
+- NOT IMPLEMENTED in the current codebase.
+- Backfill job cancellation exists, but only for an individual job and only when status == PENDING. :contentReference[oaicite:0]{index=0}
+- There is no implemented bulk operation that:
+  - finds all PENDING jobs for a specific loader_code, and
+  - cancels/pauses them automatically when the loader is disabled.
+- There is no “PAUSED” status in the BackfillJobStatus enum (statuses include PENDING, RUNNING, SUCCESS, FAILED, CANCELLED). :contentReference[oaicite:1]{index=1}
+
+What exists today (closest behavior)
+- Operator can cancel a single pending backfill job via POST /backfill/{id}/cancel, which sets status=CANCELLED. :contentReference[oaicite:2]{index=2} :contentReference[oaicite:3]{index=3}
+- Scheduler eligibility for loaders is controlled by loader.enabled; disabling a loader stops scheduled execution for that loader (does not touch backfill queue). :contentReference[oaicite:4]{index=4}
+
+Acceptance Criteria (for current state)
+- Disabling a loader prevents it from being selected for scheduled execution. :contentReference[oaicite:5]{index=5}
+- Pending backfill jobs remain pending unless explicitly cancelled via the cancel endpoint. :contentReference[oaicite:6]{index=6}
+
+Explicit Limitations (current state)
+- No automatic pausing/cancelling of all pending jobs on loader deactivation.
+- No “PAUSED” job state exists; only CANCELLED is implemented for stopping a pending job. :contentReference[oaicite:7]{index=7}
+
+---------------------
+User Story: Resume Pending Jobs After Loader Reactivation
+
+Story
+As the system, when a loader is reactivated, I want previously paused pending jobs for that loader to resume, so that queued work continues automatically once the loader is enabled again.
+
+Current Implementation Status (reverse-documented)
+- NOT IMPLEMENTED in the current codebase.
+- There is no “PAUSED” status for backfill jobs; statuses are PENDING, RUNNING, SUCCESS, FAILED, CANCELLED. :contentReference[oaicite:0]{index=0}
+- Disabling a loader affects scheduled loader execution eligibility but does not manage backfill job queue states. :contentReference[oaicite:1]{index=1}
+- There is no implemented mechanism that:
+  - marks pending jobs as paused when a loader is disabled, or
+  - automatically re-queues/executes them when loader is re-enabled.
+
+What exists today (closest behavior)
+- Loader reactivation (enabled=true) makes the loader eligible again for scheduled executions (subject to APPROVED status and due logic). :contentReference[oaicite:2]{index=2}
+- Pending backfill jobs remain PENDING until explicitly executed (and can be cancelled individually while PENDING). :contentReference[oaicite:3]{index=3} :contentReference[oaicite:4]{index=4}
+
+Acceptance Criteria (for current state)
+- Re-enabling a loader restores scheduler eligibility for that loader (does not change backfill job statuses). :contentReference[oaicite:5]{index=5}
+- Existing backfill jobs remain in their prior status; no automatic “resume” action occurs. :contentReference[oaicite:6]{index=6}
+
+Explicit Limitations (current state)
+- No pause/resume lifecycle exists for jobs.
+- No bulk resume mechanism exists after loader reactivation.
+
+---------------------
+User Story: Support Safe Re-Execution for Debugging Purposes
+
+Story
+As an operator, I want to safely re-execute loader work for debugging by running a controlled backfill over a specific time range with an overwrite-safe purge strategy, so that I can reproduce issues and correct data without creating duplicates.
+
+Functional Requirements (as implemented)
+- The system supports submitting a backfill job for a specific loader_code and an explicit time range (fromTime, toTime). :contentReference[oaicite:0]{index=0}
+- Backfill jobs default purgeStrategy to PURGE_AND_RELOAD when not provided, enabling safe re-execution that overwrites the same period. :contentReference[oaicite:1]{index=1}
+- Backfill execution applies the purge strategy before inserting results, ensuring idempotent reprocessing for the same range. :contentReference[oaicite:2]{index=2}
+- Operators can retry a FAILED backfill by re-submitting the same parameters as a new PENDING job, enabling safe repeated attempts. :contentReference[oaicite:3]{index=3} :contentReference[oaicite:4]{index=4}
+
+Technical Requirements (as implemented)
+- Submitting a backfill job validates:
+  - loaderCode exists
+  - fromTime and toTime are provided and toTime > fromTime :contentReference[oaicite:5]{index=5}
+- The backfill job stores time bounds as epoch seconds and persists status=PENDING at creation. :contentReference[oaicite:6]{index=6}
+- Backfill execution requires job status == PENDING; otherwise it is rejected (prevents re-executing an existing completed/failed job record). :contentReference[oaicite:7]{index=7}
+- Execution flow applies purge + insert:
+  - applyPurgeStrategy(loader, window)
+  - saveAll(signals) :contentReference[oaicite:8]{index=8}
+
+Security Requirements (as implemented)
+- Defaulting purgeStrategy to PURGE_AND_RELOAD for backfills reduces the risk of creating duplicates during debugging re-runs. :contentReference[oaicite:9]{index=9}
+- Status gating (must be PENDING) preserves an audit trail by ensuring each re-execution is a new job record. :contentReference[oaicite:10]{index=10}
+
+Acceptance Criteria
+- Given I submit a backfill job for loaderCode with fromTime/toTime,
+  when submission succeeds,
+  then a new BackfillJob is created in PENDING status with purgeStrategy defaulted to PURGE_AND_RELOAD if omitted. :contentReference[oaicite:11]{index=11}
+- Given I execute a PENDING backfill job,
+  when it runs,
+  then it applies PURGE_AND_RELOAD (or configured strategy) before inserting, enabling safe re-execution for that period. :contentReference[oaicite:12]{index=12}
+- Given a backfill job failed,
+  when I use Retry,
+  then the system creates a new PENDING job with the same parameters (safe repeated debug attempts). :contentReference[oaicite:13]{index=13} :contentReference[oaicite:14]{index=14}
+
+Explicit Limitations (current state)
+- Safe re-execution is implemented via backfill jobs and purge strategies; there is no dedicated “debug mode” execution path.
+- Cancellation of RUNNING jobs is not implemented; operators may rely on timeout/stale-lock cleanup behavior instead. :contentReference[oaicite:15]{index=15} :contentReference[oaicite:16]{index=16}
+
+---------------------
+User Story: Support Dry-Run Mode for Loaders
+
+Story
+As an operator, I want to execute a loader in “dry-run” mode (extract + transform + validate only, without inserting into signals_history), so that I can validate SQL, connectivity, and expected record volume safely.
+
+Current Implementation Status (reverse-documented)
+- NOT IMPLEMENTED in the current codebase.
+- The existing execution pipeline (as represented in tests) includes persistence to the target repository via signalsHistoryRepository.saveAll(...), with no dry-run flag/branch shown. :contentReference[oaicite:0]{index=0}
+- Backfill execution is implemented as “executeBackfillReal(...)” (real execution) and records SUCCESS/FAILED results; no “dry-run” execution path is shown in the provided code excerpts. :contentReference[oaicite:1]{index=1}
+
+What exists today (closest behavior)
+- Frontend SQL editor performs query-shape validation before execution (“Validation is mandatory”), which provides a pre-run safety check but does not execute the query as a non-persisting dry run. :contentReference[oaicite:2]{index=2}
+- Operators can submit backfill jobs and execute them, but these runs are designed to ingest results (with purge strategies) rather than simulate. :contentReference[oaicite:3]{index=3} :contentReference[oaicite:4]{index=4}
+
+Acceptance Criteria (for current state)
+- Loader/backfill executions persist results via the signalsHistoryRepository (no dry-run bypass). :contentReference[oaicite:5]{index=5}
+
+Explicit Limitations (current state)
+- No API parameter, loader flag, or UI toggle is present to run extraction/transform without insert.
+- No dedicated “validation-only” execution result model exists (e.g., returning sample rows, column schema, or counts without ingest).
+
+---------------------
+Phase 5 — Platform & Runtime Architecture
+---------------------
+User Story: Support Stateless Loader Runners
+
+Story
+As the loader platform, I want runner instances (pods) to be stateless so they can be scaled, restarted, or replaced without losing the system’s ability to schedule, coordinate, and audit loader executions.
+
+Current Implementation (reverse-documented)
+- Mostly stateless is supported because critical execution state is persisted in the database:
+  - Loader configuration and watermarks (last_load_timestamp / last_success_timestamp) are stored on the loader record. :contentReference[oaicite:0]{index=0}
+  - Each execution produces a persistent LoadHistory record (start/end/status/error/window). :contentReference[oaicite:1]{index=1} :contentReference[oaicite:2]{index=2}
+  - Concurrency coordination is implemented using a DB-backed distributed lock table (loader_execution_lock). :contentReference[oaicite:3]{index=3}
+- A small amount of runner-local (in-memory) state exists:
+  - activeExecutions map (lockId -> Future) is kept in memory to enable best-effort thread cancellation during stale-lock cleanup. :contentReference[oaicite:4]{index=4}
+  - Execution concurrency is controlled per runner via a fixed-size thread pool. :contentReference[oaicite:5]{index=5}
+
+Functional Requirements (as implemented)
+- A runner can start, stop, or restart without requiring local disk state to preserve scheduling correctness.
+- On restart, the runner can continue scheduling based on persisted loader state (watermarks + status) and can avoid duplicate execution using distributed locks.
+- Execution history remains queryable and auditable across runner restarts.
+
+Technical Requirements (as implemented)
+- Persisted state used for stateless operation:
+  - Loader watermarks (last_load_timestamp / last_success_timestamp). :contentReference[oaicite:6]{index=6}
+  - Execution history records (LoadHistory). :contentReference[oaicite:7]{index=7}
+  - Distributed execution locks in loader_execution_lock. :contentReference[oaicite:8]{index=8}
+- Runner-local state:
+  - ExecutorService is created as a fixed thread pool sized by configuration. :contentReference[oaicite:9]{index=9}
+  - activeExecutions is in-memory only; after restart it is empty, so cancelling “stuck” threads from previous process lifetime is not possible via Future cancellation, but DB stale-lock cleanup can still release stale locks. :contentReference[oaicite:10]{index=10}
+
+Security Requirements (as implemented)
+- Stateless runners + DB locks reduce risk of duplicate execution across multiple pods and after restarts (coordination via persisted locks). :contentReference[oaicite:11]{index=11}
+- Persisted execution history provides an audit trail independent of runner lifecycle. :contentReference[oaicite:12]{index=12}
+
+Acceptance Criteria
+- Given a runner restarts,
+  when scheduling resumes,
+  then it uses persisted loader watermarks to compute windows and does not require any local persisted state. :contentReference[oaicite:13]{index=13}
+- Given multiple runners are active,
+  when they attempt to execute the same loader,
+  then distributed lock records prevent concurrent execution beyond configured limits. :contentReference[oaicite:14]{index=14}
+- Given an execution completed before or after a restart,
+  when querying history,
+  then LoadHistory entries remain available with status, windows, and diagnostics. :contentReference[oaicite:15]{index=15}
+
+Explicit Limitations (current state)
+- Stale-lock thread cancellation is best-effort and requires the in-memory activeExecutions mapping; after a runner restart, only DB-side stale lock cleanup can occur (no Future to cancel). :contentReference[oaicite:16]{index=16}
+- There is no persisted “runner registry” or “runner identity store”; runner identity is represented at runtime via replica_name in history/locks.
+
+---------------------
+User Story: Run Loaders Inside Containerized Environments
+
+Story
+As a platform engineer, I want loader services to run inside containerized environments (Docker + Kubernetes), so that deployments are reproducible, environment configuration is externalized, and operational controls (health probes, resources, security context) are enforced consistently.
+
+Functional Requirements (as implemented)
+- The loader service is packaged as a container image and run as a Kubernetes Deployment. :contentReference[oaicite:0]{index=0} :contentReference[oaicite:1]{index=1}
+- The loader service is exposed internally via a Kubernetes Service (ClusterIP) for in-cluster access (e.g., via gateway). :contentReference[oaicite:2]{index=2}
+- All runtime configuration is injected via Kubernetes Secrets (envFrom), not baked into the image. :contentReference[oaicite:3]{index=3}
+- Deployment/install workflow builds the JAR, builds the Docker image, and applies the Kubernetes manifest for the loader. :contentReference[oaicite:4]{index=4}
+
+Technical Requirements (as implemented)
+- Docker packaging:
+  - Loader Dockerfile runs a built JAR on Eclipse Temurin JRE Alpine and exposes port 8080. :contentReference[oaicite:5]{index=5}
+- Kubernetes runtime controls:
+  - Liveness/readiness probes use Spring Boot actuator health endpoints. :contentReference[oaicite:6]{index=6}
+  - Resource requests/limits are declared for CPU/memory. :contentReference[oaicite:7]{index=7}
+  - Graceful shutdown delay is configured via preStop hook. :contentReference[oaicite:8]{index=8}
+  - Replica identity for distributed execution is injected from pod metadata (LOADER_REPLICA_NAME=metadata.name). :contentReference[oaicite:9]{index=9}
+- Installer/build practice:
+  - The deploy script builds a timestamped Docker tag with --no-cache --pull, then applies loader-deployment.yaml. :contentReference[oaicite:10]{index=10}
+
+Security Requirements (as implemented)
+- Pod security context:
+  - runAsNonRoot=true, runAsUser=1000
+  - allowPrivilegeEscalation=false
+  - capabilities drop ALL :contentReference[oaicite:11]{index=11}
+- Secrets handling guidance:
+  - A secrets template explicitly instructs creating/applying secrets and not committing plaintext secrets; sealed secrets are recommended for GitOps. :contentReference[oaicite:12]{index=12}
+
+Acceptance Criteria
+- Given the loader service has been built,
+  when docker build is executed using the loader Dockerfile,
+  then a runnable container image is produced that starts the Spring Boot JAR and listens on port 8080. :contentReference[oaicite:13]{index=13}
+- Given loader-deployment.yaml is applied,
+  when the pod starts,
+  then it receives configuration from app-secrets via envFrom and publishes actuator health endpoints for readiness/liveness probes. :contentReference[oaicite:14]{index=14} :contentReference[oaicite:15]{index=15}
+- Given the deployment is running,
+  then the pod runs as non-root with privilege escalation disabled and Linux capabilities dropped. :contentReference[oaicite:16]{index=16}
+
+Explicit Limitations (current state)
+- The loader Dockerfile shown does not create a dedicated non-root user inside the image; the non-root constraint is enforced at Kubernetes level via securityContext. :contentReference[oaicite:17]{index=17} :contentReference[oaicite:18]{index=18}
+- ImagePullPolicy is currently IfNotPresent in loader-deployment.yaml (local dev friendly); separate deployment guidance exists recommending Always for cache-busting in other documents, but it is not applied in this manifest snippet. :contentReference[oaicite:19]{index=19} :contentReference[oaicite:20]{index=20}
+
+---------------------
+User Story: Integrate Loader Execution with Kubernetes
+
+Story
+As a platform engineer, I want the loader execution service to integrate with Kubernetes runtime features (deployment, service discovery, health probes, graceful shutdown, configuration injection, and security context), so that loader execution is reliable, observable, and safely operated in-cluster.
+
+Functional Requirements (as implemented)
+- Deploy the loader service as a Kubernetes Deployment so it runs as one or more pods. :contentReference[oaicite:0]{index=0}
+- Expose the loader service internally via a Kubernetes Service for in-cluster access. :contentReference[oaicite:1]{index=1}
+- Provide liveness and readiness probes so Kubernetes can manage pod health and traffic routing. :contentReference[oaicite:2]{index=2}
+- Support graceful termination so in-flight execution can stop cleanly during pod shutdown/restarts. :contentReference[oaicite:3]{index=3}
+- Provide a per-pod runtime identity for distributed execution traceability. :contentReference[oaicite:4]{index=4}
+
+Technical Requirements (as implemented)
+- Deployment configuration:
+  - container port 8080 and image for the loader service. :contentReference[oaicite:5]{index=5}
+  - resource requests/limits set for CPU and memory. :contentReference[oaicite:6]{index=6}
+- Health integration:
+  - livenessProbe uses HTTP GET /actuator/health/liveness on port 8080. :contentReference[oaicite:7]{index=7}
+  - readinessProbe uses HTTP GET /actuator/health/readiness on port 8080. :contentReference[oaicite:8]{index=8}
+- Graceful shutdown:
+  - preStop hook sleeps (10s) to allow the pod to drain before termination. :contentReference[oaicite:9]{index=9}
+- Configuration injection:
+  - envFrom loads runtime configuration from a Kubernetes Secret (app-secrets). :contentReference[oaicite:10]{index=10}
+  - LOADER_REPLICA_NAME is sourced from pod metadata.name to identify the executing replica. :contentReference[oaicite:11]{index=11}
+- Service discovery:
+  - ClusterIP service exposes port 8080 targeting container port 8080 with selector app=loader. :contentReference[oaicite:12]{index=12}
+
+Security Requirements (as implemented)
+- Pod/container hardening:
+  - runAsNonRoot=true and runAsUser=1000. :contentReference[oaicite:13]{index=13}
+  - allowPrivilegeEscalation=false and drop ALL Linux capabilities. :contentReference[oaicite:14]{index=14}
+- Secret management guidance exists to avoid committing plaintext secrets; sealed secrets are recommended for GitOps. :contentReference[oaicite:15]{index=15}
+
+Acceptance Criteria
+- Given loader-deployment.yaml is applied,
+  when the pod starts,
+  then Kubernetes health checks pass using the configured liveness/readiness actuator endpoints. :contentReference[oaicite:16]{index=16}
+- Given the pod is terminated (rolling update / restart),
+  when termination begins,
+  then the preStop hook executes (sleep 10s) before the container stops. :contentReference[oaicite:17]{index=17}
+- Given the deployment is running,
+  then the service is reachable in-cluster via its ClusterIP Service on port 8080. :contentReference[oaicite:18]{index=18}
+- Given multiple replicas exist,
+  then each pod has a distinct LOADER_REPLICA_NAME derived from metadata.name. :contentReference[oaicite:19]{index=19}
+- Given the deployment is running,
+  then the pod runs as non-root and cannot escalate privileges and has all Linux capabilities dropped. :contentReference[oaicite:20]{index=20}
+
+Explicit Limitations (current state)
+- Kubernetes integration covers runtime deployment and health management; it does not implement “cancel a RUNNING job” semantics—long-running executions are handled via timeout/stale-lock cleanup elsewhere, not by Kubernetes signals alone.
+
+---------------------
+
+---------------------
+Isolate Loader Failures from Affecting Other Loaders
+---------------------
+Support Loader Output Versioning
+---------------------
+Enable Safe Schema Evolution for Loaded Data
+---------------------
+Phase 6 — Observability & Operational Insight
+---------------------
+Emit Structured Logs for Loader Execution
+---------------------
+Log Loader Query Parameters and Time Ranges
+---------------------
+Capture Loader Execution Duration and Row Counts
+---------------------
+Capture Loader Errors with Root Cause Details
+---------------------
+Expose Loader Execution Metrics
+---------------------
+Measure Loader Throughput and Performance Trends
+---------------------
+Detect Abnormal Loader Execution Behavior
+---------------------
+Provide Execution History per Loader
+---------------------
+Enable Debug-Level Logging per Loader
+---------------------
+Phase 7 — Security Enforcement & Auditability
+---------------------
+Restrict Loader Management to Authorized Roles
+---------------------
+Enforce Principle of Least Privilege for Loaders
+---------------------
+Encrypt Sensitive Loader Configuration Fields
+---------------------
+Mask Sensitive Data in Logs
+---------------------
+Prevent Unauthorized Query Modification
+---------------------
+Audit All Loader Configuration Changes
+---------------------
+Audit All Manual Loader Executions
+---------------------
+Isolate Loader Runtime from Production Credentials
+---------------------
+Phase 8 — Governance, Ownership & Compliance
+---------------------
+Track Loader Ownership and Responsible Teams
+---------------------
+Enforce Naming and Documentation Standards for Loaders
+---------------------
+Maintain Full Execution Audit Trail per Loader
+---------------------
+Retain Loader Execution History Based on Policy
+---------------------
+Support Loader Decommissioning and Archival
+---------------------
+Provide Evidence for Operational Audits
+---------------------
+Validate Loader Configuration Against Governance Rules
+---------------------
+Phase 9 — Downstream Integration & Future Readiness
+---------------------
+Persist Loader Execution Results for Analysis
+---------------------
+Prepare Loader Output for Alerting and Analysis Services
+---------------------
+Correlate Loader Jobs with Downstream Alerts
+---------------------
+Support Incident Correlation Back to Loader Jobs
+---------------------
+Allow Loader Logic to Be Reused Across Domains
+---------------------
+Enable Simulation and Test Loaders
+---------------------
+Prepare Loader Data for RCA and Reporting Pipelines

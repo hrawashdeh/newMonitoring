@@ -2,6 +2,7 @@ apiVersion: apps/v1
 kind: Deployment
 metadata:
   name: loader-frontend
+  namespace: monitoring-app
   labels:
     app: loader-frontend
     component: frontend
@@ -25,11 +26,12 @@ spec:
     spec:
       containers:
       - name: loader-frontend
-        # Image version is set by deployment script (scripts/deploy-frontend.sh)
-        # Never use :latest in production - always use timestamped versions
-        # Example: loader-frontend:1.1.0-1766772210
-        image: frontend:0.0.1-SNAPSHOT
-        imagePullPolicy: IfNotPresent  # Use local image if available
+        # Image version with timestamp to avoid caching issues
+        # Format: loader-frontend:<version>-<timestamp>
+        # Update this tag with each new build to force pod recreation
+        # Using unique tag ensures Kubernetes creates new pods even with IfNotPresent
+        image: loader-frontend:1.2.0-20251230165013
+        imagePullPolicy: IfNotPresent  # Use local Docker image (Docker Desktop shares with K8s)
         ports:
         - name: http
           containerPort: 8080
@@ -76,6 +78,7 @@ apiVersion: v1
 kind: Service
 metadata:
   name: loader-frontend
+  namespace: monitoring-app
   labels:
     app: loader-frontend
 spec:
@@ -95,6 +98,7 @@ apiVersion: v1
 kind: Service
 metadata:
   name: loader-frontend-nodeport
+  namespace: monitoring-app
   labels:
     app: loader-frontend
 spec:

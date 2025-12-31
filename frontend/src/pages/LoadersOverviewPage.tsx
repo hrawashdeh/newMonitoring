@@ -4,7 +4,7 @@ import { loadersApi } from '../api/loaders';
 import { StatsCard } from '../components/StatsCard';
 import { ActionCard } from '../components/ActionCard';
 import { Button } from '../components/ui/button';
-import { ArrowLeft, LogOut, Database, CheckCircle, PauseCircle, AlertCircle, FileText, History, BarChart3, HardDrive, FileCode, Activity } from 'lucide-react';
+import { ArrowLeft, LogOut, Database, CheckCircle, PauseCircle, AlertCircle, FileText, History, BarChart3, HardDrive, FileCode, Activity, Clock } from 'lucide-react';
 
 export default function LoadersOverviewPage() {
   const navigate = useNavigate();
@@ -113,7 +113,7 @@ export default function LoadersOverviewPage() {
         {/* Operational Statistics */}
         <div>
           <h2 className="text-lg font-semibold mb-4">Operational Statistics</h2>
-          <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-4 mb-10">
+          <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 xl:grid-cols-5 gap-4 mb-10">
             <StatsCard
               label="Total Loaders"
               value={stats?.total || 0}
@@ -143,6 +143,15 @@ export default function LoadersOverviewPage() {
               subtitle={stats?.failed && stats.failed > 0 ? '⚠️ Attention needed' : 'All running smoothly'}
               icon={AlertCircle}
               status={stats?.failed && stats.failed > 0 ? 'error' : 'default'}
+            />
+            <StatsCard
+              label="Pending Approval"
+              value={stats?.pendingApproval || 0}
+              subtitle={stats?.pendingApproval && stats.pendingApproval > 0 ? 'Awaiting ADMIN action' : 'No pending approvals'}
+              icon={Clock}
+              status={stats?.pendingApproval && stats.pendingApproval > 0 ? 'warning' : 'default'}
+              onClick={() => navigate('/loaders/list')}
+              className="cursor-pointer hover:shadow-lg transition-shadow"
             />
           </div>
         </div>

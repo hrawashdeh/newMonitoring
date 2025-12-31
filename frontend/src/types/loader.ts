@@ -134,6 +134,9 @@ export interface LoadersStats {
   active: number;
   paused: number;
   failed: number;
+  pendingApproval: number;
+  approved: number;
+  rejected: number;
   trend?: {
     activeChange: string; // e.g., "+8%"
     period: string; // e.g., "24h"

@@ -21,6 +21,8 @@ export const authApi = {
   logout(): void {
     localStorage.removeItem('auth_token');
     localStorage.removeItem('auth_user');
+    localStorage.removeItem('auth_username');
+    localStorage.removeItem('auth_role');
   },
 
   /**
@@ -40,7 +42,24 @@ export const authApi = {
    * Store auth data
    */
   storeAuth(token: string, username: string, roles: string[]): void {
+    const primaryRole = roles && roles.length > 0 ? roles[0] : 'VIEWER';
+    console.log('[issue_blocked_imp] Storing auth data:', {
+      username,
+      roles,
+      primaryRole,
+      timestamp: new Date().toISOString()
+    });
+
     localStorage.setItem('auth_token', token);
     localStorage.setItem('auth_user', JSON.stringify({ username, roles }));
+    // Store username and primary role separately for easy access
+    localStorage.setItem('auth_username', username);
+    localStorage.setItem('auth_role', primaryRole);
+
+    console.log('[issue_blocked_imp] Auth data stored in localStorage:', {
+      auth_username: localStorage.getItem('auth_username'),
+      auth_role: localStorage.getItem('auth_role'),
+      auth_user: localStorage.getItem('auth_user')
+    });
   },
 };

@@ -29,7 +29,7 @@ spec:
         # Image version is set by deployment script (scripts/deploy-gateway.sh)
         # Never use :latest in production - always use timestamped versions
         # Example: gateway-service:1.0.0-1766772210
-        image: gateway-service:0.0.1-SNAPSHOT
+        image: gateway-service:latest
         imagePullPolicy: IfNotPresent  # Use local image if available
         ports:
         - containerPort: 8888
