@@ -2779,3 +2779,6 @@
 {"ts":1767192603088,"action":"FILE_OPENED","file":"/app_installer.sh","tags":{"FILE_LINE_OF_CODE":"807"}}
 {"ts":1767192660528,"action":"IDE_DEACTIVATED"}
 {"ts":1767192675759,"action":"IDE_ACTIVATED"}
+{"ts":1767192800600,"action":"IDE_DEACTIVATED"}
+{"ts":1767192842462,"action":"IDE_ACTIVATED"}
+{"ts":1767192860786,"action":"IDE_DEACTIVATED"}

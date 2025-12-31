@@ -1,0 +1,119 @@
+package com.tiqmo.monitoring.{SERVICE_NAME}.filter;
+
+import io.opentelemetry.api.trace.Span;
+import io.opentelemetry.api.trace.SpanContext;
+import jakarta.servlet.*;
+import jakarta.servlet.http.HttpServletRequest;
+import org.slf4j.Logger;
+import org.slf4j.LoggerFactory;
+import org.slf4j.MDC;
+import org.springframework.core.annotation.Order;
+import org.springframework.stereotype.Component;
+
+import java.io.IOException;
+
+/**
+ * Servlet filter to extract and propagate operation context from HTTP headers.
+ * Reads X-Operation-Name header and adds to MDC and OpenTelemetry span attributes.
+ *
+ * OpenTelemetry Integration:
+ * - Extracts trace.id and span.id from current span
+ * - Adds operation.name to span attributes for correlation
+ * - Populates MDC for structured logging
+ */
+@Component
+@Order(1)  // Execute early in filter chain
+public class OperationContextFilter implements Filter {
+
+    private static final Logger logger = LoggerFactory.getLogger(OperationContextFilter.class);
+
+    private static final String OPERATION_NAME_HEADER = "X-Operation-Name";
+    private static final String OPERATION_NAME_MDC_KEY = "operation.name";
+    private static final String TRACE_ID_MDC_KEY = "trace.id";
+    private static final String SPAN_ID_MDC_KEY = "span.id";
+    private static final String DEFAULT_OPERATION = "unknown";
+
+    @Override
+    public void doFilter(ServletRequest request, ServletResponse response, FilterChain chain)
+            throws IOException, ServletException {
+
+        HttpServletRequest httpRequest = (HttpServletRequest) request;
+
+        try {
+            // Extract operation name from header
+            String operationName = httpRequest.getHeader(OPERATION_NAME_HEADER);
+
+            // Sanitize and normalize
+            operationName = sanitizeOperationName(operationName);
+
+            // Add to MDC for logging
+            MDC.put(OPERATION_NAME_MDC_KEY, operationName);
+
+            // Add trace context to MDC (automatically populated by OpenTelemetry)
+            Span currentSpan = Span.current();
+            SpanContext spanContext = currentSpan.getSpanContext();
+
+            if (spanContext.isValid()) {
+                MDC.put(TRACE_ID_MDC_KEY, spanContext.getTraceId());
+                MDC.put(SPAN_ID_MDC_KEY, spanContext.getSpanId());
+
+                // Add operation name to OpenTelemetry span attributes
+                currentSpan.setAttribute("operation.name", operationName);
+                currentSpan.setAttribute("http.route", httpRequest.getRequestURI());
+                currentSpan.setAttribute("http.method", httpRequest.getMethod());
+            }
+
+            logger.debug("Operation context set: operation={}, traceId={}, spanId={}",
+                        operationName,
+                        spanContext.getTraceId(),
+                        spanContext.getSpanId());
+
+            // Continue filter chain
+            chain.doFilter(request, response);
+
+        } finally {
+            // Clear MDC after request processing
+            MDC.remove(OPERATION_NAME_MDC_KEY);
+            MDC.remove(TRACE_ID_MDC_KEY);
+            MDC.remove(SPAN_ID_MDC_KEY);
+        }
+    }
+
+    /**
+     * Sanitize and normalize operation name.
+     * - Convert to lowercase
+     * - Replace spaces with underscores
+     * - Remove special characters
+     * - Default to "unknown" if empty
+     * - Limit length to prevent cardinality explosion
+     */
+    private String sanitizeOperationName(String operationName) {
+        if (operationName == null || operationName.trim().isEmpty()) {
+            return DEFAULT_OPERATION;
+        }
+
+        // Normalize: lowercase, replace spaces, remove special chars
+        String sanitized = operationName
+            .toLowerCase()
+            .trim()
+            .replaceAll("\\s+", "_")
+            .replaceAll("[^a-z0-9_-]", "");
+
+        // Limit length to prevent cardinality explosion in metrics
+        if (sanitized.length() > 50) {
+            sanitized = sanitized.substring(0, 50);
+        }
+
+        return sanitized.isEmpty() ? DEFAULT_OPERATION : sanitized;
+    }
+
+    @Override
+    public void init(FilterConfig filterConfig) throws ServletException {
+        // No initialization needed
+    }
+
+    @Override
+    public void destroy() {
+        // No cleanup needed
+    }
+}
