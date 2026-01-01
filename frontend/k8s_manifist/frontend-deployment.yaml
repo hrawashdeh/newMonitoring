@@ -30,7 +30,7 @@ spec:
         # Format: loader-frontend:<version>-<timestamp>
         # Update this tag with each new build to force pod recreation
         # Using unique tag ensures Kubernetes creates new pods even with IfNotPresent
-        image: loader-frontend:1.2.0-20251230165013
+        image: loader-frontend:1.2.0-20260101175232
         imagePullPolicy: IfNotPresent  # Use local Docker image (Docker Desktop shares with K8s)
         ports:
         - name: http

@@ -15,7 +15,8 @@ spring:
       max-lifetime: 1800000
 
   jpa:
-    database-platform: org.hibernate.dialect.PostgreSQLDialect
+    # database-platform removed - auto-detected by Hibernate
+    open-in-view: false  # Disable to prevent lazy-loading issues in view layer
     hibernate:
       ddl-auto: validate
     show-sql: false
@@ -66,6 +67,10 @@ logging:
     com.tiqmo.monitoring.auth: DEBUG
     org.springframework.security: DEBUG
     io.opentelemetry: INFO
+    # Suppress Spring Security configuration warnings (intentional config)
+    org.springframework.security.config.annotation.authentication.configuration: ERROR
+    # Suppress Hibernate deprecation warnings
+    org.hibernate.orm.deprecation: ERROR
   pattern:
     console: ""  # Disable default pattern (use JSON from logback-spring.xml)
 
