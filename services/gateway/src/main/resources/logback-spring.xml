@@ -63,6 +63,11 @@
                 <includeMdcKeyName>circuitBreakerState</includeMdcKeyName>
                 <includeMdcKeyName>retryCount</includeMdcKeyName>
 
+                <!-- OpenTelemetry trace correlation fields -->
+                <includeMdcKeyName>trace.id</includeMdcKeyName>
+                <includeMdcKeyName>span.id</includeMdcKeyName>
+                <includeMdcKeyName>operation.name</includeMdcKeyName>
+
                 <!-- Custom fields -->
                 <customFields>{"service_name":"${APP_NAME}","environment":"production","service_type":"api-gateway"}</customFields>
 

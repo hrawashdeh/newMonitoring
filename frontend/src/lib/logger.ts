@@ -61,7 +61,7 @@ interface LoggerConfig {
 class Logger {
   private config: LoggerConfig;
   private logBuffer: LogEntry[] = [];
-  private flushTimer: NodeJS.Timeout | null = null;
+  private flushTimer: number | null = null;
 
   constructor() {
     // Auto-detect production mode
@@ -205,42 +205,79 @@ class Logger {
   }
 
   /**
-   * Log to console with formatting
+   * Get OpenTelemetry trace context
    */
-  private logToConsole(entry: LogEntry): void {
-    const prefix = `[${entry.timestamp}] [${entry.level}]`;
-    const style = this.getConsoleStyle(entry.level);
-
-    switch (entry.level) {
-      case LogLevel.DEBUG:
-        console.debug(`%c${prefix}`, style, entry.message, entry.context || '');
-        break;
-      case LogLevel.INFO:
-        console.info(`%c${prefix}`, style, entry.message, entry.context || '');
-        break;
-      case LogLevel.WARN:
-        console.warn(`%c${prefix}`, style, entry.message, entry.context || '');
-        break;
-      case LogLevel.ERROR:
-        console.error(`%c${prefix}`, style, entry.message, entry.context || '');
-        if (entry.context?.stack) {
-          console.error(entry.context.stack);
+  private getTraceContext(): { traceId?: string; spanId?: string } {
+    try {
+      // Access OpenTelemetry context from window if available
+      const otel = (window as any).opentelemetry;
+      if (otel) {
+        const span = otel.trace?.getSpan(otel.context?.active());
+        if (span) {
+          const spanContext = span.spanContext();
+          return {
+            traceId: spanContext.traceId,
+            spanId: spanContext.spanId,
+          };
         }
-        break;
+      }
+    } catch (e) {
+      // Silently fail if OTel not available
     }
+    return {};
   }
 
   /**
-   * Get console style for log level
+   * Log to console with JSON formatting (Elasticsearch-compatible)
    */
-  private getConsoleStyle(level: LogLevel): string {
-    const styles = {
-      [LogLevel.DEBUG]: 'color: #6B7280; font-weight: normal;',
-      [LogLevel.INFO]: 'color: #3B82F6; font-weight: bold;',
-      [LogLevel.WARN]: 'color: #F59E0B; font-weight: bold;',
-      [LogLevel.ERROR]: 'color: #EF4444; font-weight: bold;',
+  private logToConsole(entry: LogEntry): void {
+    // Get OpenTelemetry trace context
+    const traceContext = this.getTraceContext();
+
+    // Build structured log entry matching backend format
+    const structuredLog: Record<string, any> = {
+      '@timestamp': entry.timestamp,
+      'log.level': entry.level,
+      message: entry.message,
+      'service.name': 'loader-frontend',
+      'service.version': BUILD_INFO.buildNumber || '1.2.0',
+      'deployment.environment': this.config.isProduction ? 'production' : 'development',
+      'trace.id': traceContext.traceId,
+      'span.id': traceContext.spanId,
+      'session.id': entry.sessionId,
+      'user.id': entry.userId,
+      'url.path': entry.page,
+      'url.full': window.location.href,
+      ...entry.context,
     };
-    return styles[level];
+
+    // Filter out undefined values
+    Object.keys(structuredLog).forEach(key => {
+      if (structuredLog[key] === undefined) {
+        delete structuredLog[key];
+      }
+    });
+
+    // Output JSON to console
+    const jsonOutput = JSON.stringify(structuredLog, null, 2);
+
+    switch (entry.level) {
+      case LogLevel.DEBUG:
+        console.debug(jsonOutput);
+        break;
+      case LogLevel.INFO:
+        console.info(jsonOutput);
+        break;
+      case LogLevel.WARN:
+        console.warn(jsonOutput);
+        break;
+      case LogLevel.ERROR:
+        console.error(jsonOutput);
+        if (entry.context?.stack) {
+          console.error('Stack trace:', entry.context.stack);
+        }
+        break;
+    }
   }
 
   /**
@@ -294,7 +331,7 @@ class Logger {
   private startFlushTimer(): void {
     this.flushTimer = setInterval(() => {
       this.flush();
-    }, this.config.flushInterval || 5000);
+    }, this.config.flushInterval || 5000) as unknown as number;
   }
 
   /**

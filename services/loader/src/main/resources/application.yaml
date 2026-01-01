@@ -87,10 +87,10 @@ management:
     tags:
       application: ${spring.application.name}
 
-# OpenTelemetry Configuration
+# OpenTelemetry Configuration (TEMPORARILY DISABLED for cluster reset)
 otel:
   sdk:
-    disabled: false
+    disabled: true  # TEMPORARILY DISABLED - Re-enable after cluster reset verification
   resource:
     attributes:
       service.name: ${OTEL_SERVICE_NAME:signal-loader}

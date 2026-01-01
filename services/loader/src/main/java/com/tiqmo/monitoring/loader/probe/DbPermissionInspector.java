@@ -211,14 +211,22 @@ public class DbPermissionInspector {
         continue;
       }
 
-      // Global scope (*.*): only SELECT and optionally SHOW VIEW should appear
+      // Global scope (*.*): only SELECT (with optional SHOW VIEW) or pure USAGE should appear
       if (up.contains("*.*")) {
+        // USAGE is a connection-only privilege - safe to allow on global scope
+        boolean isPureUsage =
+                up.contains("GRANT USAGE") &&
+                up.contains("ON *.* TO") &&
+                (!containsAny(up, disallowed, Set.of("USAGE")));
+
+        // SELECT with optional SHOW VIEW (existing logic)
         boolean onlySelectAndShowView =
                 up.contains("SELECT") &&
                         up.replace("SELECT", "").contains("ON *.* TO") &&        // crude guard to avoid false positives
                         (!up.contains("GRANT OPTION")) &&
                         (!containsAny(up, disallowed, Set.of("SELECT","SHOW VIEW")));
-        if (!onlySelectAndShowView) {
+
+        if (!isPureUsage && !onlySelectAndShowView) {
           b.addViolation("MySQL global grant not RO-safe: " + g);
           continue;
         }

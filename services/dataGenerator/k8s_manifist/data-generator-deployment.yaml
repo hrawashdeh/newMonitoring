@@ -57,12 +57,12 @@ spec:
           valueFrom:
             secretKeyRef:
               name: app-secrets
-              key: MYSQL_APP_USER
+              key: MYSQL_GENERATOR_USER
         - name: MYSQL_PASSWORD
           valueFrom:
             secretKeyRef:
               name: app-secrets
-              key: MYSQL_APP_PASSWORD
+              key: MYSQL_GENERATOR_PASSWORD
 
         resources:
           requests:

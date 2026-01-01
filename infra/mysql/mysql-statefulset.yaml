@@ -60,13 +60,13 @@ spec:
               valueFrom:
                 secretKeyRef:
                   name: infra-secrets
-                  key: MYSQL_APP_USER
+                  key: MYSQL_GENERATOR_USER
 
             - name: MYSQL_PASSWORD
               valueFrom:
                 secretKeyRef:
                   name: infra-secrets
-                  key: mysql-password
+                  key: MYSQL_GENERATOR_PASSWORD
 
             - name: MYSQL_DATABASE
               valueFrom:

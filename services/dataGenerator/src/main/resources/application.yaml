@@ -10,8 +10,8 @@ spring:
   # MySQL DataSource Configuration
   datasource:
     url: jdbc:mysql://${MYSQL_HOST:localhost}:${MYSQL_PORT:3306}/${MYSQL_DATABASE:testdata}?createDatabaseIfNotExist=true
-    username: ${MYSQL_USER:testuser}
-    password: ${MYSQL_PASSWORD:testuser_password_dev}
+    username: ${MYSQL_USER:test_compiler}
+    password: ${MYSQL_PASSWORD:HaAirK101348qGen}
     driver-class-name: com.mysql.cj.jdbc.Driver
 
     # HikariCP settings

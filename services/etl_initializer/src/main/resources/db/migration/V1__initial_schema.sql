@@ -194,44 +194,51 @@ COMMENT ON TABLE loader.backfill_job IS 'Queue for manual and automatic backfill
 COMMENT ON COLUMN loader.backfill_job.requested_by IS 'User ID or SYSTEM_AUTO_RECOVERY for automatic backfills';
 COMMENT ON COLUMN loader.backfill_job.purge_strategy IS 'FAIL_ON_DUPLICATE, PURGE_AND_RELOAD, or SKIP_DUPLICATES';
 
--- Configuration plans (for scheduled config updates)
+-- Configuration plans (runtime config management)
 CREATE TABLE loader.config_plan (
     id BIGSERIAL PRIMARY KEY,
-    plan_name VARCHAR(255) NOT NULL,
-    description TEXT,
-    config_type VARCHAR(50) NOT NULL,
-    target_entity_code VARCHAR(100),
-    scheduled_time TIMESTAMP WITH TIME ZONE NOT NULL,
-    status VARCHAR(50) DEFAULT 'PENDING' NOT NULL,
-    config_payload JSONB NOT NULL,
-    applied_at TIMESTAMP WITH TIME ZONE,
-    error_message TEXT,
-    created_by VARCHAR(255),
-    created_at TIMESTAMP WITH TIME ZONE DEFAULT NOW() NOT NULL
+    parent VARCHAR(64) NOT NULL,                    -- Parent group (e.g., "scheduler", "loader", "api")
+    plan_name VARCHAR(64) NOT NULL,                 -- Plan name (e.g., "normal", "high-load")
+    is_active BOOLEAN NOT NULL DEFAULT FALSE,       -- Only one active plan per parent
+    description TEXT,                               -- Human-readable description
+    created_at TIMESTAMP WITH TIME ZONE NOT NULL DEFAULT NOW(),
+    updated_at TIMESTAMP WITH TIME ZONE NOT NULL DEFAULT NOW(),
+    updated_by VARCHAR(128)                         -- User or system that last updated
 );
 
-CREATE INDEX idx_config_plan_status ON loader.config_plan(status, scheduled_time);
-CREATE INDEX idx_config_plan_type ON loader.config_plan(config_type);
+-- Unique constraint: Only one active plan per parent
+CREATE UNIQUE INDEX idx_config_plan_active_parent
+ON loader.config_plan(parent, is_active)
+WHERE is_active = TRUE;
 
-COMMENT ON TABLE loader.config_plan IS 'Scheduled configuration changes for loaders and sources';
-COMMENT ON COLUMN loader.config_plan.config_type IS 'LOADER_UPDATE, SOURCE_UPDATE, SYSTEM_CONFIG, etc.';
+-- Composite unique: parent + plan_name must be unique
+CREATE UNIQUE INDEX idx_config_plan_parent_name
+ON loader.config_plan(parent, plan_name);
 
--- Configuration change values (history)
+CREATE INDEX idx_config_plan_parent ON loader.config_plan(parent);
+
+COMMENT ON TABLE loader.config_plan IS 'Configuration plans for runtime config management. Only one plan per parent can be active.';
+COMMENT ON COLUMN loader.config_plan.parent IS 'Parent group: scheduler, loader, api, logging, etc.';
+COMMENT ON COLUMN loader.config_plan.plan_name IS 'Plan name: normal, high-load, maintenance, etc.';
+COMMENT ON COLUMN loader.config_plan.is_active IS 'Whether this plan is currently active (enforced by unique index)';
+
+-- Configuration values (key-value pairs for plans)
 CREATE TABLE loader.config_value (
     id BIGSERIAL PRIMARY KEY,
-    plan_id BIGINT REFERENCES loader.config_plan(id),
-    entity_type VARCHAR(50) NOT NULL,
-    entity_code VARCHAR(100) NOT NULL,
-    property_name VARCHAR(255) NOT NULL,
-    old_value TEXT,
-    new_value TEXT,
-    applied_at TIMESTAMP WITH TIME ZONE DEFAULT NOW() NOT NULL
+    plan_id BIGINT NOT NULL REFERENCES loader.config_plan(id) ON DELETE CASCADE,
+    config_key VARCHAR(128) NOT NULL,                -- Config key: "polling-interval-seconds", "thread-pool-core-size"
+    config_value TEXT NOT NULL,                      -- Config value as string
+    data_type VARCHAR(32) NOT NULL,                  -- Data type: INTEGER, STRING, BOOLEAN, LONG, DOUBLE
+    description TEXT                                 -- Human-readable description
 );
 
 CREATE INDEX idx_config_value_plan ON loader.config_value(plan_id);
-CREATE INDEX idx_config_value_entity ON loader.config_value(entity_type, entity_code);
+CREATE UNIQUE INDEX idx_config_value_plan_key ON loader.config_value(plan_id, config_key);
 
-COMMENT ON TABLE loader.config_value IS 'Historical record of configuration changes applied';
+COMMENT ON TABLE loader.config_value IS 'Configuration key-value pairs associated with config plans';
+COMMENT ON COLUMN loader.config_value.config_key IS 'Configuration key using dot notation';
+COMMENT ON COLUMN loader.config_value.config_value IS 'Configuration value as string (parsed by application)';
+COMMENT ON COLUMN loader.config_value.data_type IS 'Data type for parsing: INTEGER, STRING, BOOLEAN, LONG, DOUBLE';
 
 -- Segment dictionary (for dimensional analysis)
 CREATE TABLE loader.segments_dictionary (
@@ -338,6 +345,78 @@ GRANT ALL PRIVILEGES ON ALL TABLES IN SCHEMA signals TO alerts_user;
 GRANT ALL PRIVILEGES ON ALL SEQUENCES IN SCHEMA general TO alerts_user;
 GRANT ALL PRIVILEGES ON ALL SEQUENCES IN SCHEMA loader TO alerts_user;
 GRANT ALL PRIVILEGES ON ALL SEQUENCES IN SCHEMA signals TO alerts_user;
+
+-- =====================================================
+-- SEED DATA: Configuration Plans
+-- =====================================================
+
+-- Scheduler configuration plans
+INSERT INTO loader.config_plan (parent, plan_name, is_active, description, updated_by) VALUES
+('scheduler', 'normal', TRUE, 'Normal operation mode with standard polling intervals', 'system'),
+('scheduler', 'high-load', FALSE, 'High load mode with reduced polling intervals', 'system'),
+('scheduler', 'maintenance', FALSE, 'Maintenance mode with disabled scheduling', 'system');
+
+-- Scheduler: normal plan values
+INSERT INTO loader.config_value (plan_id, config_key, config_value, data_type, description)
+SELECT id, 'polling-interval-seconds', '60', 'INTEGER', 'Polling interval in seconds'
+FROM loader.config_plan WHERE parent = 'scheduler' AND plan_name = 'normal';
+
+INSERT INTO loader.config_value (plan_id, config_key, config_value, data_type, description)
+SELECT id, 'thread-pool-core-size', '10', 'INTEGER', 'Core thread pool size'
+FROM loader.config_plan WHERE parent = 'scheduler' AND plan_name = 'normal';
+
+INSERT INTO loader.config_value (plan_id, config_key, config_value, data_type, description)
+SELECT id, 'enabled', 'true', 'BOOLEAN', 'Scheduling enabled'
+FROM loader.config_plan WHERE parent = 'scheduler' AND plan_name = 'normal';
+
+-- Scheduler: high-load plan values
+INSERT INTO loader.config_value (plan_id, config_key, config_value, data_type, description)
+SELECT id, 'polling-interval-seconds', '30', 'INTEGER', 'Faster polling for high load'
+FROM loader.config_plan WHERE parent = 'scheduler' AND plan_name = 'high-load';
+
+INSERT INTO loader.config_value (plan_id, config_key, config_value, data_type, description)
+SELECT id, 'thread-pool-core-size', '20', 'INTEGER', 'Larger thread pool'
+FROM loader.config_plan WHERE parent = 'scheduler' AND plan_name = 'high-load';
+
+INSERT INTO loader.config_value (plan_id, config_key, config_value, data_type, description)
+SELECT id, 'enabled', 'true', 'BOOLEAN', 'Scheduling enabled'
+FROM loader.config_plan WHERE parent = 'scheduler' AND plan_name = 'high-load';
+
+-- Scheduler: maintenance plan values
+INSERT INTO loader.config_value (plan_id, config_key, config_value, data_type, description)
+SELECT id, 'enabled', 'false', 'BOOLEAN', 'Scheduling disabled during maintenance'
+FROM loader.config_plan WHERE parent = 'scheduler' AND plan_name = 'maintenance';
+
+-- Loader configuration plans
+INSERT INTO loader.config_plan (parent, plan_name, is_active, description, updated_by) VALUES
+('loader', 'default', TRUE, 'Default loader execution settings', 'system'),
+('loader', 'performance', FALSE, 'Performance-optimized for large datasets', 'system');
+
+-- Loader: default plan values
+INSERT INTO loader.config_value (plan_id, config_key, config_value, data_type, description)
+SELECT id, 'execution-timeout-hours', '2', 'INTEGER', 'Max execution time'
+FROM loader.config_plan WHERE parent = 'loader' AND plan_name = 'default';
+
+INSERT INTO loader.config_value (plan_id, config_key, config_value, data_type, description)
+SELECT id, 'thread-pool-size', '10', 'INTEGER', 'Thread pool size'
+FROM loader.config_plan WHERE parent = 'loader' AND plan_name = 'default';
+
+INSERT INTO loader.config_value (plan_id, config_key, config_value, data_type, description)
+SELECT id, 'default-lookback-hours', '24', 'INTEGER', 'Default lookback period'
+FROM loader.config_plan WHERE parent = 'loader' AND plan_name = 'default';
+
+-- Loader: performance plan values
+INSERT INTO loader.config_value (plan_id, config_key, config_value, data_type, description)
+SELECT id, 'execution-timeout-hours', '6', 'INTEGER', 'Extended timeout'
+FROM loader.config_plan WHERE parent = 'loader' AND plan_name = 'performance';
+
+INSERT INTO loader.config_value (plan_id, config_key, config_value, data_type, description)
+SELECT id, 'thread-pool-size', '20', 'INTEGER', 'Larger thread pool'
+FROM loader.config_plan WHERE parent = 'loader' AND plan_name = 'performance';
+
+INSERT INTO loader.config_value (plan_id, config_key, config_value, data_type, description)
+SELECT id, 'default-lookback-hours', '168', 'INTEGER', 'Extended lookback (7 days)'
+FROM loader.config_plan WHERE parent = 'loader' AND plan_name = 'performance';
 
 -- =====================================================
 -- COMPLETION

@@ -238,16 +238,34 @@ kubectl rollout status deployment/signal-loader -n monitoring-app --timeout=120s
 
 ---
 
-### ⏳ Gateway Service
+### ✅ Gateway Service
 
-**Status**: Pending
+**Status**: ✅ COMPLETE - Implementation finished (2025-12-31)
 
-**Required Changes**:
-1. Add OpenTelemetry dependencies to `services/gateway/pom.xml`
-2. Create `services/gateway/src/main/java/com/tiqmo/monitoring/gateway/filter/OperationContextFilter.java`
-3. Update `services/gateway/src/main/resources/application.yaml`
-4. Update `services/gateway/src/main/resources/logback-spring.xml` (add trace MDC keys)
-5. Update `services/gateway/k8s_manifist/gateway-deployment.yaml`
+**Files Modified**:
+1. ✅ `services/gateway/pom.xml` - Added OpenTelemetry dependencies (versions 1.33.0 / 1.32.0)
+2. ✅ `services/gateway/src/main/java/com/tiqmo/monitoring/gateway/filter/OperationContextWebFilter.java` - Created (Reactive WebFilter)
+3. ✅ `services/gateway/src/main/resources/application.yaml` - Added OTel config
+4. ✅ `services/gateway/src/main/resources/logback-spring.xml` - Added trace MDC keys (trace.id, span.id, operation.name)
+5. ✅ `services/gateway/k8s_manifist/gateway-deployment.yaml` - Added OTel env vars
+
+**Implementation Details**:
+- OpenTelemetry SDK 1.33.0 with OTLP gRPC exporter
+- **OperationContextWebFilter** (Reactive WebFilter for Spring Cloud Gateway/WebFlux)
+- Key difference from loader: Uses `Mono<Void> filter()` instead of `void doFilter()`
+- Automatic trace.id and span.id injection to MDC
+- 100% trace sampling (always_on) for production
+- Service name: gateway-service
+- OTLP endpoint: otel-collector.monitoring-infra.svc.cluster.local:4317
+- Deployment: 2 replicas for high availability
+
+**Commands to deploy**:
+```bash
+cd /Volumes/Files/Projects/newLoader/services/gateway
+docker build -t gateway-service:latest .
+kubectl rollout restart deployment/gateway-service -n monitoring-app
+kubectl rollout status deployment/gateway-service -n monitoring-app --timeout=120s
+```
 
 **Service Name**: `gateway-service`
 

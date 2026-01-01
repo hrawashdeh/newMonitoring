@@ -59,6 +59,22 @@ spec:
               name: app-secrets
               key: JWT_SECRET
 
+        # OpenTelemetry configuration
+        - name: OTEL_SERVICE_NAME
+          value: "gateway-service"
+        - name: OTEL_EXPORTER_OTLP_ENDPOINT
+          value: "http://otel-collector.monitoring-infra.svc.cluster.local:4317"
+        - name: OTEL_RESOURCE_ATTRIBUTES
+          value: "deployment.environment=prod,service.namespace=monitoring-app"
+        - name: OTEL_TRACES_SAMPLER
+          value: "always_on"
+        - name: OTEL_METRICS_EXPORTER
+          value: "otlp"
+        - name: OTEL_LOGS_EXPORTER
+          value: "none"
+        - name: DEPLOYMENT_ENVIRONMENT
+          value: "prod"
+
         resources:
           requests:
             memory: "512Mi"
