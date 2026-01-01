@@ -335,11 +335,24 @@ else
 	log_success "Build completed: loader-frontend:${VERSION} (also tagged latest)"
 fi
 
-# Update deployment YAML with new image tag
-log_info "Updating deployment YAML with new image tag: loader-frontend:${VERSION}"
+# Generate deployment YAML from template with new image tag
+log_info "Generating deployment YAML from template with image: loader-frontend:${VERSION}"
+K8S_TEMPLATE="${FRONTEND_DIR}/k8s_manifist/frontend-deployment.yaml.template"
 K8S_MANIFEST="${FRONTEND_DIR}/k8s_manifist/frontend-deployment.yaml"
-sed -i.bak "s|image: loader-frontend:.*|image: loader-frontend:${VERSION}|g" "$K8S_MANIFEST"
-log_success "Deployment YAML updated"
+
+# Verify template exists
+if [ ! -f "$K8S_TEMPLATE" ]; then
+    exit_error "Template file not found: $K8S_TEMPLATE"
+fi
+
+# Clean up old deployment file and all backup files (.bak, .bak2, etc)
+log_info "Cleaning up old deployment files..."
+rm -f "$K8S_MANIFEST" "${K8S_MANIFEST}".bak*
+
+# Copy template and replace __IMAGE_TAG__ placeholder with actual version
+cp "$K8S_TEMPLATE" "$K8S_MANIFEST"
+sed -i '' "s|__IMAGE_TAG__|loader-frontend:${VERSION}|g" "$K8S_MANIFEST"
+log_success "Deployment YAML generated from template (no history maintained)"
 
 # ===================== Kubernetes Deployment =====================
 log_section "Deploying to Kubernetes"

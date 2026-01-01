@@ -4,6 +4,10 @@
 # Ignore all plain secrets YAMLs
 *-plain.yaml
 
+# Ignore generated frontend deployment (only track template)
+frontend/k8s_manifist/frontend-deployment.yaml
+frontend/k8s_manifist/frontend-deployment.yaml.bak*
+
 # (Optional but recommended)
 .DS_Store
 .env
