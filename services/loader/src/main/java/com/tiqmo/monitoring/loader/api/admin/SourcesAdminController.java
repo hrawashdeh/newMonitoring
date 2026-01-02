@@ -12,8 +12,11 @@ import org.springframework.web.bind.annotation.RestController;
 
 import java.util.List;
 
+/**
+ * Service ID: ldr (Loader Service), Controller ID: src (Sources Controller)
+ */
 @RestController
-@RequestMapping("/ops/v1/admin/")
+@RequestMapping("/api/ldr/src")
 @RequiredArgsConstructor
 public class SourcesAdminController {
 
@@ -23,7 +26,7 @@ public class SourcesAdminController {
   private final ApplicationEventPublisher publisher;
 
   /** List sources without secrets. */
-  @GetMapping("res/db-sources")
+  @GetMapping("/db-sources")
   public List<SourceView> list() {
     return registry.getConfigs().values().stream()
             .map(this::toView)

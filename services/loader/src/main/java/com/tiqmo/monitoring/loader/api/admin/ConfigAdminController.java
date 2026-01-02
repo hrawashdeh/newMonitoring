@@ -16,19 +16,21 @@ import java.util.Map;
 import java.util.stream.Collectors;
 
 /**
- * Admin Controller for managing configuration plans.
+ * Service ID: ldr (Loader Service), Controller ID: cfg (Config Controller)
+ *
+ * <p>Admin Controller for managing configuration plans.
  * Provides endpoints to activate plans, view active plans, and list all plans.
  *
  * <p>Endpoints:
  * <ul>
- *   <li>POST /ops/v1/admin/config/activate-plan - Activate a configuration plan</li>
- *   <li>GET /ops/v1/admin/config/{parent}/active-plan - Get active plan for a parent</li>
- *   <li>GET /ops/v1/admin/config/{parent}/plans - List all plans for a parent</li>
- *   <li>POST /ops/v1/admin/config/{parent}/refresh-cache - Refresh config cache for a parent</li>
+ *   <li>POST /api/ldr/cfg/activate-plan - Activate a configuration plan</li>
+ *   <li>GET /api/ldr/cfg/{parent}/active-plan - Get active plan for a parent</li>
+ *   <li>GET /api/ldr/cfg/{parent}/plans - List all plans for a parent</li>
+ *   <li>POST /api/ldr/cfg/{parent}/refresh-cache - Refresh config cache for a parent</li>
  * </ul>
  */
 @RestController
-@RequestMapping("/ops/v1/admin/config")
+@RequestMapping("/api/ldr/cfg")
 @RequiredArgsConstructor
 @Slf4j
 public class ConfigAdminController {

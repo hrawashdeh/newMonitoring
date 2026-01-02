@@ -35,8 +35,11 @@ import org.springframework.web.bind.annotation.*;
 import java.util.List;
 import java.util.Map;
 
+/**
+ * Service ID: ldr (Loader Service), Controller ID: ldr (Loader Controller)
+ */
 @RestController
-@RequestMapping("/api/v1/res/loaders")
+@RequestMapping("/api/ldr/ldr")
 @RequiredArgsConstructor
 @Slf4j
 public class LoaderController {

@@ -11,7 +11,11 @@ import org.springframework.web.bind.annotation.RestController;
 
 import java.util.*;
 
+/**
+ * Service ID: ldr (Loader Service), Controller ID: sec (Security Controller)
+ */
 @RestController
+@RequestMapping("/api/ldr/sec")
 @RequiredArgsConstructor
 public class SecurityAdminController {
 
@@ -20,7 +24,7 @@ public class SecurityAdminController {
 
   public record ProbeView(String dbCode, boolean readOnly, List<String> violations) {}
 
-  @GetMapping("/api/v1/admin/security/read-only-check")
+  @GetMapping("/read-only-check")
   public List<ProbeView> checkAll() {
     List<ProbeView> list = new ArrayList<>();
     for (Map.Entry<String, HikariDataSource> e : registry.getPools().entrySet()) {

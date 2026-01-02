@@ -17,15 +17,19 @@ import org.springframework.web.bind.annotation.*;
 /**
  * Authentication Controller for user login and token validation.
  *
+ * <p>Standardized Endpoint Pattern: /api/{service-id}/{controller-id}/{path}
+ * <p>Service ID: auth (Authentication Service)
+ * <p>Controller ID: auth (Authentication Controller)
+ *
  * <p>Endpoints:
  * <ul>
- *   <li>POST /api/v1/auth/login - Authenticate user and return JWT token</li>
- *   <li>POST /api/v1/auth/validate - Validate JWT token for frontend routing</li>
+ *   <li>POST /api/auth/auth/login - Authenticate user and return JWT token</li>
+ *   <li>POST /api/auth/auth/validate - Validate JWT token for frontend routing</li>
  * </ul>
  *
  * <p>Example Usage:
  * <pre>
- * curl -X POST http://localhost:8081/api/v1/auth/login \
+ * curl -X POST http://localhost:8081/api/auth/auth/login \
  *   -H "Content-Type: application/json" \
  *   -d '{
  *     "username": "admin",
@@ -48,7 +52,7 @@ import org.springframework.web.bind.annotation.*;
  */
 @Slf4j
 @RestController
-@RequestMapping("/api/v1/auth")
+@RequestMapping("/api/auth/auth")
 @RequiredArgsConstructor
 @CrossOrigin(origins = {"http://localhost:3000", "http://localhost:5173", "http://localhost:4200", "http://localhost:8081"})
 public class AuthController {

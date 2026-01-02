@@ -22,12 +22,16 @@ import org.springframework.web.multipart.MultipartFile;
  *
  * REST API endpoints for loader import operations.
  *
+ * <p>Standardized Endpoint Pattern: /api/{service-id}/{controller-id}/{path}
+ * <p>Service ID: imex (Import/Export Service)
+ * <p>Controller ID: imp (Import Controller)
+ *
  * @author Hassan Rawashdeh
  * @version 1.0.0
  * @since 2025-12-29
  */
 @RestController
-@RequestMapping("/api/import")
+@RequestMapping("/api/imex/imp")
 @RequiredArgsConstructor
 @Slf4j
 @Tag(name = "Import", description = "Loader import operations")

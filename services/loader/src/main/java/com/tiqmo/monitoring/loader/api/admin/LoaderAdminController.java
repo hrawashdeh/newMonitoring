@@ -19,7 +19,9 @@ import java.util.Optional;
 import java.util.stream.Collectors;
 
 /**
- * Admin API for loader operational management (Rounds 14-16).
+ * Service ID: ldr (Loader Service), Controller ID: admn (Admin Controller)
+ *
+ * <p>Admin API for loader operational management (Rounds 14-16).
  *
  * <p>Provides administrative endpoints for:
  * <ul>
@@ -33,7 +35,7 @@ import java.util.stream.Collectors;
  */
 @Slf4j
 @RestController
-@RequestMapping("/ops/v1/admin/loaders")
+@RequestMapping("/api/ldr/admn")
 @RequiredArgsConstructor
 public class LoaderAdminController {
 

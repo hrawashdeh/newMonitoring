@@ -15,8 +15,11 @@ import java.util.LinkedHashMap;
 import java.util.List;
 import java.util.Map;
 
+/**
+ * Service ID: ldr (Loader Service), Controller ID: sig (Signals Controller)
+ */
 @RestController
-@RequestMapping("/api/v1/res/signals")
+@RequestMapping("/api/ldr/sig")
 @RequiredArgsConstructor
 public class SignalsController {
     private final SignalsQueryService svc;

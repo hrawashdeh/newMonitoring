@@ -13,7 +13,9 @@ import java.util.List;
 import java.util.Map;
 
 /**
- * REST Controller for segment management.
+ * Service ID: ldr (Loader Service), Controller ID: seg (Segments Controller)
+ *
+ * <p>REST Controller for segment management.
  *
  * <p>Provides endpoints to:
  * <ul>
@@ -23,15 +25,15 @@ import java.util.Map;
  *
  * <p><b>Endpoints:</b>
  * <ul>
- *   <li>GET /api/v1/res/segments/dictionary?loaderCode={code} - Get segment dictionary for a loader</li>
- *   <li>GET /api/v1/res/segments/combinations?loaderCode={code} - Get segment combinations for a loader</li>
+ *   <li>GET /api/ldr/seg/dictionary?loaderCode={code} - Get segment dictionary for a loader</li>
+ *   <li>GET /api/ldr/seg/combinations?loaderCode={code} - Get segment combinations for a loader</li>
  * </ul>
  *
  * @author Hassan Rawashdeh
  * @since 1.0.0
  */
 @RestController
-@RequestMapping("/api/v1/res/segments")
+@RequestMapping("/api/ldr/seg")
 @RequiredArgsConstructor
 @Slf4j
 public class SegmentController {

@@ -17,7 +17,9 @@ import java.util.List;
 import java.util.Map;
 
 /**
- * Admin Controller for managing backfill jobs.
+ * Service ID: ldr (Loader Service), Controller ID: bkfl (Backfill Controller)
+ *
+ * <p>Admin Controller for managing backfill jobs.
  *
  * <p>Provides endpoints to:
  * <ul>
@@ -29,20 +31,20 @@ import java.util.Map;
  *
  * <p>Endpoints:
  * <ul>
- *   <li>POST /ops/v1/admin/backfill/submit - Submit a new backfill job</li>
- *   <li>POST /ops/v1/admin/backfill/{id}/execute - Execute a pending job</li>
- *   <li>GET /ops/v1/admin/backfill/{id} - Get job by ID</li>
- *   <li>GET /ops/v1/admin/backfill/loader/{loaderCode} - Get jobs by loader</li>
- *   <li>GET /ops/v1/admin/backfill/recent - Get recent jobs</li>
- *   <li>POST /ops/v1/admin/backfill/{id}/cancel - Cancel a pending job</li>
- *   <li>GET /ops/v1/admin/backfill/stats - Get backfill statistics</li>
+ *   <li>POST /api/ldr/bkfl/submit - Submit a new backfill job</li>
+ *   <li>POST /api/ldr/bkfl/{id}/execute - Execute a pending job</li>
+ *   <li>GET /api/ldr/bkfl/{id} - Get job by ID</li>
+ *   <li>GET /api/ldr/bkfl/loader/{loaderCode} - Get jobs by loader</li>
+ *   <li>GET /api/ldr/bkfl/recent - Get recent jobs</li>
+ *   <li>POST /api/ldr/bkfl/{id}/cancel - Cancel a pending job</li>
+ *   <li>GET /api/ldr/bkfl/stats - Get backfill statistics</li>
  * </ul>
  *
  * @author Hassan Rawashdeh
  * @since 1.0.0
  */
 @RestController
-@RequestMapping("/ops/v1/admin/backfill")
+@RequestMapping("/api/ldr/bkfl")
 @RequiredArgsConstructor
 @Slf4j
 public class BackfillAdminController {

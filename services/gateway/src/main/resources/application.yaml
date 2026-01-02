@@ -22,12 +22,13 @@ spring:
             maxAge: 3600
 
       routes:
-        # Route 1: Auth Service (must come before /api/** to match first)
+        # Route 1: Auth Service - Standardized /api/auth/** pattern
+        # Service ID: auth (Authentication Service)
         - id: auth-service
           uri: http://auth-service.monitoring-app.svc.cluster.local:8081
           order: 1
           predicates:
-            - Path=/api/v1/auth/**
+            - Path=/api/auth/**
           filters:
             - name: RequestRateLimiter
               args:
@@ -39,12 +40,13 @@ spring:
                 name: authServiceCircuitBreaker
                 fallbackUri: forward:/fallback/auth
 
-        # Route 2: Import/Export Service (must come before /api/** to match first)
+        # Route 2: Import/Export Service - Standardized /api/imex/** pattern
+        # Service ID: imex (Import/Export Service)
         - id: import-export-service
           uri: http://import-export-service.monitoring-app.svc.cluster.local:8080
           order: 2
           predicates:
-            - Path=/api/import/**
+            - Path=/api/imex/**
           filters:
             - name: RequestRateLimiter
               args:
@@ -56,12 +58,14 @@ spring:
                 name: importExportServiceCircuitBreaker
                 fallbackUri: forward:/fallback/import
 
-        # Route 3: Loader Service (catches all other /api/** requests)
+        # Route 3: Loader Service - Standardized /api/ldr/** pattern
+        # Service ID: ldr (Loader/Signal Service)
+        # Handles all loader controllers: ldr, sig, seg, apv, admn, bkfl, cfg, src, sec
         - id: loader-service
           uri: http://signal-loader.monitoring-app.svc.cluster.local:8080
           order: 3
           predicates:
-            - Path=/api/**
+            - Path=/api/ldr/**
           filters:
             - name: RequestRateLimiter
               args:

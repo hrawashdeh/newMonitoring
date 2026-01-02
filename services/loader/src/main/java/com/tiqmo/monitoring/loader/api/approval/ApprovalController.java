@@ -20,9 +20,11 @@ import java.util.List;
 import java.util.stream.Collectors;
 
 /**
- * Approval Management Controller
+ * Service ID: ldr (Loader Service), Controller ID: apv (Approval Controller)
  *
- * REST API endpoints for generic approval workflow.
+ * <p>Approval Management Controller
+ *
+ * <p>REST API endpoints for generic approval workflow.
  * Supports approval management for all entity types (LOADER, DASHBOARD, INCIDENT, CHART).
  *
  * @author Hassan Rawashdeh
@@ -30,7 +32,7 @@ import java.util.stream.Collectors;
  * @since 2025-12-29
  */
 @RestController
-@RequestMapping("/api/approvals")
+@RequestMapping("/api/ldr/apv")
 @RequiredArgsConstructor
 @Slf4j
 @Tag(name = "Approvals", description = "Generic approval workflow management")
