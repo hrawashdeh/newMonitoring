@@ -127,6 +127,12 @@ management:
       prometheus:
         enabled: true
 
+# JWT Configuration
+jwt:
+  secret: ${JWT_SECRET:your-secret-key-change-this-in-production-must-be-at-least-256-bits}
+  enabled: ${JWT_ENABLED:false}  # Set to true to enable JWT authentication
+  expiration-ms: 86400000  # 24 hours (for reference only, validated by auth-service)
+
 # Resilience4j Circuit Breaker Configuration
 resilience4j:
   circuitbreaker:
