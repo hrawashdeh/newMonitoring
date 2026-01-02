@@ -38,6 +38,14 @@ public class OperationContextWebFilter implements WebFilter, Ordered {
     @Override
     public Mono<Void> filter(ServerWebExchange exchange, WebFilterChain chain) {
         ServerHttpRequest request = exchange.getRequest();
+        String requestPath = request.getPath().value();
+        String method = request.getMethod().name();
+        String correlationId = MDC.get("correlationId");
+        String clientIp = request.getRemoteAddress() != null ?
+                request.getRemoteAddress().getAddress().getHostAddress() : "unknown";
+
+        logger.trace("Entering OperationContextWebFilter | requestPath={} | method={} | clientIp={} | correlationId={}",
+                requestPath, method, clientIp, correlationId);
 
         // Extract operation name from header
         String operationName = request.getHeaders().getFirst(OPERATION_NAME_HEADER);
@@ -58,17 +66,50 @@ public class OperationContextWebFilter implements WebFilter, Ordered {
             currentSpan.setAttribute("operation.name", operationName);
             currentSpan.setAttribute("http.route", request.getPath().value());
             currentSpan.setAttribute("http.method", request.getMethod().name());
+            currentSpan.setAttribute("client.ip", clientIp);
+            currentSpan.setAttribute("correlation.id", correlationId != null ? correlationId : "");
+
+            logger.trace("OpenTelemetry span attributes set | traceId={} | spanId={} | operation={} | requestPath={}",
+                    spanContext.getTraceId(), spanContext.getSpanId(), operationName, requestPath);
         }
 
-        logger.debug("Operation context set: operation={}, traceId={}, spanId={}, path={}",
+        logger.debug("Operation context set: operation={}, traceId={}, spanId={}, path={}, correlationId={}",
                 operationName,
                 spanContext.getTraceId(),
                 spanContext.getSpanId(),
-                request.getPath().value());
+                request.getPath().value(),
+                correlationId);
 
         // Continue filter chain and cleanup MDC after
+        long startTime = System.currentTimeMillis();
+
         return chain.filter(exchange)
+                .doOnSuccess(v -> {
+                    long duration = System.currentTimeMillis() - startTime;
+                    int statusCode = exchange.getResponse().getStatusCode() != null ?
+                            exchange.getResponse().getStatusCode().value() : 0;
+
+                    logger.debug("Request completed successfully | requestPath={} | method={} | statusCode={} | " +
+                                    "duration={}ms | correlationId={} | clientIp={}",
+                            requestPath, method, statusCode, duration, correlationId, clientIp);
+
+                    if (duration > 5000) {
+                        logger.warn("SLOW_REQUEST: Request took longer than 5 seconds | requestPath={} | method={} | " +
+                                        "duration={}ms | correlationId={} | statusCode={}",
+                                requestPath, method, duration, correlationId, statusCode);
+                    }
+                })
+                .doOnError(error -> {
+                    long duration = System.currentTimeMillis() - startTime;
+
+                    logger.error("REQUEST_FAILED: Error occurred during request processing | requestPath={} | method={} | " +
+                                    "duration={}ms | correlationId={} | clientIp={} | errorType={} | errorMessage={}",
+                            requestPath, method, duration, correlationId, clientIp,
+                            error.getClass().getSimpleName(), error.getMessage(), error);
+                })
                 .doFinally(signalType -> {
+                    logger.trace("Cleaning up MDC | signalType={} | correlationId={}", signalType, correlationId);
+
                     // Clear MDC after request processing
                     MDC.remove(OPERATION_NAME_MDC_KEY);
                     MDC.remove(TRACE_ID_MDC_KEY);
