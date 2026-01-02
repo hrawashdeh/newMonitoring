@@ -6,6 +6,7 @@ import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
 import org.apache.poi.ss.usermodel.*;
 import org.apache.poi.xssf.usermodel.XSSFWorkbook;
+import org.slf4j.MDC;
 import org.springframework.stereotype.Service;
 import org.springframework.web.multipart.MultipartFile;
 
@@ -46,33 +47,68 @@ public class FileStorageService {
      * @throws IOException If file cannot be stored
      */
     public String storeFile(MultipartFile file, String username) throws IOException {
+        String correlationId = MDC.get("correlationId");
+        String originalFilename = file.getOriginalFilename();
+        long fileSize = file.getSize();
+        long maxFileSize = fileStorageProperties.getMaxFileSize();
+
+        log.trace("Entering storeFile() | fileName={} | fileSize={} | username={} | correlationId={}",
+                originalFilename, fileSize, username, correlationId);
+
+        log.debug("Storing uploaded file | fileName={} | fileSize={} | username={} | correlationId={}",
+                originalFilename, fileSize, username, correlationId);
+
         // Validate file
+        log.trace("Validating file before storage | fileName={} | correlationId={}", originalFilename, correlationId);
+
         if (file.isEmpty()) {
+            log.error("FILE_STORAGE_FAILED: Cannot store empty file | fileName={} | username={} | correlationId={} | " +
+                            "reason=File has zero size | " +
+                            "suggestion=Ensure file contains data before uploading",
+                    originalFilename, username, correlationId);
             throw new IllegalArgumentException("Cannot store empty file");
         }
 
-        if (file.getSize() > fileStorageProperties.getMaxFileSize()) {
+        if (fileSize > maxFileSize) {
+            log.error("FILE_STORAGE_FAILED: File size exceeds limit | fileName={} | fileSize={} | maxFileSize={} | " +
+                            "username={} | correlationId={} | " +
+                            "reason=Uploaded file exceeds maximum allowed size | " +
+                            "suggestion=Reduce file size or split into smaller files (max {} bytes)",
+                    originalFilename, fileSize, maxFileSize, username, correlationId, maxFileSize);
             throw new IllegalArgumentException(
-                    String.format("File size exceeds maximum allowed size (%d bytes)",
-                            fileStorageProperties.getMaxFileSize())
+                    String.format("File size exceeds maximum allowed size (%d bytes)", maxFileSize)
             );
         }
 
+        log.debug("File validation passed | fileName={} | fileSize={} | correlationId={}",
+                originalFilename, fileSize, correlationId);
+
         // Create base directory if not exists
         Path baseDir = Paths.get(fileStorageProperties.getBasePath());
+        log.trace("Creating base storage directory if not exists | basePath={} | correlationId={}",
+                baseDir, correlationId);
         Files.createDirectories(baseDir);
+        log.debug("Storage directory ready | basePath={} | correlationId={}", baseDir, correlationId);
 
         // Generate unique filename
         String timestamp = LocalDateTime.now().format(TIMESTAMP_FORMAT);
-        String originalFilename = file.getOriginalFilename();
         String safeFilename = sanitizeFilename(originalFilename);
         String storedFilename = String.format("%s_%s_%s", timestamp, username, safeFilename);
 
+        log.debug("Generated storage filename | originalFilename={} | storedFilename={} | correlationId={}",
+                originalFilename, storedFilename, correlationId);
+
         // Store file
         Path targetPath = baseDir.resolve(storedFilename);
+        log.trace("Copying file to storage | targetPath={} | correlationId={}", targetPath, correlationId);
+
         Files.copy(file.getInputStream(), targetPath, StandardCopyOption.REPLACE_EXISTING);
 
-        log.info("Stored file: {} (size: {} bytes)", targetPath, file.getSize());
+        log.info("File stored successfully | fileName={} | storedPath={} | fileSize={} | username={} | correlationId={}",
+                originalFilename, targetPath, fileSize, username, correlationId);
+
+        log.trace("Exiting storeFile() | success=true | storedPath={}", targetPath);
+
         return targetPath.toString();
     }
 
@@ -87,19 +123,32 @@ public class FileStorageService {
     public String generateErrorFile(String originalFilePath, List<ImportErrorDto> errors)
             throws IOException {
 
-        log.info("Generating error file for {} errors", errors.size());
+        String correlationId = MDC.get("correlationId");
+        int errorCount = errors.size();
+
+        log.trace("Entering generateErrorFile() | originalFilePath={} | errorCount={} | correlationId={}",
+                originalFilePath, errorCount, correlationId);
+
+        log.info("Starting error file generation | originalFilePath={} | errorCount={} | correlationId={}",
+                originalFilePath, errorCount, correlationId);
 
         // Create error files directory
         Path errorDir = Paths.get(fileStorageProperties.getErrorFilesPath());
+        log.trace("Creating error files directory | errorDir={} | correlationId={}", errorDir, correlationId);
         Files.createDirectories(errorDir);
+        log.debug("Error files directory ready | errorDir={} | correlationId={}", errorDir, correlationId);
 
         // Generate error filename
         String originalFilename = Paths.get(originalFilePath).getFileName().toString();
         String errorFilename = originalFilename.replace(".xlsx", "_errors.xlsx");
         Path errorFilePath = errorDir.resolve(errorFilename);
 
+        log.debug("Generating error report | originalFilename={} | errorFilename={} | correlationId={}",
+                originalFilename, errorFilename, correlationId);
+
         // Create error workbook
         try (Workbook workbook = new XSSFWorkbook()) {
+            log.trace("Creating error workbook | correlationId={}", correlationId);
             Sheet sheet = workbook.createSheet("Import Errors");
 
             // Create header row
@@ -113,7 +162,10 @@ public class FileStorageService {
                 cell.setCellStyle(headerStyle);
             }
 
+            log.trace("Header row created | headerCount={} | correlationId={}", headers.length, correlationId);
+
             // Create error rows
+            log.trace("Writing error rows | errorCount={} | correlationId={}", errorCount, correlationId);
             int rowNum = 1;
             for (ImportErrorDto error : errors) {
                 Row row = sheet.createRow(rowNum++);
@@ -124,18 +176,26 @@ public class FileStorageService {
                 row.createCell(4).setCellValue(error.getErrorType() != null ? error.getErrorType() : "");
             }
 
+            log.debug("Error rows written | totalRows={} | correlationId={}", errorCount, correlationId);
+
             // Auto-size columns
+            log.trace("Auto-sizing columns | correlationId={}", correlationId);
             for (int i = 0; i < headers.length; i++) {
                 sheet.autoSizeColumn(i);
             }
 
             // Write to file
+            log.trace("Writing workbook to file | errorFilePath={} | correlationId={}", errorFilePath, correlationId);
             try (FileOutputStream fos = new FileOutputStream(errorFilePath.toFile())) {
                 workbook.write(fos);
             }
+
+            log.info("Error file generated successfully | errorFilePath={} | errorCount={} | correlationId={}",
+                    errorFilePath, errorCount, correlationId);
         }
 
-        log.info("Generated error file: {}", errorFilePath);
+        log.trace("Exiting generateErrorFile() | success=true | errorFilePath={}", errorFilePath);
+
         return errorFilePath.toString();
     }
 

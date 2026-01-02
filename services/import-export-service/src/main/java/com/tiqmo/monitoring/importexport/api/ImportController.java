@@ -9,6 +9,7 @@ import io.swagger.v3.oas.annotations.tags.Tag;
 import jakarta.servlet.http.HttpServletRequest;
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
+import org.slf4j.MDC;
 import org.springframework.http.HttpStatus;
 import org.springframework.http.MediaType;
 import org.springframework.http.ResponseEntity;
@@ -70,37 +71,92 @@ public class ImportController {
             Authentication authentication,
             HttpServletRequest request) {
 
-        log.info("Import request from user: {} (dryRun: {})", authentication.getName(), dryRun);
+        String username = authentication.getName();
+        String correlationId = MDC.get("correlationId");
+        String requestPath = MDC.get("requestPath");
+        String fileName = file.getOriginalFilename();
+        long fileSize = file.getSize();
+
+        log.trace("Entering uploadImportFile() | username={} | fileName={} | fileSize={} | dryRun={} | correlationId={}",
+                username, fileName, fileSize, dryRun, correlationId);
+
+        log.debug("POST /api/imex/imp/upload | username={} | fileName={} | fileSize={} | importLabel={} | " +
+                        "dryRun={} | correlationId={} | requestPath={}",
+                username, fileName, fileSize, importLabel, dryRun, correlationId, requestPath);
+
+        log.info("Import request received | username={} | fileName={} | fileSize={} | dryRun={} | importLabel={} | correlationId={}",
+                username, fileName, fileSize, dryRun, importLabel, correlationId);
 
         // Extract JWT token from Authorization header
+        log.trace("Extracting JWT token from Authorization header | correlationId={}", correlationId);
         String token = extractToken(request);
         if (token == null) {
+            log.error("IMPORT_FAILED: Missing or invalid Authorization token | username={} | fileName={} | " +
+                            "correlationId={} | statusCode=401 | " +
+                            "reason=Authorization header missing or malformed | " +
+                            "suggestion=Ensure Authorization header contains valid Bearer token",
+                    username, fileName, correlationId);
+            log.trace("Exiting uploadImportFile() | success=false | statusCode=401 | reason=missing_token");
             return ResponseEntity.status(HttpStatus.UNAUTHORIZED).build();
         }
 
         // Validate file
+        log.trace("Validating uploaded file | fileName={} | fileSize={} | isEmpty={} | correlationId={}",
+                fileName, fileSize, file.isEmpty(), correlationId);
+
         if (file.isEmpty()) {
+            log.error("IMPORT_FAILED: Empty file uploaded | username={} | fileName={} | correlationId={} | " +
+                            "statusCode=400 | reason=File is empty | " +
+                            "suggestion=Ensure file contains data before uploading",
+                    username, fileName, correlationId);
+            log.trace("Exiting uploadImportFile() | success=false | statusCode=400 | reason=empty_file");
             return ResponseEntity.badRequest().build();
         }
 
-        if (!file.getOriginalFilename().toLowerCase().endsWith(".xlsx")) {
+        if (!fileName.toLowerCase().endsWith(".xlsx")) {
+            log.error("IMPORT_FAILED: Invalid file type | username={} | fileName={} | correlationId={} | " +
+                            "statusCode=400 | reason=File must be Excel format (.xlsx) | " +
+                            "suggestion=Upload a valid .xlsx file",
+                    username, fileName, correlationId);
+            log.trace("Exiting uploadImportFile() | success=false | statusCode=400 | reason=invalid_file_type");
             return ResponseEntity.badRequest().build();
         }
+
+        log.debug("File validation passed | fileName={} | fileSize={} | correlationId={}", fileName, fileSize, correlationId);
 
         // Process import
         try {
+            log.trace("Invoking import service | username={} | fileName={} | dryRun={} | correlationId={}",
+                    username, fileName, dryRun, correlationId);
+
             ImportResultDto result = importService.importLoaders(
                     file,
                     importLabel,
-                    authentication.getName(),
+                    username,
                     token,
                     dryRun
             );
 
+            log.info("Import completed successfully | username={} | fileName={} | totalRows={} | successCount={} | " +
+                            "failureCount={} | dryRun={} | auditLogId={} | correlationId={}",
+                    username, fileName, result.getTotalRows(), result.getSuccessCount(),
+                    result.getFailureCount(), dryRun, result.getAuditLogId(), correlationId);
+
+            log.trace("Exiting uploadImportFile() | username={} | success=true | statusCode=200 | " +
+                            "totalRows={} | successCount={}",
+                    username, result.getTotalRows(), result.getSuccessCount());
+
             return ResponseEntity.ok(result);
 
         } catch (Exception e) {
-            log.error("Import failed", e);
+            log.error("IMPORT_FAILED: Unexpected error during import | username={} | fileName={} | " +
+                            "correlationId={} | errorType={} | errorMessage={} | " +
+                            "reason=Unexpected error occurred during import processing | " +
+                            "suggestion=Check file format and content, review error logs for details",
+                    username, fileName, correlationId, e.getClass().getSimpleName(), e.getMessage(), e);
+
+            log.trace("Exiting uploadImportFile() | username={} | success=false | statusCode=500 | reason=exception");
+
             return ResponseEntity.status(HttpStatus.INTERNAL_SERVER_ERROR).build();
         }
     }
@@ -126,26 +182,64 @@ public class ImportController {
             Authentication authentication,
             HttpServletRequest request) {
 
-        log.info("Validation request from user: {}", authentication.getName());
+        String username = authentication.getName();
+        String correlationId = MDC.get("correlationId");
+        String requestPath = MDC.get("requestPath");
+        String fileName = file.getOriginalFilename();
+        long fileSize = file.getSize();
 
+        log.trace("Entering validateImportFile() | username={} | fileName={} | fileSize={} | correlationId={}",
+                username, fileName, fileSize, correlationId);
+
+        log.debug("POST /api/imex/imp/validate | username={} | fileName={} | fileSize={} | " +
+                        "correlationId={} | requestPath={}",
+                username, fileName, fileSize, correlationId, requestPath);
+
+        log.info("Validation request received | username={} | fileName={} | fileSize={} | correlationId={}",
+                username, fileName, fileSize, correlationId);
+
+        log.trace("Extracting JWT token from Authorization header | correlationId={}", correlationId);
         String token = extractToken(request);
         if (token == null) {
+            log.error("VALIDATION_FAILED: Missing or invalid Authorization token | username={} | fileName={} | " +
+                            "correlationId={} | statusCode=401 | " +
+                            "reason=Authorization header missing or malformed | " +
+                            "suggestion=Ensure Authorization header contains valid Bearer token",
+                    username, fileName, correlationId);
+            log.trace("Exiting validateImportFile() | success=false | statusCode=401 | reason=missing_token");
             return ResponseEntity.status(HttpStatus.UNAUTHORIZED).build();
         }
 
         try {
+            log.trace("Invoking import service in dry-run mode | username={} | fileName={} | correlationId={}",
+                    username, fileName, correlationId);
+
             ImportResultDto result = importService.importLoaders(
                     file,
                     null,
-                    authentication.getName(),
+                    username,
                     token,
                     true // Dry run
             );
 
+            log.info("Validation completed successfully | username={} | fileName={} | totalRows={} | " +
+                            "validationErrors={} | correlationId={}",
+                    username, fileName, result.getTotalRows(), result.getErrors().size(), correlationId);
+
+            log.trace("Exiting validateImportFile() | username={} | success=true | statusCode=200 | totalRows={}",
+                    username, result.getTotalRows());
+
             return ResponseEntity.ok(result);
 
         } catch (Exception e) {
-            log.error("Validation failed", e);
+            log.error("VALIDATION_FAILED: Unexpected error during validation | username={} | fileName={} | " +
+                            "correlationId={} | errorType={} | errorMessage={} | " +
+                            "reason=Unexpected error occurred during file validation | " +
+                            "suggestion=Check file format and content, review error logs for details",
+                    username, fileName, correlationId, e.getClass().getSimpleName(), e.getMessage(), e);
+
+            log.trace("Exiting validateImportFile() | username={} | success=false | statusCode=500 | reason=exception");
+
             return ResponseEntity.status(HttpStatus.INTERNAL_SERVER_ERROR).build();
         }
     }
