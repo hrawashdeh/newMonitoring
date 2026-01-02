@@ -28,7 +28,7 @@
     <springProfile name="dev,default">
         <appender name="CONSOLE" class="ch.qos.logback.core.ConsoleAppender">
             <encoder>
-                <pattern>%d{yyyy-MM-dd HH:mm:ss.SSS} [%thread] %-5level %logger{36} - [requestId=%X{requestId}] [username=%X{username}] [endpoint=%X{endpoint}] - %msg%n</pattern>
+                <pattern>%d{yyyy-MM-dd HH:mm:ss.SSS} [%thread] %-5level %logger{36} - [correlationId=%X{correlationId}] [requestId=%X{requestId}] [username=%X{username}] [requestPath=%X{requestPath}] - %msg%n</pattern>
             </encoder>
         </appender>
 
@@ -51,26 +51,31 @@
         <!-- Console JSON Appender for Kubernetes/Elasticsearch -->
         <appender name="CONSOLE_JSON" class="ch.qos.logback.core.ConsoleAppender">
             <encoder class="net.logstash.logback.encoder.LogstashEncoder">
-                <!-- Include MDC fields -->
-                <includeMdcKeyName>requestId</includeMdcKeyName>
+                <!-- OpenTelemetry trace correlation fields (MUST be first) -->
+                <includeMdcKeyName>trace.id</includeMdcKeyName>
+                <includeMdcKeyName>span.id</includeMdcKeyName>
+                <includeMdcKeyName>operation.name</includeMdcKeyName>
+
+                <!-- Core MDC fields (all services) -->
                 <includeMdcKeyName>correlationId</includeMdcKeyName>
-                <includeMdcKeyName>username</includeMdcKeyName>
-                <includeMdcKeyName>userId</includeMdcKeyName>
-                <includeMdcKeyName>endpoint</includeMdcKeyName>
-                <includeMdcKeyName>method</includeMdcKeyName>
+                <includeMdcKeyName>requestId</includeMdcKeyName>
+                <includeMdcKeyName>contextId</includeMdcKeyName>
+                <includeMdcKeyName>processId</includeMdcKeyName>
+                <includeMdcKeyName>serviceId</includeMdcKeyName>
+                <includeMdcKeyName>httpMethod</includeMdcKeyName>
+                <includeMdcKeyName>requestPath</includeMdcKeyName>
                 <includeMdcKeyName>statusCode</includeMdcKeyName>
                 <includeMdcKeyName>duration</includeMdcKeyName>
-                <includeMdcKeyName>ipAddress</includeMdcKeyName>
+                <includeMdcKeyName>clientIp</includeMdcKeyName>
+                <includeMdcKeyName>username</includeMdcKeyName>
+
+                <!-- Auth-service specific fields -->
+                <includeMdcKeyName>userId</includeMdcKeyName>
                 <includeMdcKeyName>userAgent</includeMdcKeyName>
                 <includeMdcKeyName>authMethod</includeMdcKeyName>
                 <includeMdcKeyName>tokenType</includeMdcKeyName>
                 <includeMdcKeyName>loginSuccess</includeMdcKeyName>
                 <includeMdcKeyName>failureReason</includeMdcKeyName>
-
-                <!-- OpenTelemetry trace correlation fields -->
-                <includeMdcKeyName>trace.id</includeMdcKeyName>
-                <includeMdcKeyName>span.id</includeMdcKeyName>
-                <includeMdcKeyName>operation.name</includeMdcKeyName>
 
                 <!-- Custom fields -->
                 <customFields>{"service_name":"${APP_NAME}","environment":"production","service_type":"authentication"}</customFields>

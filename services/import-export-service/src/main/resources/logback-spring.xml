@@ -15,14 +15,25 @@
     <!-- Console JSON Appender for Kubernetes/Elasticsearch -->
     <appender name="CONSOLE_JSON" class="ch.qos.logback.core.ConsoleAppender">
         <encoder class="net.logstash.logback.encoder.LogstashEncoder">
-            <!-- Include MDC fields -->
-            <includeMdcKeyName>requestId</includeMdcKeyName>
+            <!-- OpenTelemetry trace correlation fields (MUST be first) -->
+            <includeMdcKeyName>trace.id</includeMdcKeyName>
+            <includeMdcKeyName>span.id</includeMdcKeyName>
+            <includeMdcKeyName>operation.name</includeMdcKeyName>
+
+            <!-- Core MDC fields (all services) -->
             <includeMdcKeyName>correlationId</includeMdcKeyName>
-            <includeMdcKeyName>username</includeMdcKeyName>
-            <includeMdcKeyName>endpoint</includeMdcKeyName>
-            <includeMdcKeyName>method</includeMdcKeyName>
+            <includeMdcKeyName>requestId</includeMdcKeyName>
+            <includeMdcKeyName>contextId</includeMdcKeyName>
+            <includeMdcKeyName>processId</includeMdcKeyName>
+            <includeMdcKeyName>serviceId</includeMdcKeyName>
+            <includeMdcKeyName>httpMethod</includeMdcKeyName>
+            <includeMdcKeyName>requestPath</includeMdcKeyName>
             <includeMdcKeyName>statusCode</includeMdcKeyName>
             <includeMdcKeyName>duration</includeMdcKeyName>
+            <includeMdcKeyName>clientIp</includeMdcKeyName>
+            <includeMdcKeyName>username</includeMdcKeyName>
+
+            <!-- Import-export service specific fields -->
             <includeMdcKeyName>importLabel</includeMdcKeyName>
             <includeMdcKeyName>fileName</includeMdcKeyName>
             <includeMdcKeyName>totalRows</includeMdcKeyName>

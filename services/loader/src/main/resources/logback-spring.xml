@@ -33,7 +33,7 @@
         <!-- Console appender with colored pattern -->
         <appender name="CONSOLE" class="ch.qos.logback.core.ConsoleAppender">
             <encoder>
-                <pattern>%d{yyyy-MM-dd HH:mm:ss.SSS} [%thread] %-5level %logger{36} - [requestId=%X{requestId}] [correlationId=%X{correlationId}] [loaderCode=%X{loaderCode}] - %msg%n</pattern>
+                <pattern>%d{yyyy-MM-dd HH:mm:ss.SSS} [%thread] %-5level %logger{36} - [correlationId=%X{correlationId}] [requestId=%X{requestId}] [loaderCode=%X{loaderCode}] [requestPath=%X{requestPath}] - %msg%n</pattern>
             </encoder>
         </appender>
 
@@ -48,7 +48,7 @@
                 <cleanHistoryOnStart>true</cleanHistoryOnStart>
             </rollingPolicy>
             <encoder>
-                <pattern>%d{yyyy-MM-dd HH:mm:ss.SSS} [%thread] %-5level %logger{36} - [requestId=%X{requestId}] [correlationId=%X{correlationId}] [loaderCode=%X{loaderCode}] - %msg%n</pattern>
+                <pattern>%d{yyyy-MM-dd HH:mm:ss.SSS} [%thread] %-5level %logger{36} - [correlationId=%X{correlationId}] [requestId=%X{requestId}] [loaderCode=%X{loaderCode}] [requestPath=%X{requestPath}] - %msg%n</pattern>
             </encoder>
         </appender>
 
@@ -162,7 +162,7 @@
     <springProfile name="dev,default">
         <appender name="CONSOLE" class="ch.qos.logback.core.ConsoleAppender">
             <encoder>
-                <pattern>%d{yyyy-MM-dd HH:mm:ss.SSS} [%thread] %-5level %logger{36} - [requestId=%X{requestId}] [correlationId=%X{correlationId}] [loaderCode=%X{loaderCode}] - %msg%n</pattern>
+                <pattern>%d{yyyy-MM-dd HH:mm:ss.SSS} [%thread] %-5level %logger{36} - [correlationId=%X{correlationId}] [requestId=%X{requestId}] [loaderCode=%X{loaderCode}] [requestPath=%X{requestPath}] - %msg%n</pattern>
             </encoder>
         </appender>
 
@@ -191,20 +191,26 @@
         <!-- Console JSON Appender for Kubernetes/Elasticsearch -->
         <appender name="CONSOLE_JSON" class="ch.qos.logback.core.ConsoleAppender">
             <encoder class="net.logstash.logback.encoder.LogstashEncoder">
-                <!-- Include OpenTelemetry MDC fields (for trace correlation) -->
+                <!-- OpenTelemetry trace correlation fields (MUST be first) -->
                 <includeMdcKeyName>trace.id</includeMdcKeyName>
                 <includeMdcKeyName>span.id</includeMdcKeyName>
                 <includeMdcKeyName>operation.name</includeMdcKeyName>
 
-                <!-- Include business MDC fields -->
-                <includeMdcKeyName>requestId</includeMdcKeyName>
+                <!-- Core MDC fields (all services) -->
                 <includeMdcKeyName>correlationId</includeMdcKeyName>
-                <includeMdcKeyName>loaderCode</includeMdcKeyName>
-                <includeMdcKeyName>username</includeMdcKeyName>
-                <includeMdcKeyName>endpoint</includeMdcKeyName>
-                <includeMdcKeyName>method</includeMdcKeyName>
+                <includeMdcKeyName>requestId</includeMdcKeyName>
+                <includeMdcKeyName>contextId</includeMdcKeyName>
+                <includeMdcKeyName>processId</includeMdcKeyName>
+                <includeMdcKeyName>serviceId</includeMdcKeyName>
+                <includeMdcKeyName>httpMethod</includeMdcKeyName>
+                <includeMdcKeyName>requestPath</includeMdcKeyName>
                 <includeMdcKeyName>statusCode</includeMdcKeyName>
                 <includeMdcKeyName>duration</includeMdcKeyName>
+                <includeMdcKeyName>clientIp</includeMdcKeyName>
+                <includeMdcKeyName>username</includeMdcKeyName>
+
+                <!-- Loader service specific fields -->
+                <includeMdcKeyName>loaderCode</includeMdcKeyName>
                 <includeMdcKeyName>sourceDatabase</includeMdcKeyName>
                 <includeMdcKeyName>approvalRequestId</includeMdcKeyName>
                 <includeMdcKeyName>importLabel</includeMdcKeyName>

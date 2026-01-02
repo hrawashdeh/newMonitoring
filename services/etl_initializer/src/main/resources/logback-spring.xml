@@ -15,9 +15,31 @@
     <!-- Console JSON Appender for Kubernetes/Elasticsearch -->
     <appender name="CONSOLE_JSON" class="ch.qos.logback.core.ConsoleAppender">
         <encoder class="net.logstash.logback.encoder.LogstashEncoder">
+            <!-- OpenTelemetry trace correlation fields (MUST be first) -->
+            <includeMdcKeyName>trace.id</includeMdcKeyName>
+            <includeMdcKeyName>span.id</includeMdcKeyName>
+            <includeMdcKeyName>operation.name</includeMdcKeyName>
+
+            <!-- Core MDC fields (all services) -->
+            <includeMdcKeyName>correlationId</includeMdcKeyName>
+            <includeMdcKeyName>requestId</includeMdcKeyName>
+            <includeMdcKeyName>contextId</includeMdcKeyName>
+            <includeMdcKeyName>processId</includeMdcKeyName>
+            <includeMdcKeyName>serviceId</includeMdcKeyName>
+            <includeMdcKeyName>httpMethod</includeMdcKeyName>
+            <includeMdcKeyName>requestPath</includeMdcKeyName>
+            <includeMdcKeyName>statusCode</includeMdcKeyName>
+            <includeMdcKeyName>duration</includeMdcKeyName>
+            <includeMdcKeyName>clientIp</includeMdcKeyName>
+            <includeMdcKeyName>username</includeMdcKeyName>
+
+            <!-- ETL Initializer specific fields -->
+            <includeMdcKeyName>migrationVersion</includeMdcKeyName>
+            <includeMdcKeyName>migrationScript</includeMdcKeyName>
+
             <!-- Custom fields -->
             <customFields>{"service_name":"${APP_NAME}","environment":"production","service_type":"etl-initializer"}</customFields>
-            
+
             <!-- Shorten logger names -->
             <shortenedLoggerNameLength>36</shortenedLoggerNameLength>
             
