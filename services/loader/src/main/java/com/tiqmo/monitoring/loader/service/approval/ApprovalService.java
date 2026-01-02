@@ -8,6 +8,7 @@ import com.tiqmo.monitoring.loader.domain.approval.repo.ApprovalActionRepository
 import com.tiqmo.monitoring.loader.domain.approval.repo.ApprovalRequestRepository;
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
+import org.slf4j.MDC;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 
@@ -65,58 +66,72 @@ public class ApprovalService {
             ApprovalRequest.Source source,
             String importLabel) {
 
-        log.info("[submitApprovalRequest] START | entityType={} | entityId={} | requestType={} | requestedBy={} | source={} | importLabel={}",
-                entityType, entityId, requestType, requestedBy, source, importLabel);
+        MDC.put("entityType", entityType.name());
+        MDC.put("entityId", entityId);
+        try {
+            log.trace("Entering submitApprovalRequest() | entityType={} | entityId={} | requestType={} | correlationId={} | processId={}",
+                    entityType, entityId, requestType, MDC.get("correlationId"), MDC.get("processId"));
+            log.info("[submitApprovalRequest] START | entityType={} | entityId={} | requestType={} | requestedBy={} | source={} | importLabel={}",
+                    entityType, entityId, requestType, requestedBy, source, importLabel);
 
-        // Check if entity already has a pending approval
-        log.info("[submitApprovalRequest] Checking for existing pending approval for entityType={}, entityId={}", entityType, entityId);
-        Optional<ApprovalRequest> existing = approvalRequestRepository
-                .findPendingForEntity(entityType, entityId);
-        log.info("[submitApprovalRequest] Existing pending approval check result: {}", existing.isPresent() ? "FOUND (ID=" + existing.get().getId() + ")" : "NOT_FOUND");
+            // Check if entity already has a pending approval
+            log.debug("Checking for existing pending approval | entityType={} | entityId={}", entityType, entityId);
+            Optional<ApprovalRequest> existing = approvalRequestRepository
+                    .findPendingForEntity(entityType, entityId);
+            log.trace("Existing pending approval check result: {} | correlationId={}",
+                    existing.isPresent() ? "FOUND (ID=" + existing.get().getId() + ")" : "NOT_FOUND",
+                    MDC.get("correlationId"));
 
-        if (existing.isPresent()) {
-            throw new IllegalStateException(
-                    String.format("Entity %s/%s already has a pending approval request (ID: %d)",
-                            entityType, entityId, existing.get().getId())
-            );
+            if (existing.isPresent()) {
+                log.warn("Approval request already pending | entityType={} | entityId={} | existingRequestId={} | correlationId={}",
+                        entityType, entityId, existing.get().getId(), MDC.get("correlationId"));
+                throw new IllegalStateException(
+                        String.format("Entity %s/%s already has a pending approval request (ID: %d)",
+                                entityType, entityId, existing.get().getId())
+                );
+            }
+
+            // Serialize request data to JSON
+            log.trace("Serializing request data to JSON | entityType={} | entityId={}", entityType, entityId);
+            String requestDataJson = serializeToJson(requestData);
+            String currentDataJson = currentData != null ? serializeToJson(currentData) : null;
+            log.debug("Serialization complete | requestDataJson length={} | currentDataJson length={}",
+                    requestDataJson != null ? requestDataJson.length() : 0,
+                    currentDataJson != null ? currentDataJson.length() : 0);
+
+            // Create approval request
+            log.trace("Creating approval request entity | entityType={} | entityId={}", entityType, entityId);
+            ApprovalRequest request = ApprovalRequest.builder()
+                    .entityType(entityType)
+                    .entityId(entityId)
+                    .requestType(requestType)
+                    .approvalStatus(ApprovalRequest.ApprovalStatus.PENDING_APPROVAL)
+                    .requestedBy(requestedBy)
+                    .requestData(requestDataJson)
+                    .currentData(currentDataJson)
+                    .changeSummary(changeSummary)
+                    .source(source)
+                    .importLabel(importLabel)
+                    .build();
+
+            log.trace("Saving approval request to database | entityType={} | entityId={}", entityType, entityId);
+            request = approvalRequestRepository.save(request);
+            log.debug("Approval request saved | requestId={} | correlationId={}", request.getId(), MDC.get("correlationId"));
+
+            // Create SUBMIT action for audit trail
+            log.trace("Creating SUBMIT action for audit trail | requestId={}", request.getId());
+            ApprovalAction submitAction = ApprovalAction.submit(request, requestedBy);
+            approvalActionRepository.save(submitAction);
+
+            log.info("Approval request submitted: {} {} by {} (ID: {}) | correlationId={}",
+                    entityType, entityId, requestedBy, request.getId(), MDC.get("correlationId"));
+            log.trace("Exiting submitApprovalRequest() | requestId={} | success=true", request.getId());
+
+            return request;
+        } finally {
+            MDC.remove("entityType");
+            MDC.remove("entityId");
         }
-
-        // Serialize request data to JSON
-        log.info("[submitApprovalRequest] Serializing request data to JSON");
-        String requestDataJson = serializeToJson(requestData);
-        String currentDataJson = currentData != null ? serializeToJson(currentData) : null;
-        log.info("[submitApprovalRequest] Serialization complete | requestDataJson length={} | currentDataJson length={}",
-                requestDataJson != null ? requestDataJson.length() : 0,
-                currentDataJson != null ? currentDataJson.length() : 0);
-
-        // Create approval request
-        log.info("[submitApprovalRequest] Creating approval request entity");
-        ApprovalRequest request = ApprovalRequest.builder()
-                .entityType(entityType)
-                .entityId(entityId)
-                .requestType(requestType)
-                .approvalStatus(ApprovalRequest.ApprovalStatus.PENDING_APPROVAL)
-                .requestedBy(requestedBy)
-                .requestData(requestDataJson)
-                .currentData(currentDataJson)
-                .changeSummary(changeSummary)
-                .source(source)
-                .importLabel(importLabel)
-                .build();
-
-        log.info("[submitApprovalRequest] Saving approval request to database");
-        request = approvalRequestRepository.save(request);
-        log.info("[submitApprovalRequest] Approval request saved | requestId={}", request.getId());
-
-        // Create SUBMIT action for audit trail
-        log.info("[submitApprovalRequest] Creating SUBMIT action for audit trail");
-        ApprovalAction submitAction = ApprovalAction.submit(request, requestedBy);
-        approvalActionRepository.save(submitAction);
-
-        log.info("Approval request submitted: {} {} by {} (ID: {})",
-                entityType, entityId, requestedBy, request.getId());
-
-        return request;
     }
 
     // ===== Approve Request =====
@@ -131,28 +146,44 @@ public class ApprovalService {
      */
     @Transactional
     public ApprovalRequest approveRequest(Long requestId, String approvedBy, String justification) {
-        ApprovalRequest request = getApprovalRequest(requestId);
+        MDC.put("approvalRequestId", String.valueOf(requestId));
+        try {
+            log.trace("Entering approveRequest() | requestId={} | approvedBy={} | correlationId={} | processId={}",
+                    requestId, approvedBy, MDC.get("correlationId"), MDC.get("processId"));
+            log.debug("Fetching approval request | requestId={}", requestId);
+            ApprovalRequest request = getApprovalRequest(requestId);
 
-        // Validate state
-        if (!request.isPending()) {
-            throw new IllegalStateException(
-                    String.format("Cannot approve request %d - current status: %s",
-                            requestId, request.getApprovalStatus())
-            );
+            log.trace("Request fetched | requestId={} | entityType={} | entityId={} | currentStatus={}",
+                    requestId, request.getEntityType(), request.getEntityId(), request.getApprovalStatus());
+
+            // Validate state
+            if (!request.isPending()) {
+                log.warn("Cannot approve request - invalid status | requestId={} | currentStatus={} | correlationId={}",
+                        requestId, request.getApprovalStatus(), MDC.get("correlationId"));
+                throw new IllegalStateException(
+                        String.format("Cannot approve request %d - current status: %s",
+                                requestId, request.getApprovalStatus())
+                );
+            }
+
+            // Approve the request
+            log.debug("Approving request | requestId={} | approvedBy={}", requestId, approvedBy);
+            request.approve(approvedBy);
+            request = approvalRequestRepository.save(request);
+
+            // Create APPROVE action for audit trail
+            log.trace("Creating APPROVE action for audit trail | requestId={}", requestId);
+            ApprovalAction approveAction = ApprovalAction.approve(request, approvedBy, justification);
+            approvalActionRepository.save(approveAction);
+
+            log.info("Approval request approved: ID {} by {} - {} | correlationId={}", requestId, approvedBy,
+                    request.getEntityType() + "/" + request.getEntityId(), MDC.get("correlationId"));
+            log.trace("Exiting approveRequest() | requestId={} | success=true", requestId);
+
+            return request;
+        } finally {
+            MDC.remove("approvalRequestId");
         }
-
-        // Approve the request
-        request.approve(approvedBy);
-        request = approvalRequestRepository.save(request);
-
-        // Create APPROVE action for audit trail
-        ApprovalAction approveAction = ApprovalAction.approve(request, approvedBy, justification);
-        approvalActionRepository.save(approveAction);
-
-        log.info("Approval request approved: ID {} by {} - {}", requestId, approvedBy,
-                request.getEntityType() + "/" + request.getEntityId());
-
-        return request;
     }
 
     // ===== Reject Request =====

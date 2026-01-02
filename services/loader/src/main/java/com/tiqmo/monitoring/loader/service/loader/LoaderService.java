@@ -50,6 +50,8 @@ public class LoaderService {
      * @return List of all loaders
      */
     public List<EtlLoaderDto> findAll() {
+        log.trace("Entering findAll() | correlationId={} | contextId={} | processId={}",
+                MDC.get("correlationId"), MDC.get("contextId"), MDC.get("processId"));
         log.debug("Fetching all loaders");
 
         List<EtlLoaderDto> loaders = repo.findAll().stream()
@@ -57,6 +59,7 @@ public class LoaderService {
             .toList();
 
         log.info("Found {} loaders", loaders.size());
+        log.trace("Exiting findAll() | resultCount={}", loaders.size());
         return loaders;
     }
 
@@ -71,11 +74,14 @@ public class LoaderService {
         MDC.put("loaderCode", loaderCode);
 
         try {
+            log.trace("Entering getByCode() | loaderCode={} | correlationId={} | contextId={}",
+                    loaderCode, MDC.get("correlationId"), MDC.get("contextId"));
             log.debug("Fetching loader by code: {}", loaderCode);
 
             // Validation
             if (loaderCode == null || loaderCode.isBlank()) {
-                log.warn("Loader code is null or blank");
+                log.warn("Validation failed: Loader code is null or blank | correlationId={}",
+                        MDC.get("correlationId"));
                 throw new BusinessException(
                     ErrorCode.VALIDATION_REQUIRED_FIELD,
                     "Loader code is required",
@@ -83,17 +89,20 @@ public class LoaderService {
                 );
             }
 
+            log.trace("Querying repository for loaderCode={}", loaderCode);
             EtlLoaderDto loader = repo.findByLoaderCode(loaderCode)
                 .map(this::toDto)
                 .orElseThrow(() -> {
-                    log.warn("Loader not found: {}", loaderCode);
+                    log.warn("Loader not found: {} | correlationId={}", loaderCode, MDC.get("correlationId"));
                     return new BusinessException(
                         ErrorCode.LOADER_NOT_FOUND,
                         "Loader with code '" + loaderCode + "' not found"
                     );
                 });
 
-            log.debug("Loader found: {}", loaderCode);
+            log.debug("Loader found: {} | enabled={} | approvalStatus={}",
+                    loaderCode, loader.getEnabled(), loader.getApprovalStatus());
+            log.trace("Exiting getByCode() | loaderCode={} | success=true", loaderCode);
             return loader;
 
         } finally {
@@ -114,14 +123,18 @@ public class LoaderService {
         MDC.put("loaderCode", dto.getLoaderCode());
 
         try {
+            log.trace("Entering create() | loaderCode={} | requestedBy={} | correlationId={} | processId={}",
+                    dto.getLoaderCode(), requestedBy, MDC.get("correlationId"), MDC.get("processId"));
             log.info("Submitting loader creation approval request: {} | requestedBy={}", dto.getLoaderCode(), requestedBy);
 
             // Validation
+            log.debug("Validating loader DTO for creation | loaderCode={}", dto.getLoaderCode());
             validateLoaderDto(dto);
 
             // Check for duplicate
+            log.trace("Checking for duplicate loader | loaderCode={}", dto.getLoaderCode());
             if (repo.existsByLoaderCode(dto.getLoaderCode())) {
-                log.warn("Loader already exists: {}", dto.getLoaderCode());
+                log.warn("Loader already exists: {} | correlationId={}", dto.getLoaderCode(), MDC.get("correlationId"));
                 throw new BusinessException(
                     ErrorCode.LOADER_ALREADY_EXISTS,
                     "Loader with code '" + dto.getLoaderCode() + "' already exists",
@@ -130,9 +143,11 @@ public class LoaderService {
             }
 
             // Convert DTO to JSON for approval request
+            log.trace("Serializing loader DTO to JSON | loaderCode={}", dto.getLoaderCode());
             String requestData = objectMapper.writeValueAsString(dto);
 
             // Submit approval request
+            log.debug("Submitting approval request to ApprovalService | entityType=LOADER | requestType=CREATE");
             ApprovalRequest approvalRequest = approvalService.submitApprovalRequest(
                 ApprovalRequest.EntityType.LOADER,
                 dto.getLoaderCode(),
@@ -145,7 +160,10 @@ public class LoaderService {
                 null
             );
 
-            log.info("Loader creation approval request submitted: {} | approvalRequestId={}", dto.getLoaderCode(), approvalRequest.getId());
+            log.info("Loader creation approval request submitted: {} | approvalRequestId={} | correlationId={}",
+                    dto.getLoaderCode(), approvalRequest.getId(), MDC.get("correlationId"));
+            log.trace("Exiting create() | loaderCode={} | approvalRequestId={} | success=true",
+                    dto.getLoaderCode(), approvalRequest.getId());
 
             return approvalRequest;
 
@@ -153,7 +171,8 @@ public class LoaderService {
             if (e instanceof BusinessException) {
                 throw (BusinessException) e;
             }
-            log.error("Failed to submit loader creation approval request", e);
+            log.error("Failed to submit loader creation approval request | loaderCode={} | correlationId={} | error={}",
+                    dto.getLoaderCode(), MDC.get("correlationId"), e.getMessage(), e);
             throw new BusinessException(
                 ErrorCode.INTERNAL_ERROR,
                 "Failed to submit approval request: " + e.getMessage()
