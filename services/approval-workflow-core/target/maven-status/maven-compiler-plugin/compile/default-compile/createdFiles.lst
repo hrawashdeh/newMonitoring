@@ -1,7 +1,0 @@
-com/tiqmo/monitoring/workflow/service/AbstractRejectionService.class
-com/tiqmo/monitoring/workflow/service/AbstractApprovalService.class
-com/tiqmo/monitoring/workflow/service/AbstractArchiveService.class
-com/tiqmo/monitoring/workflow/domain/ChangeType.class
-com/tiqmo/monitoring/workflow/domain/WorkflowEntity.class
-com/tiqmo/monitoring/workflow/service/AbstractDraftService.class
-com/tiqmo/monitoring/workflow/domain/VersionStatus.class

@@ -8,6 +8,30 @@
 frontend/k8s_manifist/frontend-deployment.yaml
 frontend/k8s_manifist/frontend-deployment.yaml.bak*
 
-# (Optional but recommended)
+# Maven build directories and artifacts
+**/target/
+*.jar
+*.war
+*.ear
+*.class
+
+# IDE files
+.idea/
+*.iml
+.vscode/
+*.swp
+*.swo
+*~
+
+# Build and dependency directories
+node_modules/
+dist/
+build/
+
+# OS files
 .DS_Store
 .env
+Thumbs.db
+
+# Log files
+*.log
