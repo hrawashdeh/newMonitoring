@@ -6,6 +6,7 @@ import com.tiqmo.monitoring.loader.domain.signals.entity.SegmentCombination;
 import com.tiqmo.monitoring.loader.domain.signals.repo.SegmentCombinationRepository;
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
+import org.slf4j.MDC;
 import org.springframework.data.domain.Sort;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
@@ -46,8 +47,22 @@ public class SegmentService {
      * @return List of segment dictionary entries (sorted by segment number)
      */
     public List<SegmentDictionary> findByLoader(String loaderCode) {
-        log.debug("Finding segment dictionary for loader: {}", loaderCode);
-        return repo.findByLoader(loaderCode, Sort.by("segmentNumber"));
+        MDC.put("loaderCode", loaderCode);
+        try {
+            log.trace("Entering findByLoader() | loaderCode={} | correlationId={} | processId={}",
+                    loaderCode, MDC.get("correlationId"), MDC.get("processId"));
+            log.debug("Finding segment dictionary for loader: {}", loaderCode);
+
+            log.trace("Querying segment dictionary repository | loaderCode={}", loaderCode);
+            List<SegmentDictionary> segments = repo.findByLoader(loaderCode, Sort.by("segmentNumber"));
+
+            log.debug("Found {} segment dictionary entries | loaderCode={}", segments.size(), loaderCode);
+            log.trace("Exiting findByLoader() | resultCount={} | success=true", segments.size());
+
+            return segments;
+        } finally {
+            MDC.remove("loaderCode");
+        }
     }
 
     /**
@@ -60,7 +75,21 @@ public class SegmentService {
      * @return List of segment combinations
      */
     public List<SegmentCombination> findCombinationsByLoader(String loaderCode) {
-        log.debug("Finding segment combinations for loader: {}", loaderCode);
-        return combRepo.findAllByLoaderCode(loaderCode);
+        MDC.put("loaderCode", loaderCode);
+        try {
+            log.trace("Entering findCombinationsByLoader() | loaderCode={} | correlationId={} | processId={}",
+                    loaderCode, MDC.get("correlationId"), MDC.get("processId"));
+            log.debug("Finding segment combinations for loader: {}", loaderCode);
+
+            log.trace("Querying segment combination repository | loaderCode={}", loaderCode);
+            List<SegmentCombination> combinations = combRepo.findAllByLoaderCode(loaderCode);
+
+            log.debug("Found {} segment combinations | loaderCode={}", combinations.size(), loaderCode);
+            log.trace("Exiting findCombinationsByLoader() | resultCount={} | success=true", combinations.size());
+
+            return combinations;
+        } finally {
+            MDC.remove("loaderCode");
+        }
     }
 }

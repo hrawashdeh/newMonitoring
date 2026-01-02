@@ -43,21 +43,29 @@ public class SignalsQueryService {
         MDC.put("loaderCode", loaderCode);
 
         try {
+            log.trace("Entering byLoaderBetween() | loaderCode={} | fromEpoch={} | toEpoch={} | correlationId={} | processId={}",
+                    loaderCode, fromEpoch, toEpoch, MDC.get("correlationId"), MDC.get("processId"));
             log.info("Querying signals by loader | loaderCode={} | timeRange=[{}, {}]",
                 loaderCode, fromEpoch, toEpoch);
 
             // Validation
+            log.debug("Validating query parameters | loaderCode={}", loaderCode);
             validateLoaderCode(loaderCode);
             validateTimeRange(fromEpoch, toEpoch);
 
             // Convert epoch to Instant
+            log.trace("Converting epoch times to Instant | fromEpoch={} | toEpoch={}", fromEpoch, toEpoch);
             Instant fromTime = Instant.ofEpochSecond(fromEpoch);
             Instant toTime = Instant.ofEpochSecond(toEpoch);
 
+            log.debug("Executing repository query | loaderCode={} | fromTime={} | toTime={}",
+                    loaderCode, fromTime, toTime);
             List<SignalsHistory> results = repo.findByLoaderCodeAndLoadTimeStampBetween(
                 loaderCode, fromTime, toTime);
 
-            log.info("Query completed | loaderCode={} | resultCount={}", loaderCode, results.size());
+            log.info("Query completed | loaderCode={} | resultCount={} | correlationId={}",
+                    loaderCode, results.size(), MDC.get("correlationId"));
+            log.trace("Exiting byLoaderBetween() | resultCount={} | success=true", results.size());
 
             return results;
 
@@ -82,23 +90,30 @@ public class SignalsQueryService {
         MDC.put("segmentCode", segmentCode);
 
         try {
+            log.trace("Entering byLoaderAndSegmentBetween() | loaderCode={} | segmentCode={} | fromEpoch={} | toEpoch={} | correlationId={} | processId={}",
+                    loaderCode, segmentCode, fromEpoch, toEpoch, MDC.get("correlationId"), MDC.get("processId"));
             log.info("Querying signals by loader and segment | loaderCode={} | segmentCode={} | timeRange=[{}, {}]",
                 loaderCode, segmentCode, fromEpoch, toEpoch);
 
             // Validation
+            log.debug("Validating query parameters | loaderCode={} | segmentCode={}", loaderCode, segmentCode);
             validateLoaderCode(loaderCode);
             validateSegmentCode(segmentCode);
             validateTimeRange(fromEpoch, toEpoch);
 
             // Convert epoch to Instant
+            log.trace("Converting epoch times to Instant | fromEpoch={} | toEpoch={}", fromEpoch, toEpoch);
             Instant fromTime = Instant.ofEpochSecond(fromEpoch);
             Instant toTime = Instant.ofEpochSecond(toEpoch);
 
+            log.debug("Executing repository query | loaderCode={} | segmentCode={} | fromTime={} | toTime={}",
+                    loaderCode, segmentCode, fromTime, toTime);
             List<SignalsHistory> results = repo.findByLoaderCodeAndSegmentCodeAndLoadTimeStampBetween(
                 loaderCode, segmentCode, fromTime, toTime);
 
-            log.info("Query completed | loaderCode={} | segmentCode={} | resultCount={}",
-                loaderCode, segmentCode, results.size());
+            log.info("Query completed | loaderCode={} | segmentCode={} | resultCount={} | correlationId={}",
+                loaderCode, segmentCode, results.size(), MDC.get("correlationId"));
+            log.trace("Exiting byLoaderAndSegmentBetween() | resultCount={} | success=true", results.size());
 
             return results;
 
@@ -116,13 +131,14 @@ public class SignalsQueryService {
      */
     private void validateLoaderCode(String loaderCode) {
         if (loaderCode == null || loaderCode.isBlank()) {
-            log.warn("Loader code is null or blank");
+            log.warn("Validation failed: Loader code is null or blank | correlationId={}", MDC.get("correlationId"));
             throw new BusinessException(
                 ErrorCode.VALIDATION_REQUIRED_FIELD,
                 "Loader code is required",
                 "loaderCode"
             );
         }
+        log.trace("Loader code validation passed | loaderCode={}", loaderCode);
     }
 
     /**

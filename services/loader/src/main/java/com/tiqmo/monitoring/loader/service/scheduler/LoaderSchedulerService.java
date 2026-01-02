@@ -13,6 +13,7 @@ import com.tiqmo.monitoring.loader.service.locking.LoaderLock;
 import com.tiqmo.monitoring.loader.service.locking.LockManager;
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
+import org.slf4j.MDC;
 import org.springframework.beans.factory.annotation.Qualifier;
 import org.springframework.scheduling.annotation.Scheduled;
 import org.springframework.stereotype.Service;
@@ -106,38 +107,60 @@ public class LoaderSchedulerService {
   @Scheduled(fixedDelay = 10000, initialDelay = 5000)
   public void scheduleLoaders() {
     try {
+      log.trace("Entering scheduleLoaders() | processId={} | contextId={}",
+              MDC.get("processId"), MDC.get("contextId"));
       log.debug("Scheduler: Starting scheduling cycle");
 
       // Round 12: Auto-recover FAILED loaders
+      log.trace("Executing recoverFailedLoaders()");
       recoverFailedLoaders();
 
       // SECURITY: Find all enabled AND APPROVED loaders only
+      log.trace("Querying for enabled and approved loaders");
       List<Loader> enabledLoaders = loaderRepository.findAllByEnabledTrueAndApprovalStatus(ApprovalStatus.APPROVED);
       if (enabledLoaders.isEmpty()) {
         log.debug("Scheduler: No enabled and approved loaders found");
+        log.trace("Exiting scheduleLoaders() | reason=no_loaders");
         return;
       }
 
       log.debug("Scheduler: Found {} enabled and approved loader(s)", enabledLoaders.size());
+      log.trace("Loader codes: {}", enabledLoaders.stream().map(Loader::getLoaderCode).toList());
 
       // Round 11: Sort by priority (IDLE > RUNNING > FAILED)
+      log.trace("Sorting loaders by priority (IDLE > RUNNING > FAILED)");
       List<Loader> sortedLoaders = sortByPriority(enabledLoaders);
 
       // Round 10: Process each loader
+      int processed = 0, executed = 0, skipped = 0;
       for (Loader loader : sortedLoaders) {
+        MDC.put("loaderCode", loader.getLoaderCode());
         try {
+          log.trace("Processing loader {} (status: {}, lastLoad: {})",
+                  loader.getLoaderCode(), loader.getLoadStatus(), loader.getLastLoadTimestamp());
           processLoader(loader);
+          processed++;
+          if (loader.getLoadStatus() == LoadStatus.RUNNING) {
+            executed++;
+          } else {
+            skipped++;
+          }
         } catch (Exception e) {
-          log.error("Scheduler: Error processing loader {}: {}",
-              loader.getLoaderCode(), e.getMessage(), e);
+          log.error("Scheduler: Error processing loader {} | correlationId={} | error={}",
+              loader.getLoaderCode(), MDC.get("correlationId"), e.getMessage(), e);
           // Continue with next loader
+        } finally {
+          MDC.remove("loaderCode");
         }
       }
 
-      log.debug("Scheduler: Scheduling cycle complete");
+      log.info("Scheduler: Scheduling cycle complete | processed={} | executed={} | skipped={}",
+              processed, executed, skipped);
+      log.trace("Exiting scheduleLoaders() | success=true");
 
     } catch (Exception e) {
-      log.error("Scheduler: Unexpected error in scheduling cycle", e);
+      log.error("Scheduler: Unexpected error in scheduling cycle | processId={}",
+              MDC.get("processId"), e);
     }
   }
 
@@ -153,18 +176,23 @@ public class LoaderSchedulerService {
   @Scheduled(fixedDelay = 1800000, initialDelay = 60000)  // 30 minutes, 1 minute initial delay
   public void cleanupStaleLocks() {
     try {
+      log.trace("Entering cleanupStaleLocks() | processId={}", MDC.get("processId"));
       log.debug("Round 13: Starting stale lock cleanup");
 
+      log.trace("Invoking lockManager.cleanupStaleLocks()");
       int cleaned = lockManager.cleanupStaleLocks();
 
       if (cleaned > 0) {
-        log.warn("Round 13: Cleaned up {} stale lock(s) from crashed/terminated pods", cleaned);
+        log.warn("Round 13: Cleaned up {} stale lock(s) from crashed/terminated pods | processId={}",
+                cleaned, MDC.get("processId"));
       } else {
         log.debug("Round 13: No stale locks found");
       }
 
+      log.trace("Exiting cleanupStaleLocks() | cleaned={} | success=true", cleaned);
+
     } catch (Exception e) {
-      log.error("Round 13: Error during stale lock cleanup", e);
+      log.error("Round 13: Error during stale lock cleanup | processId={}", MDC.get("processId"), e);
     }
   }
 
@@ -177,26 +205,50 @@ public class LoaderSchedulerService {
    * <p>Package-private for integration testing.
    */
   public void recoverFailedLoaders() {
+    log.trace("Entering recoverFailedLoaders() | processId={}", MDC.get("processId"));
+
+    log.trace("Fetching all loaders from repository");
     List<Loader> allLoaders = loaderRepository.findAll();
     Instant now = Instant.now();
 
+    int recovered = 0;
+    int stillFailed = 0;
+
     for (Loader loader : allLoaders) {
       if (loader.getLoadStatus() == LoadStatus.FAILED && loader.getFailedSince() != null) {
-        Duration failedDuration = Duration.between(loader.getFailedSince(), now);
+        MDC.put("loaderCode", loader.getLoaderCode());
+        try {
+          Duration failedDuration = Duration.between(loader.getFailedSince(), now);
+          log.trace("Checking FAILED loader {} | failedSince={} | failedDuration={}min",
+                  loader.getLoaderCode(), loader.getFailedSince(), failedDuration.toMinutes());
 
-        if (failedDuration.compareTo(FAILED_RECOVERY_THRESHOLD) > 0) {
-          log.info("Round 12: Auto-recovering FAILED loader {} (failed for {} minutes)",
-              loader.getLoaderCode(), failedDuration.toMinutes());
+          if (failedDuration.compareTo(FAILED_RECOVERY_THRESHOLD) > 0) {
+            log.info("Round 12: Auto-recovering FAILED loader {} (failed for {} minutes) | processId={}",
+                loader.getLoaderCode(), failedDuration.toMinutes(), MDC.get("processId"));
 
-          loader.setLoadStatus(LoadStatus.IDLE);
-          loader.setFailedSince(null);
-          loaderRepository.save(loader);
+            loader.setLoadStatus(LoadStatus.IDLE);
+            loader.setFailedSince(null);
+            loaderRepository.save(loader);
+            recovered++;
 
-          log.info("Round 12: Loader {} reset to IDLE and ready for execution",
-              loader.getLoaderCode());
+            log.info("Round 12: Loader {} reset to IDLE and ready for execution | processId={}",
+                loader.getLoaderCode(), MDC.get("processId"));
+          } else {
+            stillFailed++;
+            log.trace("Loader {} still within recovery threshold ({}min remaining)",
+                    loader.getLoaderCode(),
+                    FAILED_RECOVERY_THRESHOLD.minus(failedDuration).toMinutes());
+          }
+        } finally {
+          MDC.remove("loaderCode");
         }
       }
     }
+
+    if (recovered > 0 || stillFailed > 0) {
+      log.debug("Round 12: Recovery summary | recovered={} | stillFailed={}", recovered, stillFailed);
+    }
+    log.trace("Exiting recoverFailedLoaders() | recovered={} | success=true", recovered);
   }
 
   /**
