@@ -1,114 +1,64 @@
 <?xml version="1.0" encoding="UTF-8"?>
 <configuration>
     <!--
-        Elasticsearch-Compatible Structured Logging Configuration
-        API Gateway Service
-
-        Profiles:
-        - dev/default: Human-readable console logging (Kubernetes)
-        - prod/production: JSON structured logging for Elasticsearch/ELK
-
-        Features:
-        - MDC fields: requestId, routeId, targetUri, httpMethod, statusCode, responseTime
-        - Profile-based log formats
-        - Elasticsearch-compatible JSON in production
-
-        Author: Hassan Rawashdeh
-        Date: 2025-12-31
+        Elasticsearch-Compatible JSON Logging Configuration
+        API Gateway Service - JSON ONLY (No Profile Switching)
+        
+        This configuration ALWAYS outputs JSON logs for Kibana/Elasticsearch.
+        No dev/prod profile switching to prevent mixed-format output.
     -->
-
+    
     <!-- Load Spring properties -->
     <springProperty scope="context" name="APP_NAME" source="spring.application.name" defaultValue="gateway-service"/>
     <springProperty scope="context" name="LOG_LEVEL" source="logging.level.root" defaultValue="INFO"/>
-    <property name="LOG_PATH" value="${LOG_PATH:-./logs}"/>
-
-    <!-- ============================================ -->
-    <!-- DEV/DEFAULT PROFILE (Human-readable console) -->
-    <!-- ============================================ -->
-    <springProfile name="dev,default,!prod,!production">
-        <appender name="CONSOLE" class="ch.qos.logback.core.ConsoleAppender">
-            <encoder>
-                <pattern>%d{yyyy-MM-dd HH:mm:ss.SSS} [%thread] %-5level %logger{36} - [requestId=%X{requestId}] [routeId=%X{routeId}] [method=%X{httpMethod}] [path=%X{requestPath}] - %msg%n</pattern>
-            </encoder>
-        </appender>
-
-        <logger name="com.tiqmo.monitoring.gateway" level="DEBUG"/>
-        <logger name="org.springframework.cloud.gateway" level="DEBUG"/>
-        <logger name="org.springframework.web.reactive" level="DEBUG"/>
-        <logger name="reactor.netty" level="INFO"/>
-
-        <root level="${LOG_LEVEL}">
-            <appender-ref ref="CONSOLE"/>
-        </root>
-    </springProfile>
-
-    <!-- ============================================ -->
-    <!-- PRODUCTION PROFILE (Elasticsearch JSON logging) -->
-    <!-- ============================================ -->
-    <springProfile name="prod,production">
-        <!-- Console JSON Appender for Kubernetes/Elasticsearch -->
-        <appender name="CONSOLE_JSON" class="ch.qos.logback.core.ConsoleAppender">
-            <encoder class="net.logstash.logback.encoder.LogstashEncoder">
-                <!-- Include MDC fields -->
-                <includeMdcKeyName>requestId</includeMdcKeyName>
-                <includeMdcKeyName>correlationId</includeMdcKeyName>
-                <includeMdcKeyName>routeId</includeMdcKeyName>
-                <includeMdcKeyName>targetUri</includeMdcKeyName>
-                <includeMdcKeyName>httpMethod</includeMdcKeyName>
-                <includeMdcKeyName>requestPath</includeMdcKeyName>
-                <includeMdcKeyName>statusCode</includeMdcKeyName>
-                <includeMdcKeyName>responseTime</includeMdcKeyName>
-                <includeMdcKeyName>clientIp</includeMdcKeyName>
-                <includeMdcKeyName>userAgent</includeMdcKeyName>
-                <includeMdcKeyName>circuitBreakerState</includeMdcKeyName>
-                <includeMdcKeyName>retryCount</includeMdcKeyName>
-
-                <!-- Custom fields -->
-                <customFields>{"service_name":"${APP_NAME}","environment":"production","service_type":"api-gateway"}</customFields>
-
-                <!-- Shorten logger names -->
-                <shortenedLoggerNameLength>36</shortenedLoggerNameLength>
-
-                <!-- Stack trace configuration -->
-                <throwableConverter class="net.logstash.logback.stacktrace.ShortenedThrowableConverter">
-                    <maxDepthPerThrowable>30</maxDepthPerThrowable>
-                    <maxLength>2048</maxLength>
-                    <shortenedClassNameLength>20</shortenedClassNameLength>
-                    <exclude>sun\.reflect\..*</exclude>
-                    <exclude>net\.sf\.cglib\..*</exclude>
-                    <exclude>org\.springframework\.aop\..*</exclude>
-                    <rootCauseFirst>true</rootCauseFirst>
-                </throwableConverter>
-            </encoder>
-        </appender>
-
-        <!-- Package-specific loggers for production -->
-        <logger name="com.tiqmo.monitoring.gateway" level="INFO"/>
-        <logger name="org.springframework.cloud.gateway" level="INFO"/>
-        <logger name="org.springframework.web.reactive" level="WARN"/>
-        <logger name="reactor.netty" level="INFO"/>
-
-        <root level="INFO">
-            <appender-ref ref="CONSOLE_JSON"/>
-        </root>
-    </springProfile>
-
-    <!-- ============================================ -->
-    <!-- Common Logger Configurations (All Profiles) -->
-    <!-- ============================================ -->
-
-    <!-- Reduce noise from Spring framework -->
+    
+    <!-- Console JSON Appender for Kubernetes/Elasticsearch -->
+    <appender name="CONSOLE_JSON" class="ch.qos.logback.core.ConsoleAppender">
+        <encoder class="net.logstash.logback.encoder.LogstashEncoder">
+            <!-- Include MDC fields -->
+            <includeMdcKeyName>requestId</includeMdcKeyName>
+            <includeMdcKeyName>correlationId</includeMdcKeyName>
+            <includeMdcKeyName>routeId</includeMdcKeyName>
+            <includeMdcKeyName>targetUri</includeMdcKeyName>
+            <includeMdcKeyName>httpMethod</includeMdcKeyName>
+            <includeMdcKeyName>requestPath</includeMdcKeyName>
+            <includeMdcKeyName>statusCode</includeMdcKeyName>
+            <includeMdcKeyName>responseTime</includeMdcKeyName>
+            <includeMdcKeyName>clientIp</includeMdcKeyName>
+            <includeMdcKeyName>userAgent</includeMdcKeyName>
+            <includeMdcKeyName>circuitBreakerState</includeMdcKeyName>
+            <includeMdcKeyName>retryCount</includeMdcKeyName>
+            <includeMdcKeyName>trace.id</includeMdcKeyName>
+            <includeMdcKeyName>span.id</includeMdcKeyName>
+            <includeMdcKeyName>operation.name</includeMdcKeyName>
+            
+            <!-- Custom fields -->
+            <customFields>{"service_name":"${APP_NAME}","environment":"production","service_type":"api-gateway"}</customFields>
+            
+            <!-- Shorten logger names -->
+            <shortenedLoggerNameLength>36</shortenedLoggerNameLength>
+            
+            <!-- Stack trace configuration -->
+            <throwableConverter class="net.logstash.logback.stacktrace.ShortenedThrowableConverter">
+                <maxDepthPerThrowable>30</maxDepthPerThrowable>
+                <maxLength>2048</maxLength>
+                <shortenedClassNameLength>20</shortenedClassNameLength>
+                <rootCauseFirst>true</rootCauseFirst>
+            </throwableConverter>
+        </encoder>
+    </appender>
+    
+    <!-- Package-specific loggers -->
+    <logger name="com.tiqmo.monitoring.gateway" level="INFO"/>
+    <logger name="org.springframework.cloud.gateway" level="INFO"/>
+    <logger name="org.springframework.web.reactive" level="WARN"/>
+    <logger name="reactor.netty" level="INFO"/>
     <logger name="org.springframework.boot.autoconfigure" level="WARN"/>
     <logger name="org.springframework.boot.actuator" level="INFO"/>
-
-    <!-- Gateway routing -->
-    <logger name="org.springframework.cloud.gateway.handler" level="INFO"/>
-    <logger name="org.springframework.cloud.gateway.route" level="INFO"/>
-
-    <!-- Circuit breaker and resilience -->
     <logger name="io.github.resilience4j" level="INFO"/>
-
-    <!-- Reactor (reactive programming) -->
     <logger name="reactor.core" level="WARN"/>
-
+    
+    <root level="${LOG_LEVEL}">
+        <appender-ref ref="CONSOLE_JSON"/>
+    </root>
 </configuration>

@@ -5,6 +5,7 @@
 /Volumes/Files/Projects/newLoader/services/auth-service/src/main/java/com/tiqmo/monitoring/auth/domain/User.java
 /Volumes/Files/Projects/newLoader/services/auth-service/src/main/java/com/tiqmo/monitoring/auth/dto/LoginRequest.java
 /Volumes/Files/Projects/newLoader/services/auth-service/src/main/java/com/tiqmo/monitoring/auth/dto/LoginResponse.java
+/Volumes/Files/Projects/newLoader/services/auth-service/src/main/java/com/tiqmo/monitoring/auth/filter/OperationContextFilter.java
 /Volumes/Files/Projects/newLoader/services/auth-service/src/main/java/com/tiqmo/monitoring/auth/repository/LoginAttemptRepository.java
 /Volumes/Files/Projects/newLoader/services/auth-service/src/main/java/com/tiqmo/monitoring/auth/repository/RoleRepository.java
 /Volumes/Files/Projects/newLoader/services/auth-service/src/main/java/com/tiqmo/monitoring/auth/repository/UserRepository.java

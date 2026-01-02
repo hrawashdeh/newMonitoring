@@ -10,7 +10,7 @@
         <module name="gateway-service" />
         <module name="data-generator" />
       </profile>
-      <profile name="Annotation profile for loader" enabled="true">
+      <profile name="Annotation profile for ETL Initializer" enabled="true">
         <sourceOutputDir name="target/generated-sources/annotations" />
         <sourceTestOutputDir name="target/generated-test-sources/test-annotations" />
         <outputRelativeToContentRoot value="true" />

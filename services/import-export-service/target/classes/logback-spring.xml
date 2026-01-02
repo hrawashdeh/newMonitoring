@@ -1,171 +1,65 @@
 <?xml version="1.0" encoding="UTF-8"?>
 <configuration>
     <!--
-        Elasticsearch-Compatible Structured Logging Configuration
-        Import/Export Service
-
-        Profiles:
-        - dev/default: Human-readable console logging (Kubernetes)
-        - prod/production: JSON structured logging for Elasticsearch/ELK
-
-        Features:
-        - MDC fields: requestId, correlationId, username, importLabel, fileName
-        - Profile-based log formats
-        - Elasticsearch-compatible JSON in production
-
-        Author: Hassan Rawashdeh
-        Date: 2025-12-31
+        Elasticsearch-Compatible JSON Logging Configuration
+        Import/Export Service - JSON ONLY (No Profile Switching)
+        
+        This configuration ALWAYS outputs JSON logs for Kibana/Elasticsearch.
+        No dev/prod profile switching to prevent mixed-format output.
     -->
-
+    
     <!-- Load Spring properties -->
     <springProperty scope="context" name="APP_NAME" source="spring.application.name" defaultValue="import-export-service"/>
     <springProperty scope="context" name="LOG_LEVEL" source="logging.level.root" defaultValue="INFO"/>
-    <property name="LOG_PATH" value="${LOG_PATH:-./logs}"/>
-
-    <!-- ============================================ -->
-    <!-- DEV/DEFAULT PROFILE (Human-readable console) -->
-    <!-- ============================================ -->
-    <springProfile name="dev,default,!prod,!production">
-        <appender name="CONSOLE" class="ch.qos.logback.core.ConsoleAppender">
-            <encoder>
-                <pattern>%d{yyyy-MM-dd HH:mm:ss.SSS} [%thread] %-5level %logger{36} - [requestId=%X{requestId}] [username=%X{username}] [importLabel=%X{importLabel}] - %msg%n</pattern>
-            </encoder>
-        </appender>
-
-        <logger name="com.tiqmo.monitoring.importexport" level="DEBUG"/>
-        <logger name="org.springframework.web" level="DEBUG"/>
-        <logger name="org.springframework.web.reactive" level="DEBUG"/>
-        <logger name="org.hibernate" level="WARN"/>
-        <logger name="com.zaxxer.hikari" level="INFO"/>
-
-        <root level="${LOG_LEVEL}">
-            <appender-ref ref="CONSOLE"/>
-        </root>
-    </springProfile>
-
-    <!-- ============================================ -->
-    <!-- PRODUCTION PROFILE (Elasticsearch JSON logging) -->
-    <!-- ============================================ -->
-    <springProfile name="prod,production">
-        <!-- Console JSON Appender for Kubernetes/Elasticsearch -->
-        <appender name="CONSOLE_JSON" class="ch.qos.logback.core.ConsoleAppender">
-            <encoder class="net.logstash.logback.encoder.LogstashEncoder">
-                <!-- Include MDC fields -->
-                <includeMdcKeyName>requestId</includeMdcKeyName>
-                <includeMdcKeyName>correlationId</includeMdcKeyName>
-                <includeMdcKeyName>username</includeMdcKeyName>
-                <includeMdcKeyName>endpoint</includeMdcKeyName>
-                <includeMdcKeyName>method</includeMdcKeyName>
-                <includeMdcKeyName>statusCode</includeMdcKeyName>
-                <includeMdcKeyName>duration</includeMdcKeyName>
-                <includeMdcKeyName>importLabel</includeMdcKeyName>
-                <includeMdcKeyName>fileName</includeMdcKeyName>
-                <includeMdcKeyName>totalRows</includeMdcKeyName>
-                <includeMdcKeyName>processedRows</includeMdcKeyName>
-                <includeMdcKeyName>errorRows</includeMdcKeyName>
-                <includeMdcKeyName>approvalRequestsCreated</includeMdcKeyName>
-
-                <!-- Custom fields -->
-                <customFields>{"service_name":"${APP_NAME}","environment":"production"}</customFields>
-
-                <!-- Shorten logger names -->
-                <shortenedLoggerNameLength>36</shortenedLoggerNameLength>
-
-                <!-- Stack trace configuration -->
-                <throwableConverter class="net.logstash.logback.stacktrace.ShortenedThrowableConverter">
-                    <maxDepthPerThrowable>30</maxDepthPerThrowable>
-                    <maxLength>2048</maxLength>
-                    <shortenedClassNameLength>20</shortenedClassNameLength>
-                    <exclude>sun\.reflect\..*</exclude>
-                    <exclude>net\.sf\.cglib\..*</exclude>
-                    <exclude>org\.springframework\.aop\..*</exclude>
-                    <rootCauseFirst>true</rootCauseFirst>
-                </throwableConverter>
-            </encoder>
-        </appender>
-
-        <!-- File JSON Appender (optional, for persistent logs) -->
-        <appender name="FILE_JSON" class="ch.qos.logback.core.rolling.RollingFileAppender">
-            <file>${LOG_PATH}/import-export.json</file>
-            <encoder class="net.logstash.logback.encoder.LogstashEncoder">
-                <includeMdcKeyName>requestId</includeMdcKeyName>
-                <includeMdcKeyName>correlationId</includeMdcKeyName>
-                <includeMdcKeyName>username</includeMdcKeyName>
-                <includeMdcKeyName>endpoint</includeMdcKeyName>
-                <includeMdcKeyName>method</includeMdcKeyName>
-                <includeMdcKeyName>statusCode</includeMdcKeyName>
-                <includeMdcKeyName>duration</includeMdcKeyName>
-                <includeMdcKeyName>importLabel</includeMdcKeyName>
-                <includeMdcKeyName>fileName</includeMdcKeyName>
-                <includeMdcKeyName>totalRows</includeMdcKeyName>
-                <includeMdcKeyName>processedRows</includeMdcKeyName>
-                <includeMdcKeyName>errorRows</includeMdcKeyName>
-
-                <customFields>{"service_name":"${APP_NAME}","environment":"production"}</customFields>
-                <shortenedLoggerNameLength>36</shortenedLoggerNameLength>
-
-                <throwableConverter class="net.logstash.logback.stacktrace.ShortenedThrowableConverter">
-                    <maxDepthPerThrowable>30</maxDepthPerThrowable>
-                    <maxLength>2048</maxLength>
-                    <shortenedClassNameLength>20</shortenedClassNameLength>
-                    <rootCauseFirst>true</rootCauseFirst>
-                </throwableConverter>
-            </encoder>
-
-            <rollingPolicy class="ch.qos.logback.core.rolling.TimeBasedRollingPolicy">
-                <fileNamePattern>${LOG_PATH}/import-export.json.%d{yyyy-MM-dd}.%i.gz</fileNamePattern>
-                <maxHistory>90</maxHistory>
-                <totalSizeCap>10GB</totalSizeCap>
-                <timeBasedFileNamingAndTriggeringPolicy class="ch.qos.logback.core.rolling.SizeAndTimeBasedFNATP">
-                    <maxFileSize>200MB</maxFileSize>
-                </timeBasedFileNamingAndTriggeringPolicy>
-            </rollingPolicy>
-        </appender>
-
-        <!-- Async wrappers for performance -->
-        <appender name="ASYNC_CONSOLE" class="ch.qos.logback.classic.AsyncAppender">
-            <queueSize>512</queueSize>
-            <discardingThreshold>0</discardingThreshold>
-            <appender-ref ref="CONSOLE_JSON"/>
-        </appender>
-
-        <appender name="ASYNC_FILE" class="ch.qos.logback.classic.AsyncAppender">
-            <queueSize>512</queueSize>
-            <discardingThreshold>0</discardingThreshold>
-            <appender-ref ref="FILE_JSON"/>
-        </appender>
-
-        <!-- Package-specific loggers for production -->
-        <logger name="com.tiqmo.monitoring.importexport" level="INFO"/>
-        <logger name="org.springframework.web" level="WARN"/>
-        <logger name="org.springframework.web.reactive" level="WARN"/>
-        <logger name="org.hibernate" level="WARN"/>
-        <logger name="com.zaxxer.hikari" level="INFO"/>
-
-        <root level="INFO">
-            <appender-ref ref="ASYNC_CONSOLE"/>
-            <appender-ref ref="ASYNC_FILE"/>
-        </root>
-    </springProfile>
-
-    <!-- ============================================ -->
-    <!-- Common Logger Configurations (All Profiles) -->
-    <!-- ============================================ -->
-
-    <!-- Reduce noise from Spring framework -->
+    
+    <!-- Console JSON Appender for Kubernetes/Elasticsearch -->
+    <appender name="CONSOLE_JSON" class="ch.qos.logback.core.ConsoleAppender">
+        <encoder class="net.logstash.logback.encoder.LogstashEncoder">
+            <!-- Include MDC fields -->
+            <includeMdcKeyName>requestId</includeMdcKeyName>
+            <includeMdcKeyName>correlationId</includeMdcKeyName>
+            <includeMdcKeyName>username</includeMdcKeyName>
+            <includeMdcKeyName>endpoint</includeMdcKeyName>
+            <includeMdcKeyName>method</includeMdcKeyName>
+            <includeMdcKeyName>statusCode</includeMdcKeyName>
+            <includeMdcKeyName>duration</includeMdcKeyName>
+            <includeMdcKeyName>importLabel</includeMdcKeyName>
+            <includeMdcKeyName>fileName</includeMdcKeyName>
+            <includeMdcKeyName>totalRows</includeMdcKeyName>
+            <includeMdcKeyName>processedRows</includeMdcKeyName>
+            <includeMdcKeyName>errorRows</includeMdcKeyName>
+            <includeMdcKeyName>approvalRequestsCreated</includeMdcKeyName>
+            
+            <!-- Custom fields -->
+            <customFields>{"service_name":"${APP_NAME}","environment":"production"}</customFields>
+            
+            <!-- Shorten logger names -->
+            <shortenedLoggerNameLength>36</shortenedLoggerNameLength>
+            
+            <!-- Stack trace configuration -->
+            <throwableConverter class="net.logstash.logback.stacktrace.ShortenedThrowableConverter">
+                <maxDepthPerThrowable>30</maxDepthPerThrowable>
+                <maxLength>2048</maxLength>
+                <shortenedClassNameLength>20</shortenedClassNameLength>
+                <rootCauseFirst>true</rootCauseFirst>
+            </throwableConverter>
+        </encoder>
+    </appender>
+    
+    <!-- Package-specific loggers -->
+    <logger name="com.tiqmo.monitoring.importexport" level="INFO"/>
+    <logger name="org.springframework.web" level="WARN"/>
+    <logger name="org.springframework.web.reactive" level="WARN"/>
+    <logger name="org.hibernate" level="WARN"/>
+    <logger name="com.zaxxer.hikari" level="INFO"/>
     <logger name="org.springframework.boot.autoconfigure" level="WARN"/>
     <logger name="org.springframework.boot.actuator" level="INFO"/>
     <logger name="org.springframework.data.jpa" level="WARN"/>
-
-    <!-- Security and JWT -->
     <logger name="org.springframework.security" level="INFO"/>
     <logger name="io.jsonwebtoken" level="INFO"/>
-
-    <!-- Import/Export operations -->
-    <logger name="com.tiqmo.monitoring.importexport.service" level="INFO"/>
-    <logger name="com.tiqmo.monitoring.importexport.api" level="INFO"/>
-
-    <!-- Excel parsing (Apache POI) -->
     <logger name="org.apache.poi" level="WARN"/>
-
+    
+    <root level="${LOG_LEVEL}">
+        <appender-ref ref="CONSOLE_JSON"/>
+    </root>
 </configuration>
