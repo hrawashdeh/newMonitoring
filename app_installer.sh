@@ -659,6 +659,20 @@ log_success "data-generator service installed successfully"
 
 
 
+# ===================== approval-workflow-core (dependency) =====================
+log_section "Building approval-workflow-core dependency"
+
+cd "${PROJECT_ROOT}/services/approval-workflow-core" || exit_error "Missing directory: ${PROJECT_ROOT}/services/approval-workflow-core"
+
+log_info "Installing approval-workflow-core to local Maven repository..."
+
+if ! mvn clean install -Dmaven.test.skip=true; then
+    log_error "approval-workflow-core Maven install failed"
+    exit 1
+fi
+
+log_success "approval-workflow-core installed to local Maven repository (~/.m2/repository)"
+
 # ===================== signal loader =====================
 cd "${PROJECT_ROOT}/services/loader" || exit_error "Missing directory: ${PROJECT_ROOT}/services/loader"
 
