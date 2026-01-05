@@ -1,6 +1,7 @@
 package com.tiqmo.monitoring.loader.api.loader;
 
 import com.tiqmo.monitoring.loader.domain.approval.entity.ApprovalRequest;
+import com.tiqmo.monitoring.loader.infra.config.ApiKey;
 import com.tiqmo.monitoring.loader.domain.loader.entity.Loader;
 import com.tiqmo.monitoring.loader.domain.loader.entity.LoaderArchive;
 import com.tiqmo.monitoring.loader.domain.loader.entity.PurgeStrategy;
@@ -39,7 +40,7 @@ import java.util.Map;
  * Service ID: ldr (Loader Service), Controller ID: ldr (Loader Controller)
  */
 @RestController
-@RequestMapping("/api/ldr/ldr")
+@RequestMapping("/api/v1/ldr/ldr")
 @RequiredArgsConstructor
 @Slf4j
 public class LoaderController {
@@ -58,6 +59,7 @@ public class LoaderController {
     private final LoaderArchiveService loaderArchiveService;
 
     @GetMapping("/loaders")
+    @ApiKey(value = "ldr.loaders.list", description = "List all loaders with field protection")
     public ResponseEntity<Map<String, Object>> getAll(Authentication authentication) {
         // Get all loaders from service
         List<EtlLoaderDto> loaders = service.findAll();
@@ -105,6 +107,7 @@ public class LoaderController {
     }
 
     @GetMapping("/{loaderCode}")
+    @ApiKey(value = "ldr.loaders.get", description = "Get loader by code")
     public ResponseEntity<?> getByCode(@PathVariable String loaderCode, Authentication authentication) {
         EtlLoaderDto loader = service.getByCode(loaderCode);
         if (loader == null) {
@@ -149,6 +152,7 @@ public class LoaderController {
      * @return Created draft entity
      */
     @PostMapping
+    @ApiKey(value = "ldr.loaders.create", description = "Create new loader draft", tags = {"admin"})
     public ResponseEntity<EtlLoaderDto> create(
             @Valid @RequestBody EtlLoaderDto dto,
             Authentication authentication) {
@@ -189,6 +193,7 @@ public class LoaderController {
      * @return Updated draft entity
      */
     @PutMapping("/{loaderCode}")
+    @ApiKey(value = "ldr.loaders.update", description = "Update loader draft")
     public ResponseEntity<EtlLoaderDto> update(
             @PathVariable String loaderCode,
             @Valid @RequestBody EtlLoaderDto dto,
@@ -227,12 +232,14 @@ public class LoaderController {
     }
 
     @GetMapping("/stats")
+    @ApiKey(value = "ldr.loaders.stats", description = "Get loader statistics")
     public ResponseEntity<LoadersStatsDto> getStats() {
         LoadersStatsDto stats = service.getStats();
         return ResponseEntity.ok(stats);
     }
 
     @GetMapping("/activity")
+    @ApiKey(value = "ldr.loaders.activity", description = "Get recent loader activity")
     public ResponseEntity<List<ActivityEventDto>> getActivity(
             @RequestParam(defaultValue = "5") int limit) {
         List<ActivityEventDto> activity = service.getRecentActivity(limit);
@@ -244,6 +251,7 @@ public class LoaderController {
      * Returns ID, dbCode, dbType, ip, port, dbName (password excluded).
      */
     @GetMapping("/source-databases")
+    @ApiKey(value = "ldr.loaders.sources", description = "List source databases for form selection")
     public ResponseEntity<List<SourceDatabaseDto>> getSourceDatabases() {
         log.debug("Fetching source databases list");
         List<SourceDatabase> sourceDbs = sourceDbRepo.findAll();
@@ -267,6 +275,7 @@ public class LoaderController {
      * @return Updated loader DTO
      */
     @PostMapping("/{loaderCode}/submit")
+    @ApiKey(value = "ldr.loaders.submitForApproval", description = "Submit loader draft for approval")
     public ResponseEntity<EtlLoaderDto> submitForApproval(
             @PathVariable String loaderCode,
             Authentication authentication) {
@@ -315,6 +324,7 @@ public class LoaderController {
      */
     @PostMapping("/{loaderCode}/approve")
     @org.springframework.security.access.prepost.PreAuthorize("hasRole('ADMIN')")
+    @ApiKey(value = "ldr.loaders.approve", description = "Approve pending loader", tags = {"admin"})
     public ResponseEntity<EtlLoaderDto> approveLoader(
             @PathVariable String loaderCode,
             @RequestBody(required = false) Map<String, String> request,
@@ -368,6 +378,7 @@ public class LoaderController {
      */
     @PostMapping("/{loaderCode}/reject")
     @org.springframework.security.access.prepost.PreAuthorize("hasRole('ADMIN')")
+    @ApiKey(value = "ldr.loaders.reject", description = "Reject pending loader", tags = {"admin"})
     public ResponseEntity<?> rejectLoader(
             @PathVariable String loaderCode,
             @RequestBody Map<String, String> request,
@@ -420,6 +431,7 @@ public class LoaderController {
      * @return Success message
      */
     @DeleteMapping("/{loaderCode}/draft")
+    @ApiKey(value = "ldr.loaders.deleteDraft", description = "Delete loader draft")
     public ResponseEntity<?> deleteDraft(
             @PathVariable String loaderCode,
             Authentication authentication) {
@@ -456,6 +468,7 @@ public class LoaderController {
      * @return List of archived versions
      */
     @GetMapping("/{loaderCode}/versions")
+    @ApiKey(value = "ldr.loaders.versions", description = "Get loader version history")
     public ResponseEntity<?> getVersionHistory(@PathVariable String loaderCode) {
         try {
             log.info("Fetching version history for loader: {}", loaderCode);
@@ -502,6 +515,7 @@ public class LoaderController {
      * @return Loader version details
      */
     @GetMapping("/{loaderCode}/versions/{versionNumber}")
+    @ApiKey(value = "ldr.loaders.version", description = "Get specific loader version")
     public ResponseEntity<?> getVersion(
             @PathVariable String loaderCode,
             @PathVariable Integer versionNumber) {
@@ -553,6 +567,7 @@ public class LoaderController {
      * @return Test query response with results or errors
      */
     @PostMapping("/test-query")
+    @ApiKey(value = "ldr.loaders.test", description = "Test SQL query against source database")
     public ResponseEntity<TestQueryResponse> testQuery(@Valid @RequestBody TestQueryRequest request) {
         long startTime = System.currentTimeMillis();
 
@@ -732,7 +747,7 @@ public class LoaderController {
                 .maxQueryPeriodSeconds(dto.getMaxQueryPeriodSeconds())
                 .maxParallelExecutions(dto.getMaxParallelExecutions())
                 .sourceTimezoneOffsetHours(dto.getSourceTimezoneOffsetHours())
-                .enabled(dto.getEnabled() != null ? dto.getEnabled() : true)
+                .enabled(false)  // New loaders must be disabled until approved
                 .aggregationPeriodSeconds(dto.getAggregationPeriodSeconds())
                 .purgeStrategy(purgeStrategy)
                 .sourceDatabase(sourceDb)

@@ -29,7 +29,7 @@ spec:
         # Image version is set by deployment script (scripts/deploy-signal-loader.sh)
         # Never use :latest in production - always use timestamped versions
         # Example: signal-loader:1.0.0-1766772210
-        image: signal-loader:0.0.1-SNAPSHOT
+        image: loader:latest
         imagePullPolicy: IfNotPresent  # Use local image if available
         ports:
         - name: http
@@ -69,6 +69,13 @@ spec:
           value: "none"  # Logs go to stdout, collected by Filebeat
         - name: DEPLOYMENT_ENVIRONMENT
           value: "dev"
+
+        # Redis configuration for centralized API config
+        # REDIS_PASSWORD is injected from app-secrets via envFrom
+        - name: REDIS_HOST
+          value: "redis-master.monitoring-infra.svc.cluster.local"
+        - name: REDIS_PORT
+          value: "6379"
 
         # JVM settings
         - name: JAVA_OPTS

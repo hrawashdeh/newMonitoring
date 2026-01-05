@@ -36,9 +36,29 @@ public interface LoaderRepository extends JpaRepository<Loader, Long> {
      *
      * @param approvalStatus the approval status to filter by (typically APPROVED)
      * @return list of enabled and approved loaders with source databases loaded
+     * @deprecated Use {@link #findAllByEnabledTrueAndVersionStatus(VersionStatus)} instead.
+     *             Approval workflow is now unified to use version_status field.
      */
+    @Deprecated
     @Query("SELECT l FROM Loader l JOIN FETCH l.sourceDatabase WHERE l.enabled = true AND l.approvalStatus = :approvalStatus")
     List<Loader> findAllByEnabledTrueAndApprovalStatus(ApprovalStatus approvalStatus);
+
+    /**
+     * Find all enabled AND ACTIVE loaders for scheduling with source database eagerly fetched.
+     *
+     * <p><b>SECURITY:</b> Only ACTIVE loaders should be executed by the scheduler.
+     * DRAFT and PENDING_APPROVAL loaders must NOT execute.
+     *
+     * <p><b>UNIFIED WORKFLOW:</b> This method uses version_status instead of approval_status
+     * for the unified approval workflow system.
+     *
+     * <p>Used by LoaderSchedulerService to find loaders ready for execution.
+     *
+     * @param versionStatus the version status to filter by (typically ACTIVE)
+     * @return list of enabled and active loaders with source databases loaded
+     */
+    @Query("SELECT l FROM Loader l JOIN FETCH l.sourceDatabase WHERE l.enabled = true AND l.versionStatus = :versionStatus")
+    List<Loader> findAllByEnabledTrueAndVersionStatus(@Param("versionStatus") VersionStatus versionStatus);
 
     // ==================== VERSIONING QUERIES ====================
 

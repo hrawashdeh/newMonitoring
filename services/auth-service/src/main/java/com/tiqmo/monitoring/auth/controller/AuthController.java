@@ -2,6 +2,7 @@ package com.tiqmo.monitoring.auth.controller;
 
 import com.tiqmo.monitoring.auth.dto.LoginRequest;
 import com.tiqmo.monitoring.auth.dto.LoginResponse;
+import com.tiqmo.monitoring.auth.infra.config.ApiKey;
 import com.tiqmo.monitoring.auth.security.JwtTokenProvider;
 import com.tiqmo.monitoring.auth.service.AuthService;
 import jakarta.servlet.http.HttpServletRequest;
@@ -53,7 +54,7 @@ import org.springframework.web.bind.annotation.*;
  */
 @Slf4j
 @RestController
-@RequestMapping("/api/auth/auth")
+@RequestMapping("/api/v1/auth/auth")
 @RequiredArgsConstructor
 @CrossOrigin(origins = {"http://localhost:3000", "http://localhost:5173", "http://localhost:4200", "http://localhost:8081"})
 public class AuthController {
@@ -62,6 +63,7 @@ public class AuthController {
     private final JwtTokenProvider tokenProvider;
 
     @PostMapping("/login")
+    @ApiKey(value = "auth.auth.login", description = "Authenticate user and return JWT token")
     public ResponseEntity<LoginResponse> login(
             @Valid @RequestBody LoginRequest loginRequest,
             HttpServletRequest request) {
@@ -93,6 +95,7 @@ public class AuthController {
      * @return validation response with token validity and user details
      */
     @PostMapping("/validate")
+    @ApiKey(value = "auth.auth.validate", description = "Validate JWT token for frontend routing")
     public ResponseEntity<TokenValidationResponse> validateToken(HttpServletRequest request) {
         String correlationId = MDC.get("correlationId");
         String clientIp = getClientIp(request);

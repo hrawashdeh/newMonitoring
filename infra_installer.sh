@@ -41,9 +41,134 @@ prompt_choice() {
 }
 
 
+# ===================== Module Definitions (Bash 3.x Compatible) =====================
+# Format: "id:description"
+MODULE_NAMES=(
+    "sealed-ctrl:Sealed Secrets Controller"
+    "sealed-vals:Sealed Secrets Values (kubeseal)"
+    "storage:Storage Class (local-path)"
+    "postgres:PostgreSQL Database"
+    "mysql:MySQL Database"
+    "redis:Redis Cache"
+    "prometheus:Prometheus Stack (Grafana, AlertManager)"
+    "eck:ECK Operator (Elastic Cloud)"
+    "elasticsearch:Elasticsearch"
+    "kibana:Kibana Dashboard"
+    "filebeat:Filebeat (Log Collection)"
+    "ilm:Elasticsearch ILM (24h Retention)"
+    "smoke:Credential Smoke Tests"
+)
+
+TOTAL_MODULES=${#MODULE_NAMES[@]}
+RUN_MODULES=""
+INTERACTIVE_MODE=false
+
+# Parse command line arguments
+if [ $# -eq 0 ]; then
+    INTERACTIVE_MODE=true
+elif [ "$1" = "-1" ]; then
+    # -1 means run all modules
+    for i in $(seq 1 $TOTAL_MODULES); do
+        RUN_MODULES="$RUN_MODULES $i"
+    done
+else
+    # Specific modules provided
+    RUN_MODULES="$*"
+fi
+
+# Get module name by number (1-indexed)
+get_module_name() {
+    local num=$1
+    local idx=$((num - 1))
+    if [ $idx -ge 0 ] && [ $idx -lt $TOTAL_MODULES ]; then
+        echo "${MODULE_NAMES[$idx]}" | cut -d: -f2
+    fi
+}
+
+# Get module id by number (1-indexed)
+get_module_id() {
+    local num=$1
+    local idx=$((num - 1))
+    if [ $idx -ge 0 ] && [ $idx -lt $TOTAL_MODULES ]; then
+        echo "${MODULE_NAMES[$idx]}" | cut -d: -f1
+    fi
+}
+
+# Check if module should run
+should_run_module() {
+    local module_num=$1
+    if [ -z "$RUN_MODULES" ]; then
+        return 1  # No modules selected yet
+    fi
+    echo "$RUN_MODULES" | grep -qw "$module_num"
+}
+
+# Show module menu
+show_module_menu() {
+    echo ""
+    echo "┌──────────────────────────────────────────────────────────────┐"
+    echo "│              Infrastructure Installation Modules            │"
+    echo "├──────────────────────────────────────────────────────────────┤"
+    for i in $(seq 1 $TOTAL_MODULES); do
+        local name
+        name=$(get_module_name $i)
+        printf "│  %2d. %-55s │\n" "$i" "$name"
+    done
+    echo "├──────────────────────────────────────────────────────────────┤"
+    echo "│  -1. Run ALL modules                                        │"
+    echo "│   0. Exit                                                   │"
+    echo "└──────────────────────────────────────────────────────────────┘"
+    echo ""
+}
+
+# Prompt for module selection
+prompt_module_selection() {
+    show_module_menu
+    printf "${GREEN}Enter module numbers (space-separated) or -1 for all: ${NC}"
+    read -r selection < /dev/tty
+
+    if [ "$selection" = "0" ]; then
+        log_info "Exiting..."
+        exit 0
+    elif [ "$selection" = "-1" ]; then
+        for i in $(seq 1 $TOTAL_MODULES); do
+            RUN_MODULES="$RUN_MODULES $i"
+        done
+    else
+        RUN_MODULES="$selection"
+    fi
+
+    # Validate selection
+    for num in $RUN_MODULES; do
+        if ! [[ "$num" =~ ^[0-9]+$ ]] || [ "$num" -lt 1 ] || [ "$num" -gt $TOTAL_MODULES ]; then
+            log_error "Invalid module number: $num (valid: 1-$TOTAL_MODULES)"
+            RUN_MODULES=""
+            return 1
+        fi
+    done
+    return 0
+}
+
+# Show selected modules
+show_selected_modules() {
+    echo ""
+    log_info "Selected modules:"
+    for num in $RUN_MODULES; do
+        local name
+        name=$(get_module_name $num)
+        log_debug "  [$num] $name"
+    done
+    echo ""
+}
+
+# Count selected modules
+count_selected_modules() {
+    echo "$RUN_MODULES" | wc -w | tr -d ' '
+}
+
 # ===================== Configuration =====================
 log_section "Verify Configuration"
-PROJECT_ROOT="/Volumes/Files/Projects/newLoader"
+PROJECT_ROOT="$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)"
 SEALED_NS="sealed-secrets"
 I_NAMESPACE="monitoring-infra"
 k_context="docker-desktop"
@@ -70,6 +195,26 @@ log_info "Current kubectl context: $(kubectl config current-context)"
 prompt_choice "Is this valid context?" "Y/n"
 [[ "$CONFIRM" =~ ^[Yy]$ ]] || exit_error "Aborted by user"
 
+# ===================== Interactive Module Selection =====================
+if [ "$INTERACTIVE_MODE" = true ]; then
+    while true; do
+        if prompt_module_selection; then
+            show_selected_modules
+            prompt_choice "Proceed with selected modules?" "Y/n"
+            if [[ "$CONFIRM" =~ ^[Yy]$ ]]; then
+                break
+            else
+                RUN_MODULES=""  # Reset for re-selection
+            fi
+        fi
+    done
+fi
+
+# Show what will be installed
+SELECTED_COUNT=$(count_selected_modules)
+log_info "Will install $SELECTED_COUNT of $TOTAL_MODULES modules"
+show_selected_modules
+
 # ===================== Namespaces =====================
 log_section "Creating namespaces"
 
@@ -87,21 +232,36 @@ done
 
 log_info "Namespaces validated successfully"
 
-# ===================== Sealed Secrets Controller =====================
-log_section "installing Sealed Secrets Controller"
+
+# ===================== add and update helm charts =====================
+log_section "Adding and updating Helm repositories"
+
+helm repo add bitnami https://charts.bitnami.com/bitnami
+helm repo add prometheus-community https://prometheus-community.github.io/helm-charts
+helm repo add enix https://charts.enix.io
+helm repo add grafana https://grafana.github.io/helm-charts
+helm repo add mysql-operator https://mysql.github.io/mysql-operator/
+helm repo add sealed-secrets https://bitnami-labs.github.io/sealed-secrets
+helm repo add kiali https://kiali.org/helm-charts
+
+helm repo update
+
+# ===================== Module 1: Sealed Secrets Controller =====================
+if should_run_module 1; then
+log_section "[1/13] Installing Sealed Secrets Controller"
 helm upgrade --install sealed-secrets sealed-secrets/sealed-secrets \
   --namespace ${SEALED_NS} \
   --set fullnameOverride=sealed-secrets
 
 kubectl rollout status deployment/sealed-secrets -n ${SEALED_NS} --timeout=180s
+fi
 
-
-
-# ===================== Sealed Secrets Values =====================
+# ===================== Module 2: Sealed Secrets Values =====================
+if should_run_module 2; then
 cd "${PROJECT_ROOT}/infra/secrets"
 log_info "Current Path: $(pwd)"
 
-log_section "installing Sealed Secrets "
+log_section "[2/13] Installing Sealed Secrets Values"
 
 kubeseal \
   --controller-name=sealed-secrets \
@@ -112,43 +272,40 @@ kubeseal \
   > monitoring-secrets-sealed.yaml
 
 kubectl apply -f monitoring-secrets-sealed.yaml
+fi
 
+# ===================== Module 3: Storage Class =====================
+if should_run_module 3; then
+log_section "[3/13] Installing Storage Class"
 
-# ===================== storage class =====================
-
-log_section "installing storage class"
-
+cd "${PROJECT_ROOT}/infra/secrets"
 curl -fsSL https://raw.githubusercontent.com/rancher/local-path-provisioner/master/deploy/local-path-storage.yaml -o local-path-storage.yaml
 kubectl apply -f local-path-storage.yaml
 kubectl get storageclass
+fi
 
-
-# ===================== PostgresSQL =====================
-
-log_section "installing PostgresSQL"
+# ===================== Module 4: PostgreSQL =====================
+if should_run_module 4; then
+log_section "[4/13] Installing PostgreSQL"
 
 cd "${PROJECT_ROOT}/infra/postgress"
-helm repo add bitnami https://charts.bitnami.com/bitnami
-helm repo update
 
 helm upgrade --install postgres bitnami/postgresql \
   -n ${I_NAMESPACE} \
   -f values-postgresql.yaml
 
-
 kubectl rollout status statefulset/postgres-postgresql -n ${I_NAMESPACE} --timeout=300s
 kubectl get pods -n ${I_NAMESPACE}
 
-
 kubectl apply -f postgres-nodeport.yaml
 kubectl get svc -n ${I_NAMESPACE}
+fi
 
-
-# ===================== mysql =====================
+# ===================== Module 5: MySQL =====================
+if should_run_module 5; then
 cd "${PROJECT_ROOT}/infra/mysql"
 
-log_section "installing mysql"
-
+log_section "[5/13] Installing MySQL"
 
 kubectl apply -f mysql-statefulset.yaml
 kubectl rollout status statefulset/mysql -n "${I_NAMESPACE}" --timeout=300s
@@ -160,34 +317,28 @@ kubectl get pods -n ${I_NAMESPACE}
 # Run MySQL post-installation setup (create users and grant privileges)
 log_info "Running MySQL post-installation setup..."
 bash mysql-post-install-setup.sh
+fi
 
-
-# ===================== Redis =====================
+# ===================== Module 6: Redis =====================
+if should_run_module 6; then
 cd "${PROJECT_ROOT}/infra/redis"
 
-log_section "installing Redis"
-
-helm repo add bitnami https://charts.bitnami.com/bitnami
-helm repo update
+log_section "[6/13] Installing Redis"
 
 helm upgrade --install redis bitnami/redis \
   -n monitoring-infra \
   -f values-redis.yaml
 
-
 kubectl rollout status statefulset/redis-master -n monitoring-infra --timeout=300s
 
-
 kubectl apply -f redis-nodeport.yaml
+fi
 
-
-# ===================== prometheus =====================
+# ===================== Module 7: Prometheus Stack =====================
+if should_run_module 7; then
 cd "${PROJECT_ROOT}/infra/prometheus"
 
-log_section "installing prometheus stack"
-
-helm repo add prometheus-community https://prometheus-community.github.io/helm-charts
-helm repo update
+log_section "[7/13] Installing Prometheus Stack"
 
 helm upgrade --install monitoring prometheus-community/kube-prometheus-stack \
   -n monitoring-infra \
@@ -195,11 +346,13 @@ helm upgrade --install monitoring prometheus-community/kube-prometheus-stack \
 kubectl apply -f Prometheus-nodeport.yaml
 kubectl apply -f AlertManager-nodeport.yaml
 kubectl apply -f grafana-nodeport.yaml
+fi
 
-# ===================== ECK Operator (Elastic Cloud on Kubernetes) =====================
+# ===================== Module 8: ECK Operator =====================
+if should_run_module 8; then
 cd "${PROJECT_ROOT}"
 
-log_section "Installing ECK Operator for Elastic Stack"
+log_section "[8/13] Installing ECK Operator for Elastic Stack"
 
 log_info "Installing ECK CRDs..."
 kubectl create -f https://download.elastic.co/downloads/eck/2.11.0/crds.yaml
@@ -212,11 +365,13 @@ kubectl wait --for=condition=ready pod -l control-plane=elastic-operator \
   -n elastic-system --timeout=180s || true
 
 log_info "ECK Operator installed successfully"
+fi
 
-# ===================== Elasticsearch =====================
+# ===================== Module 9: Elasticsearch =====================
+if should_run_module 9; then
 cd "${PROJECT_ROOT}/infra/otel-manifests/elastic"
 
-log_section "Installing Elasticsearch"
+log_section "[9/13] Installing Elasticsearch"
 
 kubectl apply -f elasticsearch.yaml
 
@@ -230,10 +385,13 @@ kubectl wait --for=condition=ready pod -l elasticsearch.k8s.elastic.co/cluster-n
 }
 
 log_info "Elasticsearch deployed successfully"
+fi
 
-# ===================== Kibana =====================
+# ===================== Module 10: Kibana =====================
+if should_run_module 10; then
+cd "${PROJECT_ROOT}/infra/otel-manifests/elastic"
 
-log_section "Installing Kibana"
+log_section "[10/13] Installing Kibana"
 
 kubectl apply -f kibana.yaml
 
@@ -248,6 +406,7 @@ kubectl wait --for=condition=ready pod -l kibana.k8s.elastic.co/name=monitoring-
 
 log_info "Kibana deployed successfully"
 log_info "Kibana UI will be available at: http://localhost:30561"
+fi
 
 # ===================== APM Server =====================
 # TEMPORARILY DISABLED - Re-enable after cluster reset verification
@@ -266,8 +425,6 @@ log_info "Kibana UI will be available at: http://localhost:30561"
 # }
 
 # log_info "APM Server deployed successfully"
-
-log_info "APM Server installation SKIPPED (temporarily disabled for cluster reset)"
 
 # ===================== OpenTelemetry Collector =====================
 # TEMPORARILY DISABLED - Re-enable after cluster reset verification
@@ -293,13 +450,11 @@ log_info "APM Server installation SKIPPED (temporarily disabled for cluster rese
 
 # log_info "ServiceMonitor created for Prometheus scraping"
 
-log_info "OpenTelemetry Collector installation SKIPPED (temporarily disabled for cluster reset)"
-
-# ===================== Filebeat (Log Collection) =====================
-cd "${PROJECT_ROOT}"
+# ===================== Module 11: Filebeat =====================
+if should_run_module 11; then
 cd "${PROJECT_ROOT}/infra/otel-manifests/logging"
 
-log_section "Installing Filebeat for Log Collection"
+log_section "[11/13] Installing Filebeat for Log Collection"
 
 kubectl apply -f filebeat-daemonset.yaml
 
@@ -307,23 +462,24 @@ log_info "Waiting for Filebeat DaemonSet to be ready..."
 kubectl rollout status daemonset/filebeat -n ${I_NAMESPACE} --timeout=180s
 
 log_info "Filebeat deployed successfully"
+fi
 
-# ===================== Elasticsearch ILM Configuration (24h Retention) =====================
+# ===================== Module 12: Elasticsearch ILM Configuration =====================
+if should_run_module 12; then
 cd "${PROJECT_ROOT}/infra/otel-scripts"
 
-log_section "Configuring Elasticsearch ILM Policies (24h retention)"
+log_section "[12/13] Configuring Elasticsearch ILM Policies (24h retention)"
 
 log_info "Running ILM configuration script..."
 bash configure-ilm-retention.sh
 
 log_info "ILM policies configured: logs and traces will be deleted after 24 hours"
+fi
 
 # ===================== Execution Timing =====================
 
 log_section "Installation execution summary"
 SCRIPT_START_EPOCH="${SCRIPT_START_EPOCH:-$(date +%s)}"
-
-
 
 format_ts() { date -r "$1" "+%Y-%m-%d %H:%M:%S %Z" 2>/dev/null || date -d "@$1" "+%Y-%m-%d %H:%M:%S %Z"; }
 
@@ -339,13 +495,13 @@ DUR_S=$((DURATION_SEC % 60))
 
 end_str="$(format_ts "$SCRIPT_END_EPOCH")"
 
-
 log_info "Script start: ${SCRIPT_START_STR}"
 log_info "Script end  : ${SCRIPT_END_STR}"
 log_info "Duration    : ${DUR_H}h ${DUR_M}m ${DUR_S}s (${DURATION_SEC}s)"
 
-# ===================== 60s Countdown Before Smoke Test =====================
-log_section "Preparing to run credential smoke tests"
+# ===================== Module 13: Credential Smoke Tests =====================
+if should_run_module 13; then
+log_section "[13/13] Preparing to run credential smoke tests"
 log_info "Starting smoke tests in 60 seconds (press Ctrl+C to abort)..."
 
 for i in $(seq 60 -1 1); do
@@ -595,4 +751,7 @@ test_pg_admin "$NS" "$SECRET_NAME" "$RID"
 test_pg_app "$NS" "$SECRET_NAME" "$RID"
 
 log_info "Credential smoke tests completed successfully"
+fi
 
+log_section "Infrastructure Installation Complete"
+log_info "Installed $SELECTED_COUNT modules"

@@ -190,49 +190,124 @@
     <springProfile name="prod,production">
         <!-- Console JSON Appender for Kubernetes/Elasticsearch -->
         <appender name="CONSOLE_JSON" class="ch.qos.logback.core.ConsoleAppender">
-            <encoder class="net.logstash.logback.encoder.LogstashEncoder">
-                <!-- OpenTelemetry trace correlation fields (MUST be first) -->
-                <includeMdcKeyName>trace.id</includeMdcKeyName>
-                <includeMdcKeyName>span.id</includeMdcKeyName>
-                <includeMdcKeyName>operation.name</includeMdcKeyName>
+            <encoder class="net.logstash.logback.encoder.LoggingEventCompositeJsonEncoder">
+                <providers>
+                    <!-- Standard fields -->
+                    <timestamp>
+                        <fieldName>@timestamp</fieldName>
+                        <pattern>yyyy-MM-dd'T'HH:mm:ss.SSSZ</pattern>
+                    </timestamp>
+                    <logLevel>
+                        <fieldName>log.level</fieldName>
+                    </logLevel>
+                    <message>
+                        <fieldName>message</fieldName>
+                    </message>
+                    <loggerName>
+                        <fieldName>logger</fieldName>
+                        <shortenedLoggerNameLength>36</shortenedLoggerNameLength>
+                    </loggerName>
+                    <threadName>
+                        <fieldName>thread</fieldName>
+                    </threadName>
 
-                <!-- Core MDC fields (all services) -->
-                <includeMdcKeyName>correlationId</includeMdcKeyName>
-                <includeMdcKeyName>requestId</includeMdcKeyName>
-                <includeMdcKeyName>contextId</includeMdcKeyName>
-                <includeMdcKeyName>processId</includeMdcKeyName>
-                <includeMdcKeyName>serviceId</includeMdcKeyName>
-                <includeMdcKeyName>httpMethod</includeMdcKeyName>
-                <includeMdcKeyName>requestPath</includeMdcKeyName>
-                <includeMdcKeyName>statusCode</includeMdcKeyName>
-                <includeMdcKeyName>duration</includeMdcKeyName>
-                <includeMdcKeyName>clientIp</includeMdcKeyName>
-                <includeMdcKeyName>username</includeMdcKeyName>
+                    <!-- Service info -->
+                    <pattern>
+                        <pattern>
+                            {
+                                "service.name": "${APP_NAME}",
+                                "service.version": "1.0.0"
+                            }
+                        </pattern>
+                    </pattern>
 
-                <!-- Loader service specific fields -->
-                <includeMdcKeyName>loaderCode</includeMdcKeyName>
-                <includeMdcKeyName>sourceDatabase</includeMdcKeyName>
-                <includeMdcKeyName>approvalRequestId</includeMdcKeyName>
-                <includeMdcKeyName>importLabel</includeMdcKeyName>
-                <includeMdcKeyName>entityType</includeMdcKeyName>
-                <includeMdcKeyName>entityId</includeMdcKeyName>
+                    <!-- Nested trace fields (for Elasticsearch indexing) -->
+                    <pattern>
+                        <pattern>
+                            {
+                                "trace": {
+                                    "id": "%mdc{trace.id}",
+                                    "span_id": "%mdc{span.id}",
+                                    "correlation_id": "%mdc{correlationId}",
+                                    "request_id": "%mdc{requestId}",
+                                    "process_id": "%mdc{processId}"
+                                }
+                            }
+                        </pattern>
+                    </pattern>
 
-                <!-- Custom fields -->
-                <customFields>{"service_name":"${APP_NAME}","environment":"production"}</customFields>
+                    <!-- Nested context fields -->
+                    <pattern>
+                        <pattern>
+                            {
+                                "context": {
+                                    "service_id": "%mdc{serviceId}",
+                                    "context_id": "%mdc{contextId}",
+                                    "class": "%mdc{class}",
+                                    "method": "%mdc{method}",
+                                    "phase": "%mdc{phase}"
+                                }
+                            }
+                        </pattern>
+                    </pattern>
 
-                <!-- Shorten logger names -->
-                <shortenedLoggerNameLength>36</shortenedLoggerNameLength>
+                    <!-- Nested integration fields -->
+                    <pattern>
+                        <pattern>
+                            {
+                                "integration": {
+                                    "type": "%mdc{integrationType}",
+                                    "direction": "%mdc{integrationDirection}",
+                                    "target": "%mdc{requestPath}",
+                                    "method": "%mdc{httpMethod}",
+                                    "status_code": "%mdc{statusCode}",
+                                    "duration_ms": "%mdc{duration}"
+                                }
+                            }
+                        </pattern>
+                    </pattern>
 
-                <!-- Stack trace configuration -->
-                <throwableConverter class="net.logstash.logback.stacktrace.ShortenedThrowableConverter">
-                    <maxDepthPerThrowable>30</maxDepthPerThrowable>
-                    <maxLength>2048</maxLength>
-                    <shortenedClassNameLength>20</shortenedClassNameLength>
-                    <exclude>sun\.reflect\..*</exclude>
-                    <exclude>net\.sf\.cglib\..*</exclude>
-                    <exclude>org\.springframework\.aop\..*</exclude>
-                    <rootCauseFirst>true</rootCauseFirst>
-                </throwableConverter>
+                    <!-- Nested user fields -->
+                    <pattern>
+                        <pattern>
+                            {
+                                "user": {
+                                    "username": "%mdc{username}",
+                                    "ip": "%mdc{clientIp}"
+                                }
+                            }
+                        </pattern>
+                    </pattern>
+
+                    <!-- Nested domain fields (service-specific) -->
+                    <pattern>
+                        <pattern>
+                            {
+                                "domain": {
+                                    "loader_code": "%mdc{loaderCode}",
+                                    "source_database": "%mdc{sourceDatabase}",
+                                    "entity_type": "%mdc{entityType}",
+                                    "entity_id": "%mdc{entityId}",
+                                    "import_label": "%mdc{importLabel}",
+                                    "approval_request_id": "%mdc{approvalRequestId}"
+                                }
+                            }
+                        </pattern>
+                    </pattern>
+
+                    <!-- Stack trace -->
+                    <stackTrace>
+                        <throwableConverter class="net.logstash.logback.stacktrace.ShortenedThrowableConverter">
+                            <maxDepthPerThrowable>30</maxDepthPerThrowable>
+                            <maxLength>2048</maxLength>
+                            <shortenedClassNameLength>20</shortenedClassNameLength>
+                            <exclude>sun\.reflect\..*</exclude>
+                            <exclude>net\.sf\.cglib\..*</exclude>
+                            <exclude>org\.springframework\.aop\..*</exclude>
+                            <rootCauseFirst>true</rootCauseFirst>
+                        </throwableConverter>
+                    </stackTrace>
+                </providers>
             </encoder>
         </appender>
 

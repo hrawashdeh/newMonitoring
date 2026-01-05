@@ -67,22 +67,31 @@ public class SecurityConfig {
                         session.sessionCreationPolicy(SessionCreationPolicy.STATELESS))
 
                 // Configure authorization rules
+                // New path pattern: /api/v1/ldr/{controller-id}/**
                 .authorizeHttpRequests(auth -> auth
                         // Public endpoints
                         .requestMatchers("/actuator/health", "/actuator/health/**").permitAll()
 
-                        // Admin operations - require ROLE_ADMIN
-                        .requestMatchers(HttpMethod.POST, "/api/v1/res/loaders").hasRole("ADMIN")
-                        .requestMatchers(HttpMethod.PUT, "/api/v1/res/loaders/**").hasRole("ADMIN")
-                        .requestMatchers(HttpMethod.DELETE, "/api/v1/res/loaders/**").hasRole("ADMIN")
-                        .requestMatchers(HttpMethod.POST, "/api/v1/res/signals/**").hasRole("ADMIN")
-                        .requestMatchers(HttpMethod.POST, "/ops/v1/admin/**").hasAnyRole("ADMIN", "OPERATOR")
-                        .requestMatchers(HttpMethod.PUT, "/ops/v1/admin/**").hasRole("ADMIN")
-                        .requestMatchers(HttpMethod.DELETE, "/ops/v1/admin/**").hasRole("ADMIN")
+                        // Loader CRUD - /api/v1/ldr/ldr/**
+                        .requestMatchers(HttpMethod.POST, "/api/v1/ldr/ldr/**").hasRole("ADMIN")
+                        .requestMatchers(HttpMethod.PUT, "/api/v1/ldr/ldr/**").hasRole("ADMIN")
+                        .requestMatchers(HttpMethod.DELETE, "/api/v1/ldr/ldr/**").hasRole("ADMIN")
 
-                        // Read operations - require any authenticated user
-                        .requestMatchers(HttpMethod.GET, "/api/v1/res/**").authenticated()
-                        .requestMatchers(HttpMethod.GET, "/ops/v1/admin/**").authenticated()
+                        // Signals - /api/v1/ldr/sig/**
+                        .requestMatchers(HttpMethod.POST, "/api/v1/ldr/sig/**").hasRole("ADMIN")
+
+                        // Admin operations - /api/v1/ldr/admn/**, /api/v1/ldr/bkfl/**, /api/v1/ldr/cfg/**
+                        .requestMatchers(HttpMethod.POST, "/api/v1/ldr/admn/**").hasAnyRole("ADMIN", "OPERATOR")
+                        .requestMatchers(HttpMethod.POST, "/api/v1/ldr/bkfl/**").hasAnyRole("ADMIN", "OPERATOR")
+                        .requestMatchers(HttpMethod.POST, "/api/v1/ldr/cfg/**").hasRole("ADMIN")
+                        .requestMatchers(HttpMethod.PUT, "/api/v1/ldr/admn/**").hasRole("ADMIN")
+                        .requestMatchers(HttpMethod.DELETE, "/api/v1/ldr/admn/**").hasRole("ADMIN")
+
+                        // Approval workflow - /api/v1/ldr/apv/**
+                        .requestMatchers(HttpMethod.POST, "/api/v1/ldr/apv/**").hasAnyRole("ADMIN", "OPERATOR")
+
+                        // Read operations - all /api/v1/ldr/** GET requests
+                        .requestMatchers(HttpMethod.GET, "/api/v1/ldr/**").authenticated()
 
                         // All other requests require authentication
                         .anyRequest().authenticated()

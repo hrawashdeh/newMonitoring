@@ -70,8 +70,8 @@ public class SecurityConfig {
                         session.sessionCreationPolicy(SessionCreationPolicy.STATELESS)
                 )
                 .authorizeHttpRequests(auth -> auth
-                        // Public endpoints
-                        .requestMatchers("/api/v1/auth/login", "/api/v1/auth/register", "/api/v1/auth/validate").permitAll()
+                        // Public endpoints - /api/v1/auth/auth/*
+                        .requestMatchers("/api/v1/auth/auth/login", "/api/v1/auth/auth/register", "/api/v1/auth/auth/validate").permitAll()
                         .requestMatchers("/actuator/health", "/actuator/info").permitAll()
                         // All other endpoints require authentication
                         .anyRequest().authenticated()

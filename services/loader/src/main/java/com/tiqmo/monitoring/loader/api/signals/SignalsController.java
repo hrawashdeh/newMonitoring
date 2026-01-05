@@ -3,6 +3,7 @@ package com.tiqmo.monitoring.loader.api.signals;
 
 import com.tiqmo.monitoring.loader.domain.signals.entity.SignalsHistory;
 import com.tiqmo.monitoring.loader.dto.signals.BulkSignalsRequest;
+import com.tiqmo.monitoring.loader.infra.config.ApiKey;
 import com.tiqmo.monitoring.loader.service.signals.SignalsIngestService;
 import com.tiqmo.monitoring.loader.service.signals.SignalsQueryService;
 import jakarta.validation.Valid;
@@ -20,14 +21,16 @@ import java.util.Map;
 /**
  * Service ID: ldr (Loader Service), Controller ID: sig (Signals Controller)
  */
+@Slf4j
 @RestController
-@RequestMapping("/api/ldr/sig")
+@RequestMapping("/api/v1/ldr/sig")
 @RequiredArgsConstructor
 public class SignalsController {
     private final SignalsQueryService svc;
     private final SignalsIngestService ingestSvc;
 
     @GetMapping("/signal/{loaderCode}")
+    @ApiKey(value = "ldr.signals.byLoader", description = "Get signals by loader code with time range")
     public ResponseEntity<Map<String, Object>> byLoader(
             @PathVariable String loaderCode,
             @RequestParam long fromEpoch,
@@ -65,6 +68,7 @@ public class SignalsController {
     }
 
     @PostMapping
+    @ApiKey(value = "ldr.signals.create", description = "Create a single signal entry")
     public ResponseEntity<SignalsHistory> create(@Valid @RequestBody SignalsHistory signal) {
         log.trace("Entering create() | loaderCode={} | timestamp={} | correlationId={} | requestPath={}",
                 signal.getLoaderCode(), signal.getLoadTimeStamp(), MDC.get("correlationId"), MDC.get("requestPath"));
@@ -82,6 +86,7 @@ public class SignalsController {
     }
 
     @PostMapping("/bulk")
+    @ApiKey(value = "ldr.signals.bulkCreate", description = "Create multiple signal entries in bulk")
     public ResponseEntity<Map<String, Object>> createBulk(@Valid @RequestBody BulkSignalsRequest request) {
         log.trace("Entering createBulk() | loaderCode={} | signalCount={} | correlationId={} | requestPath={}",
                 request.getLoaderCode(), request.getSignals().size(), MDC.get("correlationId"), MDC.get("requestPath"));

@@ -46,7 +46,7 @@ prompt_choice() {
 
 # ===================== Configuration =====================
 log_section "Verify Configuration"
-PROJECT_ROOT="/Volumes/Files/Projects/newLoader"
+PROJECT_ROOT="$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)"
 FRONTEND_DIR="${PROJECT_ROOT}/frontend"
 A_NAMESPACE="monitoring-app"
 k_context="docker-desktop"
@@ -386,19 +386,37 @@ scan_pod_logs "$SERVICE_NAME" "$A_NAMESPACE" 100
 # ===================== Service Verification =====================
 log_section "Verifying Service"
 
-# Check if service exists
+# Check if ClusterIP service exists
 if kubectl get service "$SERVICE_NAME" -n "$A_NAMESPACE" >/dev/null 2>&1; then
-    log_success "Service '$SERVICE_NAME' exists"
-
-    # Get service details
-    log_info "Service details:"
+    log_success "Service '$SERVICE_NAME' (ClusterIP) exists"
     kubectl get service "$SERVICE_NAME" -n "$A_NAMESPACE"
-
-    # Test HTTP endpoint
     echo
     check_http_endpoint "$SERVICE_NAME" "$A_NAMESPACE" 80 "/"
 else
-    log_warn "Service '$SERVICE_NAME' not found. Deployment may be using ClusterIP without service."
+    log_warn "Service '$SERVICE_NAME' not found."
+fi
+
+# Check if NodePort service exists
+NODEPORT_SERVICE="${SERVICE_NAME}-nodeport"
+if kubectl get service "$NODEPORT_SERVICE" -n "$A_NAMESPACE" >/dev/null 2>&1; then
+    log_success "Service '$NODEPORT_SERVICE' (NodePort) exists"
+    kubectl get service "$NODEPORT_SERVICE" -n "$A_NAMESPACE"
+
+    # Get the NodePort value
+    NODEPORT=$(kubectl get service "$NODEPORT_SERVICE" -n "$A_NAMESPACE" -o jsonpath='{.spec.ports[0].nodePort}')
+    log_info "NodePort: $NODEPORT"
+
+    # Test NodePort directly
+    echo
+    log_info "Testing NodePort access on http://localhost:$NODEPORT ..."
+    HTTP_CODE=$(curl -s -o /dev/null -w "%{http_code}" "http://localhost:$NODEPORT/" 2>/dev/null || echo "FAILED")
+    if [ "$HTTP_CODE" = "200" ]; then
+        log_success "NodePort endpoint OK (HTTP $HTTP_CODE)"
+    else
+        log_warn "NodePort endpoint returned HTTP $HTTP_CODE (may need a moment to initialize)"
+    fi
+else
+    log_warn "NodePort service '$NODEPORT_SERVICE' not found."
 fi
 
 # ===================== Completion Summary =====================
@@ -417,11 +435,17 @@ log_info "  • Status: ${POD_STATUS}"
 log_info "  • Duration: ${DURATION}s"
 echo
 
-log_info "Next steps:"
-log_info "  1. Check pods: kubectl get pods -n ${A_NAMESPACE} -l app=${SERVICE_NAME}"
-log_info "  2. View logs: kubectl logs -n ${A_NAMESPACE} -l app=${SERVICE_NAME} --tail=50"
-log_info "  3. Port-forward: kubectl port-forward -n ${A_NAMESPACE} svc/${SERVICE_NAME} 3000:80"
-log_info "  4. Access UI: http://localhost:3000"
+log_info "Access URLs:"
+if [ -n "$NODEPORT" ]; then
+    log_success "  → Frontend (NodePort): http://localhost:${NODEPORT}"
+fi
+log_info "  → Frontend (port-forward): http://localhost:3000"
+echo
+
+log_info "Useful commands:"
+log_info "  • Check pods: kubectl get pods -n ${A_NAMESPACE} -l app=${SERVICE_NAME}"
+log_info "  • View logs: kubectl logs -n ${A_NAMESPACE} -l app=${SERVICE_NAME} --tail=50"
+log_info "  • Port-forward: kubectl port-forward -n ${A_NAMESPACE} svc/${SERVICE_NAME} 3000:80"
 echo
 
 log_purple "Script started: $SCRIPT_START_STR"

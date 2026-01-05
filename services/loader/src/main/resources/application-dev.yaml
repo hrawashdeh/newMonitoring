@@ -11,6 +11,14 @@ spring:
     password: ${SPRING_DATASOURCE_PASSWORD:a}
     driver-class-name: org.postgresql.Driver
 
+  # Redis for centralized API configuration
+  data:
+    redis:
+      host: ${REDIS_HOST:localhost}
+      port: ${REDIS_PORT:6379}
+      password: ${REDIS_PASSWORD:}
+      timeout: 5000
+
   jpa:
     hibernate:
       ddl-auto: none  # Schema managed entirely by etl_initializer Flyway migrations
@@ -66,7 +74,14 @@ logging:
     org.springframework.jdbc.datasource: DEBUG
     com.zaxxer.hikari.HikariConfig: DEBUG # Logs HikariCP connection pool actions
     com.zaxxer.hikari: TRACE
-# application.yaml (or application-dev.yaml)
+# API Configuration
+api:
+  config:
+    service-id: ldr
+  gateway:
+    base-url: ${API_GATEWAY_URL:http://localhost:8080}
+
+# Source pool configuration
 sources:
   mysql:
     pool:

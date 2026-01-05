@@ -2,6 +2,16 @@ import apiClient from '../lib/axios';
 import { API_ENDPOINTS } from '../lib/api-config';
 import type { LoginRequest, LoginResponse } from '../types/auth';
 
+export interface MenuItemDTO {
+  menuCode: string;
+  parentCode: string | null;
+  label: string;
+  icon: string | null;
+  route: string | null;
+  menuType: string;
+  children?: MenuItemDTO[];
+}
+
 export const authApi = {
   /**
    * Login with username and password
@@ -61,5 +71,18 @@ export const authApi = {
       auth_role: localStorage.getItem('auth_role'),
       auth_user: localStorage.getItem('auth_user')
     });
+  },
+
+  /**
+   * Get user menus based on roles
+   */
+  async getMenus(): Promise<MenuItemDTO[]> {
+    try {
+      const response = await apiClient.get<MenuItemDTO[]>(API_ENDPOINTS.MENUS_USER);
+      return response.data;
+    } catch (error) {
+      console.error('Failed to fetch menus:', error);
+      return [];
+    }
   },
 };

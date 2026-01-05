@@ -25,6 +25,7 @@
         <project.build.sourceEncoding>UTF-8</project.build.sourceEncoding>
 
         <!-- Dependency versions -->
+        <lombok.version>1.18.42</lombok.version>
         <apache-poi.version>5.2.5</apache-poi.version>
         <resilience4j.version>2.3.0</resilience4j.version>
         <springdoc-openapi.version>2.8.4</springdoc-openapi.version>

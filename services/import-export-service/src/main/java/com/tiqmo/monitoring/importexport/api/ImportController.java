@@ -1,6 +1,7 @@
 package com.tiqmo.monitoring.importexport.api;
 
 import com.tiqmo.monitoring.importexport.dto.ImportResultDto;
+import com.tiqmo.monitoring.importexport.infra.config.ApiKey;
 import com.tiqmo.monitoring.importexport.service.ImportService;
 import io.swagger.v3.oas.annotations.Operation;
 import io.swagger.v3.oas.annotations.Parameter;
@@ -32,7 +33,7 @@ import org.springframework.web.multipart.MultipartFile;
  * @since 2025-12-29
  */
 @RestController
-@RequestMapping("/api/imex/imp")
+@RequestMapping("/api/v1/imex/imp")
 @RequiredArgsConstructor
 @Slf4j
 @Tag(name = "Import", description = "Loader import operations")
@@ -58,6 +59,7 @@ public class ImportController {
             description = "Upload Excel file and import loaders. Supports CREATE, UPDATE actions. " +
                     "Updates create draft versions for approval workflow."
     )
+    @ApiKey(value = "ie.import.upload", description = "Upload and import loaders from Excel", tags = {"admin"})
     public ResponseEntity<ImportResultDto> uploadImportFile(
             @Parameter(description = "Excel file (.xlsx)", required = true)
             @RequestPart("file") MultipartFile file,
@@ -175,6 +177,7 @@ public class ImportController {
             summary = "Validate import file",
             description = "Validate Excel file without actually importing loaders (dry run mode)"
     )
+    @ApiKey(value = "ie.import.validate", description = "Validate import file without importing", tags = {"admin"})
     public ResponseEntity<ImportResultDto> validateImportFile(
             @Parameter(description = "Excel file (.xlsx)", required = true)
             @RequestPart("file") MultipartFile file,
@@ -255,6 +258,7 @@ public class ImportController {
             summary = "Download import template",
             description = "Download Excel template with all loader fields and ImportAction column"
     )
+    @ApiKey(value = "ie.import.template", description = "Download import template", tags = {"admin"})
     public ResponseEntity<String> downloadTemplate() {
         // TODO: Implement template generation
         return ResponseEntity.ok("Template download endpoint - to be implemented");

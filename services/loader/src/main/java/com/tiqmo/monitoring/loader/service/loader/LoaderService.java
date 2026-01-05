@@ -3,6 +3,7 @@ package com.tiqmo.monitoring.loader.service.loader;
 import com.fasterxml.jackson.databind.ObjectMapper;
 import com.tiqmo.monitoring.loader.domain.approval.entity.ApprovalRequest;
 import com.tiqmo.monitoring.loader.domain.loader.entity.*;
+import com.tiqmo.monitoring.workflow.domain.VersionStatus;
 import com.tiqmo.monitoring.loader.domain.loader.repo.ApprovalAuditLogRepository;
 import com.tiqmo.monitoring.loader.domain.loader.repo.LoaderRepository;
 import com.tiqmo.monitoring.loader.domain.loader.repo.SourceDatabaseRepository;
@@ -40,7 +41,7 @@ public class LoaderService {
 
     private final LoaderRepository repo;
     private final SourceDatabaseRepository sourceDbRepo;
-    private final ApprovalAuditLogRepository auditLogRepo;
+    private final ApprovaanlAuditLogRepository auditLogRepo;
     private final ApprovalService approvalService;
     private final ObjectMapper objectMapper;
 
@@ -584,11 +585,14 @@ public class LoaderService {
             // Record previous status for audit
             ApprovalStatus previousStatus = loader.getApprovalStatus();
 
-            // Update loader approval status
+            // Update loader approval status (both deprecated and new unified field)
             Instant now = Instant.now();
-            loader.setApprovalStatus(ApprovalStatus.APPROVED);
+            loader.setApprovalStatus(ApprovalStatus.APPROVED);  // Deprecated, kept for backward compatibility
+            loader.setVersionStatus(com.tiqmo.monitoring.workflow.domain.VersionStatus.ACTIVE);  // Unified workflow
             loader.setApprovedBy(adminUsername);
             loader.setApprovedAt(now);
+            loader.setApprovedByVersion(adminUsername);  // Also set versioning approval fields
+            loader.setApprovedAtVersion(now);
             // Clear rejection fields if previously rejected
             loader.setRejectedBy(null);
             loader.setRejectedAt(null);
@@ -693,15 +697,18 @@ public class LoaderService {
             // Record previous status for audit
             ApprovalStatus previousStatus = loader.getApprovalStatus();
 
-            // Update loader approval status
+            // Update loader approval status (both deprecated and new unified field)
             Instant now = Instant.now();
-            loader.setApprovalStatus(ApprovalStatus.REJECTED);
+            loader.setApprovalStatus(ApprovalStatus.REJECTED);  // Deprecated, kept for backward compatibility
+            loader.setVersionStatus(VersionStatus.DRAFT);  // Unified workflow - rejected goes back to DRAFT
             loader.setRejectedBy(adminUsername);
             loader.setRejectedAt(now);
             loader.setRejectionReason(rejectionReason);
             // Clear approval fields if previously approved
             loader.setApprovedBy(null);
             loader.setApprovedAt(null);
+            loader.setApprovedByVersion(null);
+            loader.setApprovedAtVersion(null);
             // Disable loader to prevent execution
             loader.setEnabled(false);
 

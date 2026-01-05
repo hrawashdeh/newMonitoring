@@ -20,6 +20,169 @@ log_section()  { printf "\n\033[0;35m--- %s ---\033[0m\n\n" "$*"; }
 log_purple()   { printf "\033[0;35m%s\033[0m\n" "$*"; }
 exit_error()   { log_error "$*"; exit 1; }
 
+# ===================== Module Definitions =====================
+# Using indexed arrays for bash 3.x compatibility (macOS default)
+MODULE_NAMES=(
+    "secrets:Sealed Secrets"
+    "etl-init:ETL Initializer Service"
+    "etl-config:ETL Configuration (YAML files)"
+    "auth:Auth Service"
+    "gateway:Gateway Service"
+    "data-gen:Data Generator Service"
+    "approval:Approval Workflow Core (dependency)"
+    "loader:Signal Loader Service"
+    "import-export:Import-Export Service"
+    "frontend:Frontend (monitoring-frontend)"
+)
+TOTAL_MODULES=${#MODULE_NAMES[@]}
+
+# Track which modules to run (space-separated list)
+RUN_MODULES=""
+
+# ===================== Module Selection =====================
+show_usage() {
+    echo ""
+    echo "Usage: $0 [options] [module_numbers...]"
+    echo ""
+    echo "Options:"
+    echo "  -1           Run ALL modules (non-interactive)"
+    echo "  -h, --help   Show this help message"
+    echo ""
+    echo "Available modules:"
+    for i in $(seq 1 $TOTAL_MODULES); do
+        local idx=$((i - 1))
+        IFS=':' read -r id name <<< "${MODULE_NAMES[$idx]}"
+        printf "  %2d) %s\n" "$i" "$name"
+    done
+    echo ""
+    echo "Examples:"
+    echo "  $0           # Interactive mode - prompts for module selection"
+    echo "  $0 -1        # Run ALL modules (non-interactive)"
+    echo "  $0 4 5       # Run only Auth Service and Gateway Service"
+    echo "  $0 8 10      # Run only Signal Loader and Frontend"
+    echo ""
+}
+
+show_module_menu() {
+    echo ""
+    log_purple "╔════════════════════════════════════════════════════════════╗"
+    log_purple "║              SELECT MODULES TO INSTALL                      ║"
+    log_purple "╠════════════════════════════════════════════════════════════╣"
+    for i in $(seq 1 $TOTAL_MODULES); do
+        local idx=$((i - 1))
+        IFS=':' read -r id name <<< "${MODULE_NAMES[$idx]}"
+        printf "\033[0;35m║  %2d) %-54s ║\033[0m\n" "$i" "$name"
+    done
+    log_purple "╠════════════════════════════════════════════════════════════╣"
+    log_purple "║  -1) ALL MODULES                                           ║"
+    log_purple "║   0) EXIT                                                  ║"
+    log_purple "╚════════════════════════════════════════════════════════════╝"
+    echo ""
+}
+
+prompt_module_selection() {
+    show_module_menu
+    printf "${GREEN}Enter module numbers (space-separated) or -1 for all: ${NC}"
+    read -r MODULE_INPUT < /dev/tty
+
+    # Trim whitespace
+    MODULE_INPUT=$(echo "$MODULE_INPUT" | xargs)
+
+    # Check for exit
+    if [[ "$MODULE_INPUT" == "0" ]]; then
+        log_info "Installation cancelled by user"
+        exit 0
+    fi
+
+    # Check for all modules
+    if [[ "$MODULE_INPUT" == "-1" ]]; then
+        RUN_MODULES=$(seq 1 $TOTAL_MODULES | tr '\n' ' ')
+        return
+    fi
+
+    # Parse selected modules
+    for num in $MODULE_INPUT; do
+        if [[ "$num" =~ ^[0-9]+$ ]] && [ "$num" -ge 1 ] && [ "$num" -le $TOTAL_MODULES ]; then
+            RUN_MODULES="$RUN_MODULES $num "
+        else
+            log_error "Invalid module number: $num"
+            return 1
+        fi
+    done
+
+    if [ -z "$RUN_MODULES" ]; then
+        log_error "No modules selected"
+        return 1
+    fi
+
+    return 0
+}
+
+parse_module_args() {
+    # Store args for later - we'll prompt after context confirmation if no args
+    CMDLINE_ARGS="$*"
+
+    # Check for help
+    if [[ "$1" == "-h" || "$1" == "--help" ]]; then
+        show_usage
+        exit 0
+    fi
+
+    # Check for -1 (all modules, non-interactive)
+    if [[ "$1" == "-1" ]]; then
+        RUN_MODULES=$(seq 1 $TOTAL_MODULES | tr '\n' ' ')
+        INTERACTIVE_MODE=false
+        return
+    fi
+
+    # If arguments provided, use them (non-interactive)
+    if [ $# -gt 0 ]; then
+        for arg in "$@"; do
+            if [[ "$arg" =~ ^[0-9]+$ ]] && [ "$arg" -ge 1 ] && [ "$arg" -le $TOTAL_MODULES ]; then
+                RUN_MODULES="$RUN_MODULES $arg "
+            else
+                log_error "Invalid module number: $arg"
+                show_usage
+                exit 1
+            fi
+        done
+        INTERACTIVE_MODE=false
+        return
+    fi
+
+    # No arguments - will prompt interactively after context confirmation
+    INTERACTIVE_MODE=true
+}
+
+should_run_module() {
+    local module_num=$1
+    [[ " $RUN_MODULES " == *" $module_num "* ]]
+}
+
+show_selected_modules() {
+    log_section "Selected Modules"
+    local count=0
+    for i in $(seq 1 $TOTAL_MODULES); do
+        if should_run_module $i; then
+            local idx=$((i - 1))
+            IFS=':' read -r id name <<< "${MODULE_NAMES[$idx]}"
+            log_info "[$i] $name"
+            count=$((count + 1))
+        fi
+    done
+    echo ""
+    log_info "Total modules to run: $count"
+}
+
+# Parse command line arguments (sets INTERACTIVE_MODE flag)
+INTERACTIVE_MODE=true
+parse_module_args "$@"
+
+# Show selected modules if non-interactive mode
+if [ "$INTERACTIVE_MODE" = false ]; then
+    show_selected_modules
+fi
+
 # ===================== Prompt Helper =====================
 prompt_choice() {
   local message="$1"
@@ -47,12 +210,15 @@ prompt_choice() {
 
 # ===================== Configuration =====================
 log_section "Verify Configuration"
-PROJECT_ROOT="/Volumes/Files/Projects/newLoader"
+
 SEALED_NS="sealed-secrets"
 A_NAMESPACE="monitoring-app"
 k_context="docker-desktop"
+PROJECT_ROOT="$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)" 
 
 log_info "Switching to project root"
+
+cd "${PROJECT_ROOT}"
 log_info "Please verify the parameters below before proceeding"
 
 log_debug "PROJECT_ROOT = ${PROJECT_ROOT}"
@@ -74,11 +240,50 @@ log_info "Current kubectl context: $(kubectl config current-context)"
 prompt_choice "Is this valid context?" "Y/n"
 [[ "$CONFIRM" =~ ^[Yy]$ ]] || exit_error "Aborted by user"
 
+# ===================== Interactive Module Selection =====================
+if [ "$INTERACTIVE_MODE" = true ]; then
+    while true; do
+        if prompt_module_selection; then
+            show_selected_modules
+            prompt_choice "Proceed with selected modules?" "Y/n"
+            if [[ "$CONFIRM" =~ ^[Yy]$ ]]; then
+                break
+            else
+                RUN_MODULES=""  # Reset for re-selection
+            fi
+        fi
+    done
+fi
+
 # ===================== Namespaces =====================
-log_section "Creating namespaces"
+log_section "Managing namespaces"
 
-kubectl delete namespace monitoring-app --ignore-not-found
+# Check if this is a FULL deployment (all modules selected)
+SELECTED_COUNT=0
+for i in $(seq 1 $TOTAL_MODULES); do
+    if should_run_module $i; then
+        SELECTED_COUNT=$((SELECTED_COUNT + 1))
+    fi
+done
 
+if [ "$SELECTED_COUNT" -eq "$TOTAL_MODULES" ]; then
+    # Full deployment - ask before deleting namespace
+    log_warn "Full deployment detected. This will DELETE and recreate the namespace."
+    prompt_choice "Delete existing namespace and start fresh?" "Y/n"
+    if [[ "$CONFIRM" =~ ^[Yy]$ ]]; then
+        kubectl delete namespace monitoring-app --ignore-not-found
+        log_info "Namespace deleted. Waiting for cleanup..."
+        sleep 5
+    else
+        log_info "Keeping existing namespace (incremental deployment)"
+    fi
+else
+    # Partial deployment - do NOT delete namespace
+    log_info "Partial deployment detected ($SELECTED_COUNT/$TOTAL_MODULES modules)"
+    log_info "Existing namespace will be preserved"
+fi
+
+# Ensure namespace exists
 kubectl create namespace "${A_NAMESPACE}" --dry-run=client -o yaml | kubectl apply -f -
 
 log_info "Current Kubernetes namespaces:"
@@ -88,24 +293,26 @@ if ! kubectl get namespace "${A_NAMESPACE}" >/dev/null 2>&1; then
    exit_error "Namespace '${A_NAMESPACE}' was not created successfully"
 fi
 
+log_info "Namespace validated successfully"
 
-log_info "Namespaces validated successfully"
 
+# ===================== Module 1: Sealed Secrets =====================
+if should_run_module 1; then
+    cd "${PROJECT_ROOT}/services/secrets" || exit_error "Missing directory: ${PROJECT_ROOT}/services/secrets"
 
-# ===================== Selaed secret  =====================
-cd "${PROJECT_ROOT}/services/secrets" || exit_error "Missing directory: ${PROJECT_ROOT}/services/secrets"
+    log_section "[1/10] Installing Sealed Secrets"
 
-log_section "installing Sealed Secrets "
+    kubeseal \
+      --controller-name=sealed-secrets \
+      --controller-namespace=${SEALED_NS} \
+      --namespace ${A_NAMESPACE} \
+      --format yaml \
+      < app-secrets-plain.yaml \
+      > app-secrets-sealed.yaml || exit_error "kubeseal failed"
 
-kubeseal \
-  --controller-name=sealed-secrets \
-  --controller-namespace=${SEALED_NS} \
-  --namespace ${A_NAMESPACE} \
-  --format yaml \
-  < app-secrets-plain.yaml \
-  > app-secrets-sealed.yaml || exit_error "kubeseal failed"
-
-kubectl apply -f app-secrets-sealed.yaml || exit_error "Applying sealed secret failed"
+    kubectl apply -f app-secrets-sealed.yaml || exit_error "Applying sealed secret failed"
+    log_success "Sealed Secrets module completed"
+fi
 
 
 
@@ -266,7 +473,7 @@ check_health_probe() {
     # Call health endpoint
     local response=$(curl -s -w "\n%{http_code}" "http://localhost:$local_port$path" 2>/dev/null || echo "FAILED")
     local http_code=$(echo "$response" | tail -1)
-    local body=$(echo "$response" | head -n -1)
+    local body=$(echo "$response" | sed '$d')
 
     # Kill port-forward
     kill $pf_pid 2>/dev/null || true
@@ -302,12 +509,13 @@ check_actuator_endpoints() {
 }
 
 
-# ===================== ETL Initializer =====================
+# ===================== Module 2: ETL Initializer =====================
+if should_run_module 2; then
 cd "${PROJECT_ROOT}/services/etl_initializer" || exit_error "Missing directory: ${PROJECT_ROOT}/services/etl_initializer"
 
 SERVICE_NAME="etl-initializer"
 
-log_section "Installing ETL Initializer Service"
+log_section "[2/10] Installing ETL Initializer Service"
 
 log_info "Running Maven build..."
 
@@ -466,9 +674,10 @@ kubectl exec -n monitoring-infra postgres-postgresql-0 -- \
 
 log_success "Messages dictionary loaded successfully"
 
+fi  # End of module 2
 
-
-# ===================== Auth Service =====================
+# ===================== Module 4: Auth Service =====================
+if should_run_module 4; then
 cd "${PROJECT_ROOT}/services/auth-service" || exit_error "Missing directory: ${PROJECT_ROOT}/services/auth-service"
 
 SERVICE_NAME="auth-service"
@@ -523,10 +732,10 @@ scan_pod_logs "$SERVICE_NAME" "$A_NAMESPACE" 60
 check_actuator_endpoints "$SERVICE_NAME" "$A_NAMESPACE" 8081
 
 log_success "Auth service installed successfully"
+fi  # End of module 4
 
-
-
-# ===================== Gateway Service =====================
+# ===================== Module 5: Gateway Service =====================
+if should_run_module 5; then
 cd "${PROJECT_ROOT}/services/gateway" || exit_error "Missing directory: ${PROJECT_ROOT}/services/gateway"
 
 SERVICE_NAME="gateway-service"
@@ -595,10 +804,10 @@ log_success "Gateway service installed successfully"
 
 log_info "Gateway NodePort: 30088"
 log_info "Test gateway: curl http://localhost:30088/actuator/health"
+fi  # End of module 5
 
-
-
-# ===================== DATA Generator =====================
+# ===================== Module 6: Data Generator =====================
+if should_run_module 6; then
 cd "${PROJECT_ROOT}/services/dataGenerator" || exit_error "Missing directory: ${PROJECT_ROOT}/services/dataGenerator"
 
 SERVICE_NAME="data-generator"
@@ -656,10 +865,10 @@ scan_pod_logs "$SERVICE_NAME" "$A_NAMESPACE" 60
 check_actuator_endpoints "$SERVICE_NAME" "$A_NAMESPACE" 8080
 
 log_success "data-generator service installed successfully"
+fi  # End of module 6
 
-
-
-# ===================== approval-workflow-core (dependency) =====================
+# ===================== Module 7: approval-workflow-core (dependency) =====================
+if should_run_module 7; then
 log_section "Building approval-workflow-core dependency"
 
 cd "${PROJECT_ROOT}/services/approval-workflow-core" || exit_error "Missing directory: ${PROJECT_ROOT}/services/approval-workflow-core"
@@ -672,8 +881,10 @@ if ! mvn clean install -Dmaven.test.skip=true; then
 fi
 
 log_success "approval-workflow-core installed to local Maven repository (~/.m2/repository)"
+fi  # End of module 7
 
-# ===================== signal loader =====================
+# ===================== Module 8: Signal Loader =====================
+if should_run_module 8; then
 cd "${PROJECT_ROOT}/services/loader" || exit_error "Missing directory: ${PROJECT_ROOT}/services/loader"
 
 SERVICE_NAME="signal-loader"
@@ -731,10 +942,10 @@ scan_pod_logs "$SERVICE_NAME" "$A_NAMESPACE" 60
 check_actuator_endpoints "$SERVICE_NAME" "$A_NAMESPACE" 8080
 
 log_success "loader-deployment service installed successfully"
+fi  # End of module 8
 
-
-
-# ===================== Import-Export Service =====================
+# ===================== Module 9: Import-Export Service =====================
+if should_run_module 9; then
 cd "${PROJECT_ROOT}/services/import-export-service" || exit_error "Missing directory: ${PROJECT_ROOT}/services/import-export-service"
 
 SERVICE_NAME="import-export-service"
@@ -800,14 +1011,148 @@ scan_pod_logs "$SERVICE_NAME" "$A_NAMESPACE" 60
 check_actuator_endpoints "$SERVICE_NAME" "$A_NAMESPACE" 8080
 
 log_success "import-export-service installed successfully"
+fi  # End of module 9
 
+# ===================== Module 10: Frontend =====================
+if should_run_module 10; then
+    FRONTEND_DIR="${PROJECT_ROOT}/frontend"
+    SERVICE_NAME="loader-frontend"
+    IMAGE_TAG="loader-frontend:latest"
 
+    cd "${FRONTEND_DIR}" || exit_error "Missing directory: ${FRONTEND_DIR}"
 
-# ===================== Frontend =====================
+    log_section "[10/10] Building Frontend Application"
+
+    # Check if package.json exists
+    if [ ! -f "package.json" ]; then
+        exit_error "package.json not found in ${FRONTEND_DIR}"
+    fi
+
+    log_info "Installing npm dependencies..."
+    if ! npm install; then
+        log_error "npm install failed"
+        exit 1
+    fi
+    log_success "npm install completed"
+
+    # Generate Build Info
+    log_info "Generating build information..."
+    BUILD_NUMBER="$(date +%s)"
+    BUILD_DATE="$(date -u +"%Y-%m-%dT%H:%M:%SZ")"
+    APP_VERSION="1.0.0"
+
+    cat > src/buildInfo.ts <<EOF
+// Auto-generated build information
+// This file is updated automatically by the deployment script
+
+export const BUILD_INFO = {
+  buildNumber: '${BUILD_NUMBER}',
+  buildDate: '${BUILD_DATE}',
+  version: '${APP_VERSION}',
+};
+EOF
+    log_success "Build info generated: Build #${BUILD_NUMBER}"
+
+    log_info "Building production bundle with Vite..."
+    if ! npm run build; then
+        log_error "npm run build failed"
+        exit 1
+    fi
+    log_success "Frontend build completed"
+
+    # Verify dist directory exists
+    if [ ! -d "dist" ]; then
+        exit_error "Build output directory 'dist' not found. Build may have failed."
+    fi
+    log_info "Build artifacts verified in dist/"
+
+    # Docker Image Build
+    log_section "Building Frontend Docker Image"
+
+    if [ ! -f "Dockerfile" ]; then
+        exit_error "Dockerfile is required for containerization"
+    fi
+
+    VERSION="1.2.0-$(date +%Y%m%d%H%M%S)"
+    log_info "Building Docker image with version: ${VERSION}"
+    log_info "Enterprise deployment: --no-cache --pull ensures fresh build"
+
+    if ! docker build --no-cache --pull -t loader-frontend:${VERSION} -t "${IMAGE_TAG}" .; then
+        log_error "Docker image build failed"
+        exit 1
+    else
+        if docker images "loader-frontend:${VERSION}" --format "{{.Repository}}:{{.Tag}}" | grep -q "loader-frontend:${VERSION}"; then
+            log_success "Image verified in local Docker registry"
+        else
+            log_error "Image not found in local Docker registry!"
+            exit 1
+        fi
+        log_success "Build completed: loader-frontend:${VERSION} (also tagged latest)"
+    fi
+
+    # Generate deployment YAML from template
+    log_info "Generating deployment YAML from template with image: loader-frontend:${VERSION}"
+    K8S_TEMPLATE="${FRONTEND_DIR}/k8s_manifist/frontend-deployment.yaml.template"
+    K8S_MANIFEST="${FRONTEND_DIR}/k8s_manifist/frontend-deployment.yaml"
+
+    if [ ! -f "$K8S_TEMPLATE" ]; then
+        exit_error "Template file not found: $K8S_TEMPLATE"
+    fi
+
+    rm -f "$K8S_MANIFEST" "${K8S_MANIFEST}".bak*
+    cp "$K8S_TEMPLATE" "$K8S_MANIFEST"
+    sed -i '' "s|__IMAGE_TAG__|loader-frontend:${VERSION}|g" "$K8S_MANIFEST"
+    log_success "Deployment YAML generated from template"
+
+    # Kubernetes Deployment
+    log_section "Deploying Frontend to Kubernetes"
+
+    if ! kubectl apply -f "$K8S_MANIFEST" -n "${A_NAMESPACE}"; then
+        log_error "Frontend deployment manifest failed"
+        exit 1
+    else
+        log_success "Frontend deployment manifest applied"
+    fi
+
+    # Health Monitoring
+    monitor_pod_health "$SERVICE_NAME" "$A_NAMESPACE" 120
+
+    POD_STATUS=$(get_pod_status "$SERVICE_NAME" "$A_NAMESPACE")
+    log_info "Frontend Pod Status: $POD_STATUS"
+
+    scan_pod_logs "$SERVICE_NAME" "$A_NAMESPACE" 100
+
+    # Service Verification
+    log_section "Verifying Frontend Service"
+
+    if kubectl get service "$SERVICE_NAME" -n "$A_NAMESPACE" >/dev/null 2>&1; then
+        log_success "Service '$SERVICE_NAME' exists"
+        kubectl get service "$SERVICE_NAME" -n "$A_NAMESPACE"
+    fi
+
+    NODEPORT_SERVICE="${SERVICE_NAME}-nodeport"
+    if kubectl get service "$NODEPORT_SERVICE" -n "$A_NAMESPACE" >/dev/null 2>&1; then
+        log_success "Service '$NODEPORT_SERVICE' (NodePort) exists"
+        NODEPORT=$(kubectl get service "$NODEPORT_SERVICE" -n "$A_NAMESPACE" -o jsonpath='{.spec.ports[0].nodePort}')
+        log_info "Frontend NodePort: $NODEPORT"
+        log_info "Frontend URL: http://localhost:$NODEPORT"
+    fi
+
+    log_success "Frontend module completed"
+fi
+
+# ===================== Installation Summary =====================
 log_section "Installation Complete"
 
-log_success "All services have been installed successfully!"
-log_info "You can now deploy the frontend separately using the frontend deployment script"
+SCRIPT_END_EPOCH="$(date +%s)"
+DURATION=$((SCRIPT_END_EPOCH - SCRIPT_START_EPOCH))
+DUR_M=$((DURATION / 60))
+DUR_S=$((DURATION % 60))
+
+log_success "All selected modules have been installed successfully!"
+echo
+log_info "Duration: ${DUR_M}m ${DUR_S}s (${DURATION}s)"
+log_info "Timestamp: $(date +"%Y-%m-%d %H:%M:%S")"
 
 
 

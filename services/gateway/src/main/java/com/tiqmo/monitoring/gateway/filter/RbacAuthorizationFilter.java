@@ -41,37 +41,37 @@ public class RbacAuthorizationFilter implements GlobalFilter, Ordered {
     private static final Map<String, Map<HttpMethod, Set<String>>> ACCESS_RULES = new HashMap<>();
 
     static {
-        // Admin-only endpoints
-        ACCESS_RULES.put("/api/ldr/admn", Map.of(
+        // Admin-only endpoints - /api/v1/ldr/admn/**
+        ACCESS_RULES.put("/api/v1/ldr/admn", Map.of(
                 HttpMethod.GET, Set.of("ADMIN", "OPERATOR"),
                 HttpMethod.POST, Set.of("ADMIN"),
                 HttpMethod.PUT, Set.of("ADMIN"),
                 HttpMethod.DELETE, Set.of("ADMIN")
         ));
 
-        // Loader management - restricted operations
-        ACCESS_RULES.put("/api/ldr/ldr", Map.of(
+        // Loader management - /api/v1/ldr/ldr/**
+        ACCESS_RULES.put("/api/v1/ldr/ldr", Map.of(
                 HttpMethod.POST, Set.of("ADMIN"),
                 HttpMethod.PUT, Set.of("ADMIN"),
                 HttpMethod.DELETE, Set.of("ADMIN")
         ));
 
-        // Approval management - admin/operator can approve
-        ACCESS_RULES.put("/api/ldr/apv/approve", Map.of(
+        // Approval management - /api/v1/ldr/apv/**
+        ACCESS_RULES.put("/api/v1/ldr/apv/approve", Map.of(
                 HttpMethod.POST, Set.of("ADMIN", "OPERATOR")
         ));
 
-        ACCESS_RULES.put("/api/ldr/apv/reject", Map.of(
+        ACCESS_RULES.put("/api/v1/ldr/apv/reject", Map.of(
                 HttpMethod.POST, Set.of("ADMIN", "OPERATOR")
         ));
 
-        // Signal ingestion - admin only
-        ACCESS_RULES.put("/api/ldr/sig/bulk", Map.of(
+        // Signal ingestion - /api/v1/ldr/sig/**
+        ACCESS_RULES.put("/api/v1/ldr/sig/bulk", Map.of(
                 HttpMethod.POST, Set.of("ADMIN")
         ));
 
-        // Import/Export - admin only
-        ACCESS_RULES.put("/api/imex", Map.of(
+        // Import/Export - /api/v1/imex/**
+        ACCESS_RULES.put("/api/v1/imex", Map.of(
                 HttpMethod.POST, Set.of("ADMIN")
         ));
     }

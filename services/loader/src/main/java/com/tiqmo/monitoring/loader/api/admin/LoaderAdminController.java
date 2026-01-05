@@ -6,6 +6,7 @@ import com.tiqmo.monitoring.loader.domain.loader.entity.LoadStatus;
 import com.tiqmo.monitoring.loader.domain.loader.entity.Loader;
 import com.tiqmo.monitoring.loader.domain.loader.repo.LoadHistoryRepository;
 import com.tiqmo.monitoring.loader.domain.loader.repo.LoaderRepository;
+import com.tiqmo.monitoring.loader.infra.config.ApiKey;
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
 import org.springframework.http.HttpStatus;
@@ -35,7 +36,7 @@ import java.util.stream.Collectors;
  */
 @Slf4j
 @RestController
-@RequestMapping("/api/ldr/admn")
+@RequestMapping("/api/v1/ldr/admn")
 @RequiredArgsConstructor
 public class LoaderAdminController {
 
@@ -95,6 +96,7 @@ public class LoaderAdminController {
    * @return adjustment result
    */
   @PostMapping("/{loaderCode}/adjust-timestamp")
+  @ApiKey(value = "ldr.admin.adjustTimestamp", description = "Adjust loader lastLoadTimestamp", tags = {"admin"})
   public ResponseEntity<AdjustTimestampResponse> adjustTimestamp(
       @PathVariable String loaderCode,
       @RequestBody AdjustTimestampRequest request
@@ -138,6 +140,7 @@ public class LoaderAdminController {
    * @return loader status
    */
   @GetMapping("/{loaderCode}/status")
+  @ApiKey(value = "ldr.admin.status", description = "Get loader operational status", tags = {"admin"})
   public ResponseEntity<LoaderStatusResponse> getStatus(@PathVariable String loaderCode) {
     Optional<Loader> loaderOpt = loaderRepository.findByLoaderCode(loaderCode);
 
@@ -210,6 +213,7 @@ public class LoaderAdminController {
    * @return pause result
    */
   @PostMapping("/{loaderCode}/pause")
+  @ApiKey(value = "ldr.admin.pause", description = "Pause a loader from execution", tags = {"admin"})
   public ResponseEntity<PauseResumeResponse> pauseLoader(@PathVariable String loaderCode) {
     log.info("Round 15: Pausing loader: {}", loaderCode);
 
@@ -275,6 +279,7 @@ public class LoaderAdminController {
    * @return resume result
    */
   @PostMapping("/{loaderCode}/resume")
+  @ApiKey(value = "ldr.admin.resume", description = "Resume a paused loader", tags = {"admin"})
   public ResponseEntity<PauseResumeResponse> resumeLoader(@PathVariable String loaderCode) {
     log.info("Round 15: Resuming loader: {}", loaderCode);
 
@@ -390,6 +395,7 @@ public class LoaderAdminController {
    * @return list of execution history records
    */
   @GetMapping("/history")
+  @ApiKey(value = "ldr.admin.history", description = "Query loader execution history", tags = {"admin"})
   public ResponseEntity<List<ExecutionHistoryResponse>> queryExecutionHistory(
       @RequestParam(required = false) String loaderCode,
       @RequestParam(required = false) Instant startTimeFrom,

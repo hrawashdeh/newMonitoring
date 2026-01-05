@@ -3,6 +3,7 @@ package com.tiqmo.monitoring.loader.api.admin;
 import com.tiqmo.monitoring.loader.domain.config.entity.ConfigPlan;
 import com.tiqmo.monitoring.loader.domain.config.entity.ConfigValue;
 import com.tiqmo.monitoring.loader.dto.admin.ActivatePlanRequest;
+import com.tiqmo.monitoring.loader.infra.config.ApiKey;
 import com.tiqmo.monitoring.loader.service.config.ConfigService;
 import jakarta.validation.Valid;
 import lombok.RequiredArgsConstructor;
@@ -30,7 +31,7 @@ import java.util.stream.Collectors;
  * </ul>
  */
 @RestController
-@RequestMapping("/api/ldr/cfg")
+@RequestMapping("/api/v1/ldr/cfg")
 @RequiredArgsConstructor
 @Slf4j
 public class ConfigAdminController {
@@ -45,6 +46,7 @@ public class ConfigAdminController {
      * @return response with activation details
      */
     @PostMapping("/activate-plan")
+    @ApiKey(value = "ldr.config.activatePlan", description = "Activate a configuration plan", tags = {"admin"})
     public ResponseEntity<Map<String, Object>> activatePlan(@Valid @RequestBody ActivatePlanRequest request) {
         log.info("Received request to activate plan: {}.{}", request.getParent(), request.getPlanName());
 
@@ -68,6 +70,7 @@ public class ConfigAdminController {
      * @return response with active plan details including all config values
      */
     @GetMapping("/{parent}/active-plan")
+    @ApiKey(value = "ldr.config.activePlan", description = "Get active config plan for parent", tags = {"admin"})
     public ResponseEntity<Map<String, Object>> getActivePlan(@PathVariable String parent) {
         log.debug("Fetching active plan for parent: {}", parent);
 
@@ -105,6 +108,7 @@ public class ConfigAdminController {
      * @return response with list of all plans
      */
     @GetMapping("/{parent}/plans")
+    @ApiKey(value = "ldr.config.plans", description = "List all config plans for parent", tags = {"admin"})
     public ResponseEntity<Map<String, Object>> listPlans(@PathVariable String parent) {
         log.debug("Listing all plans for parent: {}", parent);
 
@@ -138,6 +142,7 @@ public class ConfigAdminController {
      * @return response with refresh status
      */
     @PostMapping("/{parent}/refresh-cache")
+    @ApiKey(value = "ldr.config.refreshCache", description = "Refresh config cache for parent", tags = {"admin"})
     public ResponseEntity<Map<String, Object>> refreshCache(@PathVariable String parent) {
         log.info("Refreshing config cache for parent: {}", parent);
 

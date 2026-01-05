@@ -5,6 +5,7 @@ import com.tiqmo.monitoring.loader.domain.loader.entity.BackfillJobStatus;
 import com.tiqmo.monitoring.loader.domain.loader.entity.PurgeStrategy;
 import com.tiqmo.monitoring.loader.dto.admin.BackfillJobResponse;
 import com.tiqmo.monitoring.loader.dto.admin.SubmitBackfillRequest;
+import com.tiqmo.monitoring.loader.infra.config.ApiKey;
 import com.tiqmo.monitoring.loader.service.backfill.BackfillService;
 import jakarta.validation.Valid;
 import lombok.RequiredArgsConstructor;
@@ -44,7 +45,7 @@ import java.util.Map;
  * @since 1.0.0
  */
 @RestController
-@RequestMapping("/api/ldr/bkfl")
+@RequestMapping("/api/v1/ldr/bkfl")
 @RequiredArgsConstructor
 @Slf4j
 public class BackfillAdminController {
@@ -70,6 +71,7 @@ public class BackfillAdminController {
      * @return Created backfill job
      */
     @PostMapping("/submit")
+    @ApiKey(value = "ldr.backfill.submit", description = "Submit a new backfill job", tags = {"admin"})
     public ResponseEntity<BackfillJobResponse> submitBackfillJob(
             @Valid @RequestBody SubmitBackfillRequest request) {
 
@@ -104,6 +106,7 @@ public class BackfillAdminController {
      * @return Executed backfill job
      */
     @PostMapping("/{id}/execute")
+    @ApiKey(value = "ldr.backfill.execute", description = "Execute a pending backfill job", tags = {"admin"})
     public ResponseEntity<BackfillJobResponse> executeBackfillJob(@PathVariable Long id) {
         log.info("Executing backfill job #{}", id);
 
@@ -119,6 +122,7 @@ public class BackfillAdminController {
      * @return Backfill job details
      */
     @GetMapping("/{id}")
+    @ApiKey(value = "ldr.backfill.get", description = "Get backfill job by ID", tags = {"admin"})
     public ResponseEntity<BackfillJobResponse> getBackfillJob(@PathVariable Long id) {
         BackfillJob job = backfillService.getBackfillJob(id)
             .orElseThrow(() -> new IllegalArgumentException("Backfill job not found: " + id));
@@ -133,6 +137,7 @@ public class BackfillAdminController {
      * @return List of backfill jobs (most recent first)
      */
     @GetMapping("/loader/{loaderCode}")
+    @ApiKey(value = "ldr.backfill.byLoader", description = "Get backfill jobs by loader code", tags = {"admin"})
     public ResponseEntity<List<BackfillJobResponse>> getBackfillJobsByLoader(
             @PathVariable String loaderCode) {
 
@@ -152,6 +157,7 @@ public class BackfillAdminController {
      * @return Recent backfill jobs (most recent first)
      */
     @GetMapping("/recent")
+    @ApiKey(value = "ldr.backfill.recent", description = "Get recent backfill jobs", tags = {"admin"})
     public ResponseEntity<List<BackfillJobResponse>> getRecentBackfillJobs(
             @RequestParam(defaultValue = "50") int limit) {
 
@@ -176,6 +182,7 @@ public class BackfillAdminController {
      * @return Cancelled job
      */
     @PostMapping("/{id}/cancel")
+    @ApiKey(value = "ldr.backfill.cancel", description = "Cancel a pending backfill job", tags = {"admin"})
     public ResponseEntity<BackfillJobResponse> cancelBackfillJob(@PathVariable Long id) {
         log.info("Cancelling backfill job #{}", id);
 
@@ -190,6 +197,7 @@ public class BackfillAdminController {
      * @return Statistics about active and recent backfill jobs
      */
     @GetMapping("/stats")
+    @ApiKey(value = "ldr.backfill.stats", description = "Get backfill statistics", tags = {"admin"})
     public ResponseEntity<Map<String, Object>> getBackfillStats() {
         long activeJobs = backfillService.countActiveJobs();
 

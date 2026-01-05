@@ -25,15 +25,10 @@ spring:
         format_sql: true
         default_schema: auth
 
-  # Flyway Database Migration
+  # Flyway Database Migration - DISABLED
+  # All database migrations are centralized in etl_initializer service
   flyway:
-    enabled: true
-    baseline-on-migrate: true
-    baseline-version: 0
-    locations: classpath:db/migration
-    schemas: auth
-    default-schema: auth
-    validate-on-migrate: true
+    enabled: false
 
   # Session management - stateless for JWT
   security:

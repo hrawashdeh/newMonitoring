@@ -1,8 +1,8 @@
 package com.tiqmo.monitoring.loader.service.scheduler;
 
-import com.tiqmo.monitoring.loader.domain.loader.entity.ApprovalStatus;
 import com.tiqmo.monitoring.loader.domain.loader.entity.LoadStatus;
 import com.tiqmo.monitoring.loader.domain.loader.entity.Loader;
+import com.tiqmo.monitoring.workflow.domain.VersionStatus;
 import com.tiqmo.monitoring.loader.domain.loader.repo.LoadHistoryRepository;
 import com.tiqmo.monitoring.loader.domain.loader.repo.LoaderExecutionLockRepository;
 import com.tiqmo.monitoring.loader.domain.loader.repo.LoaderRepository;
@@ -101,8 +101,8 @@ public class LoaderSchedulerService {
    *   <li>Round 11: Priority-based execution</li>
    * </ul>
    *
-   * <p><b>SECURITY:</b> Only executes APPROVED loaders. PENDING_APPROVAL and
-   * REJECTED loaders are skipped to prevent unauthorized code execution.
+   * <p><b>SECURITY:</b> Only executes ACTIVE loaders (unified approval workflow).
+   * DRAFT and PENDING_APPROVAL loaders are skipped to prevent unauthorized code execution.
    */
   @Scheduled(fixedDelay = 10000, initialDelay = 5000)
   public void scheduleLoaders() {
@@ -115,16 +115,16 @@ public class LoaderSchedulerService {
       log.trace("Executing recoverFailedLoaders()");
       recoverFailedLoaders();
 
-      // SECURITY: Find all enabled AND APPROVED loaders only
-      log.trace("Querying for enabled and approved loaders");
-      List<Loader> enabledLoaders = loaderRepository.findAllByEnabledTrueAndApprovalStatus(ApprovalStatus.APPROVED);
+      // SECURITY: Find all enabled AND ACTIVE loaders only (unified approval workflow)
+      log.trace("Querying for enabled and ACTIVE loaders");
+      List<Loader> enabledLoaders = loaderRepository.findAllByEnabledTrueAndVersionStatus(VersionStatus.ACTIVE);
       if (enabledLoaders.isEmpty()) {
-        log.debug("Scheduler: No enabled and approved loaders found");
+        log.debug("Scheduler: No enabled and ACTIVE loaders found");
         log.trace("Exiting scheduleLoaders() | reason=no_loaders");
         return;
       }
 
-      log.debug("Scheduler: Found {} enabled and approved loader(s)", enabledLoaders.size());
+      log.debug("Scheduler: Found {} enabled and ACTIVE loader(s)", enabledLoaders.size());
       log.trace("Loader codes: {}", enabledLoaders.stream().map(Loader::getLoaderCode).toList());
 
       // Round 11: Sort by priority (IDLE > RUNNING > FAILED)

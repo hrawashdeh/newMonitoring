@@ -50,7 +50,7 @@ etl:
       load_status: IDLE
       purge_strategy: FAIL_ON_DUPLICATE
       consecutive_zero_record_runs: 0
-      enabled: true
+      enabled: false
       aggregation_period_seconds: 60
       source_timezone_offset_hours: 0
 
@@ -88,7 +88,7 @@ etl:
       load_status: IDLE
       purge_strategy: FAIL_ON_DUPLICATE
       consecutive_zero_record_runs: 0
-      enabled: true
+      enabled: false
       aggregation_period_seconds: 60
       source_timezone_offset_hours: 0
 
@@ -126,6 +126,6 @@ etl:
       load_status: IDLE
       purge_strategy: FAIL_ON_DUPLICATE
       consecutive_zero_record_runs: 0
-      enabled: true
+      enabled: false
       aggregation_period_seconds: 60
       source_timezone_offset_hours: 0

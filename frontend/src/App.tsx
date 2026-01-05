@@ -7,6 +7,16 @@ import LoadersListPage from './pages/LoadersListPage';
 import NewLoaderPage from './pages/NewLoaderPage';
 import EditLoaderPage from './pages/EditLoaderPage';
 import ApprovalsPage from './pages/ApprovalsPage';
+import { AdminLayout } from './components/layout/AdminLayout';
+import AdminDashboardPage from './pages/admin/AdminDashboardPage';
+import ApiDiscoveryPage from './pages/admin/ApiDiscoveryPage';
+import AdminLoadersListPage from './pages/admin/LoadersListPage';
+import AdminPendingApprovalsPage from './pages/admin/PendingApprovalsPage';
+import ApiPermissionsPage from './pages/admin/ApiPermissionsPage';
+import UserManagementPage from './pages/admin/UserManagementPage';
+import RoleManagementPage from './pages/admin/RoleManagementPage';
+import SourceDatabasesPage from './pages/admin/SourceDatabasesPage';
+import AuditLogsPage from './pages/admin/AuditLogsPage';
 import { VersionNotification } from './components/VersionNotification';
 import { Toaster } from './components/ui/toaster';
 import { Footer } from './components/Footer';
@@ -101,6 +111,33 @@ function App() {
               )
             }
           />
+
+          {/* Admin Routes with Sidebar Layout */}
+          <Route
+            path="/admin"
+            element={
+              isAuthenticated() ? (
+                <AdminLayout />
+              ) : (
+                <Navigate to="/login" replace />
+              )
+            }
+          >
+            <Route index element={<AdminDashboardPage />} />
+            <Route path="loaders" element={<AdminLoadersListPage />} />
+            <Route path="loaders/new" element={<NewLoaderPage />} />
+            <Route path="loaders/pending" element={<AdminPendingApprovalsPage />} />
+            <Route path="loaders/:loaderCode/edit" element={<EditLoaderPage />} />
+            <Route path="approvals/pending" element={<AdminPendingApprovalsPage />} />
+            <Route path="approvals/history" element={<AdminPendingApprovalsPage />} />
+            <Route path="api/discovery" element={<ApiDiscoveryPage />} />
+            <Route path="api/permissions" element={<ApiPermissionsPage />} />
+            <Route path="users" element={<UserManagementPage />} />
+            <Route path="roles" element={<RoleManagementPage />} />
+            <Route path="system/sources" element={<SourceDatabasesPage />} />
+            <Route path="system/audit" element={<AuditLogsPage />} />
+          </Route>
+
           <Route path="*" element={<Navigate to="/" replace />} />
         </Routes>
       </div>

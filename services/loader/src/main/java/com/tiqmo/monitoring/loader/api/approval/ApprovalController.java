@@ -3,6 +3,7 @@ package com.tiqmo.monitoring.loader.api.approval;
 import com.tiqmo.monitoring.loader.domain.approval.entity.ApprovalAction;
 import com.tiqmo.monitoring.loader.domain.approval.entity.ApprovalRequest;
 import com.tiqmo.monitoring.loader.dto.approval.*;
+import com.tiqmo.monitoring.loader.infra.config.ApiKey;
 import com.tiqmo.monitoring.loader.service.approval.ApprovalService;
 import io.swagger.v3.oas.annotations.Operation;
 import io.swagger.v3.oas.annotations.Parameter;
@@ -32,7 +33,7 @@ import java.util.stream.Collectors;
  * @since 2025-12-29
  */
 @RestController
-@RequestMapping("/api/ldr/apv")
+@RequestMapping("/api/v1/ldr/apv")
 @RequiredArgsConstructor
 @Slf4j
 @Tag(name = "Approvals", description = "Generic approval workflow management")
@@ -49,6 +50,7 @@ public class ApprovalController {
     @PostMapping("/submit")
     @PreAuthorize("hasRole('ADMIN') or hasRole('USER')")
     @Operation(summary = "Submit approval request", description = "Submit a new approval request for any entity type")
+    @ApiKey(value = "ldr.approval.submit", description = "Submit a new approval request")
     public ResponseEntity<ApprovalRequestDto> submitApprovalRequest(
             @Valid @RequestBody SubmitApprovalRequestDto request) {
         log.info("[submitApprovalRequest] request: {}", request);
@@ -87,6 +89,7 @@ public class ApprovalController {
     @GetMapping("/pending")
     @PreAuthorize("hasRole('ADMIN')")
     @Operation(summary = "Get all pending approvals", description = "Returns all pending approval requests across all entity types")
+    @ApiKey(value = "ldr.approval.pending", description = "Get all pending approvals", tags = {"admin"})
     public ResponseEntity<List<ApprovalRequestDto>> getAllPendingApprovals() {
         List<ApprovalRequest> requests = approvalService.getAllPendingApprovals();
         List<ApprovalRequestDto> dtos = requests.stream()
@@ -101,6 +104,7 @@ public class ApprovalController {
     @GetMapping("/approved")
     @PreAuthorize("hasRole('ADMIN')")
     @Operation(summary = "Get all approved approvals", description = "Returns all approved approval requests across all entity types")
+    @ApiKey(value = "ldr.approval.approved", description = "Get all approved approvals", tags = {"admin"})
     public ResponseEntity<List<ApprovalRequestDto>> getAllApprovedApprovals() {
         log.info("[ISSUE_APPROVAL_PAGE] GET /api/approvals/approved endpoint reached - fetching approved approvals");
         List<ApprovalRequest> requests = approvalService.getAllApprovedApprovals();
@@ -118,6 +122,7 @@ public class ApprovalController {
     @GetMapping("/pending/count")
     @PreAuthorize("hasRole('ADMIN')")
     @Operation(summary = "Count all pending approvals", description = "Returns count of pending approvals across all entity types")
+    @ApiKey(value = "ldr.approval.pendingCount", description = "Count pending approvals", tags = {"admin"})
     public ResponseEntity<Long> countPendingApprovals(
             @Parameter(description = "Filter by entity type (optional)")
             @RequestParam(required = false) String entityType) {
@@ -136,6 +141,7 @@ public class ApprovalController {
     @GetMapping("/pending/{entityType}")
     @PreAuthorize("hasRole('ADMIN')")
     @Operation(summary = "Get pending approvals by entity type", description = "Returns pending approvals for specific entity type (LOADER, DASHBOARD, etc.)")
+    @ApiKey(value = "ldr.approval.pendingByType", description = "Get pending approvals by entity type", tags = {"admin"})
     public ResponseEntity<List<ApprovalRequestDto>> getPendingApprovalsByType(
             @Parameter(description = "Entity type (LOADER, DASHBOARD, INCIDENT, CHART, ALERT_RULE)")
             @PathVariable String entityType) {
@@ -155,6 +161,7 @@ public class ApprovalController {
     @GetMapping("/history/{entityType}/{entityId}")
     @PreAuthorize("hasRole('ADMIN') or hasRole('USER')")
     @Operation(summary = "Get approval history for entity", description = "Returns complete approval history for specific entity")
+    @ApiKey(value = "ldr.approval.history", description = "Get approval history for entity")
     public ResponseEntity<List<ApprovalRequestDto>> getApprovalHistory(
             @Parameter(description = "Entity type")
             @PathVariable String entityType,
@@ -176,6 +183,7 @@ public class ApprovalController {
     @GetMapping("/{requestId}/actions")
     @PreAuthorize("hasRole('ADMIN') or hasRole('USER')")
     @Operation(summary = "Get action audit trail", description = "Returns complete audit trail of all actions taken on approval request")
+    @ApiKey(value = "ldr.approval.actions", description = "Get action audit trail for approval")
     public ResponseEntity<List<ApprovalActionDto>> getApprovalActions(
             @Parameter(description = "Approval request ID")
             @PathVariable Long requestId) {
@@ -194,6 +202,7 @@ public class ApprovalController {
     @GetMapping("/{requestId}")
     @PreAuthorize("hasRole('ADMIN') or hasRole('USER')")
     @Operation(summary = "Get approval request details", description = "Returns approval request with full details including action audit trail")
+    @ApiKey(value = "ldr.approval.get", description = "Get approval request by ID")
     public ResponseEntity<ApprovalRequestDto> getApprovalRequest(
             @Parameter(description = "Approval request ID")
             @PathVariable Long requestId,
@@ -223,6 +232,7 @@ public class ApprovalController {
     @PostMapping("/approve")
     @PreAuthorize("hasRole('ADMIN')")
     @Operation(summary = "Approve request", description = "Approve a pending approval request")
+    @ApiKey(value = "ldr.approval.approve", description = "Approve a pending request", tags = {"admin"})
     public ResponseEntity<ApprovalRequestDto> approveRequest(
             @Valid @RequestBody ApproveRequestDto request,
             Authentication authentication) {
@@ -243,6 +253,7 @@ public class ApprovalController {
     @PostMapping("/reject")
     @PreAuthorize("hasRole('ADMIN')")
     @Operation(summary = "Reject request", description = "Reject a pending approval request (requires justification)")
+    @ApiKey(value = "ldr.approval.reject", description = "Reject a pending request", tags = {"admin"})
     public ResponseEntity<ApprovalRequestDto> rejectRequest(
             @Valid @RequestBody RejectRequestDto request,
             Authentication authentication) {
@@ -263,6 +274,7 @@ public class ApprovalController {
     @PostMapping("/resubmit")
     @PreAuthorize("hasRole('ADMIN') or hasRole('USER')")
     @Operation(summary = "Resubmit request", description = "Resubmit a rejected approval request with optional changes")
+    @ApiKey(value = "ldr.approval.resubmit", description = "Resubmit a rejected request")
     public ResponseEntity<ApprovalRequestDto> resubmitRequest(
             @Valid @RequestBody ResubmitRequestDto request,
             Authentication authentication) {
@@ -284,6 +296,7 @@ public class ApprovalController {
     @PostMapping("/revoke")
     @PreAuthorize("hasRole('ADMIN')")
     @Operation(summary = "Revoke approval", description = "Revoke an approved request (requires justification)")
+    @ApiKey(value = "ldr.approval.revoke", description = "Revoke an approved request", tags = {"admin"})
     public ResponseEntity<ApprovalRequestDto> revokeApproval(
             @Valid @RequestBody RevokeApprovalDto request,
             Authentication authentication) {

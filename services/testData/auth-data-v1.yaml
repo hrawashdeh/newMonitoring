@@ -5,7 +5,7 @@ auth:
 
   users:
     - username: admin
-      password: $2y$10$xWWcR5TAfL2QlfAjcVhws.HS3MhHSZkTl17goQVN13kodF678JXvG  # HaAdmin123
+      password: $2b$12$e2gXHDQ0tM8nXyb8GTeCV.SOSB5IT1ylyCVBUDRNmuRtG2YuirWXq  # HaAdmim123
       email: admin@me.sa
       full_name: System Administrator
       enabled: true

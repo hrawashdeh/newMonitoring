@@ -44,8 +44,8 @@ public class JwtAuthenticationFilter implements GlobalFilter, Ordered {
 
     // Public endpoints that don't require authentication
     private static final Set<String> PUBLIC_ENDPOINTS = Set.of(
-            "/api/auth/auth/login",
-            "/api/auth/auth/register",
+            "/api/v1/auth/auth/login",
+            "/api/v1/auth/auth/register",
             "/actuator/health",
             "/actuator/info",
             "/fallback/loader",

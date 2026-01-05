@@ -352,15 +352,18 @@ public class Loader implements WorkflowEntity {
     @Column(name = "import_label", length = 255)
     private String importLabel;
 
-    // ==================== APPROVAL WORKFLOW ====================
+    // ==================== APPROVAL WORKFLOW (DEPRECATED) ====================
 
     /**
      * Approval workflow status.
-     * All new loaders start as PENDING_APPROVAL and require admin approval.
      *
-     * <p><b>Critical Security:</b> This field cannot be changed via regular update endpoint.
-     * Only dedicated approve/reject endpoints can modify this value.
+     * @deprecated Use {@link #versionStatus} instead. The approval workflow is now unified
+     *             to use version_status (DRAFT, PENDING_APPROVAL, ACTIVE).
+     *             Mapping: APPROVED → ACTIVE, PENDING_APPROVAL → PENDING_APPROVAL, REJECTED → DRAFT
+     *             This field will be removed in a future migration.
+     * @see #versionStatus
      */
+    @Deprecated(since = "2.0.0", forRemoval = true)
     @Enumerated(EnumType.STRING)
     @Column(name = "approval_status", nullable = false, length = 20)
     @Builder.Default

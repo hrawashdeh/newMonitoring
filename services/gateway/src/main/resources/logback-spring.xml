@@ -1,72 +1,198 @@
 <?xml version="1.0" encoding="UTF-8"?>
 <configuration>
     <!--
-        Elasticsearch-Compatible JSON Logging Configuration
-        API Gateway Service - JSON ONLY (No Profile Switching)
-        
-        This configuration ALWAYS outputs JSON logs for Kibana/Elasticsearch.
-        No dev/prod profile switching to prevent mixed-format output.
+        Elasticsearch-Compatible Structured Logging Configuration
+        API Gateway Service
+
+        Profiles:
+        - dev/default: Human-readable console logging (Kubernetes)
+        - prod/production: JSON structured logging for Elasticsearch/ELK
+
+        Features:
+        - MDC fields: requestId, correlationId, routeId, targetUri, etc.
+        - Profile-based log formats
+        - Elasticsearch-compatible JSON in production
+
+        Author: Hassan Rawashdeh
+        Date: 2025-12-31
     -->
-    
+
     <!-- Load Spring properties -->
     <springProperty scope="context" name="APP_NAME" source="spring.application.name" defaultValue="gateway-service"/>
     <springProperty scope="context" name="LOG_LEVEL" source="logging.level.root" defaultValue="INFO"/>
-    
-    <!-- Console JSON Appender for Kubernetes/Elasticsearch -->
-    <appender name="CONSOLE_JSON" class="ch.qos.logback.core.ConsoleAppender">
-        <encoder class="net.logstash.logback.encoder.LogstashEncoder">
-            <!-- OpenTelemetry trace correlation fields (MUST be first) -->
-            <includeMdcKeyName>trace.id</includeMdcKeyName>
-            <includeMdcKeyName>span.id</includeMdcKeyName>
-            <includeMdcKeyName>operation.name</includeMdcKeyName>
+    <property name="LOG_PATH" value="${LOG_PATH:-./logs}"/>
 
-            <!-- Core MDC fields (all services) -->
-            <includeMdcKeyName>correlationId</includeMdcKeyName>
-            <includeMdcKeyName>requestId</includeMdcKeyName>
-            <includeMdcKeyName>contextId</includeMdcKeyName>
-            <includeMdcKeyName>processId</includeMdcKeyName>
-            <includeMdcKeyName>serviceId</includeMdcKeyName>
-            <includeMdcKeyName>httpMethod</includeMdcKeyName>
-            <includeMdcKeyName>requestPath</includeMdcKeyName>
-            <includeMdcKeyName>statusCode</includeMdcKeyName>
-            <includeMdcKeyName>duration</includeMdcKeyName>
-            <includeMdcKeyName>clientIp</includeMdcKeyName>
-            <includeMdcKeyName>username</includeMdcKeyName>
+    <!-- ============================================ -->
+    <!-- DEV/DEFAULT PROFILE (Human-readable console) -->
+    <!-- ============================================ -->
+    <springProfile name="dev,default">
+        <appender name="CONSOLE" class="ch.qos.logback.core.ConsoleAppender">
+            <encoder>
+                <pattern>%d{yyyy-MM-dd HH:mm:ss.SSS} [%thread] %-5level %logger{36} - [correlationId=%X{correlationId}] [requestId=%X{requestId}] [routeId=%X{routeId}] [requestPath=%X{requestPath}] - %msg%n</pattern>
+            </encoder>
+        </appender>
 
-            <!-- Gateway-specific fields -->
-            <includeMdcKeyName>routeId</includeMdcKeyName>
-            <includeMdcKeyName>targetUri</includeMdcKeyName>
-            <includeMdcKeyName>userAgent</includeMdcKeyName>
-            <includeMdcKeyName>circuitBreakerState</includeMdcKeyName>
-            <includeMdcKeyName>retryCount</includeMdcKeyName>
-            
-            <!-- Custom fields -->
-            <customFields>{"service_name":"${APP_NAME}","environment":"production","service_type":"api-gateway"}</customFields>
-            
-            <!-- Shorten logger names -->
-            <shortenedLoggerNameLength>36</shortenedLoggerNameLength>
-            
-            <!-- Stack trace configuration -->
-            <throwableConverter class="net.logstash.logback.stacktrace.ShortenedThrowableConverter">
-                <maxDepthPerThrowable>30</maxDepthPerThrowable>
-                <maxLength>2048</maxLength>
-                <shortenedClassNameLength>20</shortenedClassNameLength>
-                <rootCauseFirst>true</rootCauseFirst>
-            </throwableConverter>
-        </encoder>
-    </appender>
-    
-    <!-- Package-specific loggers -->
-    <logger name="com.tiqmo.monitoring.gateway" level="INFO"/>
-    <logger name="org.springframework.cloud.gateway" level="INFO"/>
-    <logger name="org.springframework.web.reactive" level="WARN"/>
-    <logger name="reactor.netty" level="INFO"/>
+        <logger name="com.tiqmo.monitoring.gateway" level="DEBUG"/>
+        <logger name="org.springframework.cloud.gateway" level="DEBUG"/>
+        <logger name="org.springframework.web.reactive" level="DEBUG"/>
+        <logger name="reactor.netty" level="INFO"/>
+        <logger name="io.github.resilience4j" level="DEBUG"/>
+
+        <root level="${LOG_LEVEL}">
+            <appender-ref ref="CONSOLE"/>
+        </root>
+    </springProfile>
+
+    <!-- ============================================ -->
+    <!-- PRODUCTION PROFILE (Elasticsearch JSON logging) -->
+    <!-- ============================================ -->
+    <springProfile name="prod,production">
+        <!-- Console JSON Appender with nested fields for Elasticsearch -->
+        <appender name="CONSOLE_JSON" class="ch.qos.logback.core.ConsoleAppender">
+            <encoder class="net.logstash.logback.encoder.LoggingEventCompositeJsonEncoder">
+                <providers>
+                    <!-- Standard fields -->
+                    <timestamp>
+                        <fieldName>@timestamp</fieldName>
+                        <pattern>yyyy-MM-dd'T'HH:mm:ss.SSSZ</pattern>
+                    </timestamp>
+                    <logLevel>
+                        <fieldName>log.level</fieldName>
+                    </logLevel>
+                    <message>
+                        <fieldName>message</fieldName>
+                    </message>
+                    <loggerName>
+                        <fieldName>logger</fieldName>
+                        <shortenedLoggerNameLength>36</shortenedLoggerNameLength>
+                    </loggerName>
+                    <threadName>
+                        <fieldName>thread</fieldName>
+                    </threadName>
+
+                    <!-- Service info -->
+                    <pattern>
+                        <pattern>
+                            {
+                                "service.name": "${APP_NAME}",
+                                "service.version": "1.0.0",
+                                "service.type": "api-gateway"
+                            }
+                        </pattern>
+                    </pattern>
+
+                    <!-- Nested trace fields -->
+                    <pattern>
+                        <pattern>
+                            {
+                                "trace": {
+                                    "id": "%mdc{trace.id}",
+                                    "span_id": "%mdc{span.id}",
+                                    "correlation_id": "%mdc{correlationId}",
+                                    "request_id": "%mdc{requestId}",
+                                    "process_id": "%mdc{processId}"
+                                }
+                            }
+                        </pattern>
+                    </pattern>
+
+                    <!-- Nested context fields -->
+                    <pattern>
+                        <pattern>
+                            {
+                                "context": {
+                                    "service_id": "%mdc{serviceId}",
+                                    "context_id": "%mdc{contextId}",
+                                    "class": "%mdc{class}",
+                                    "method": "%mdc{method}",
+                                    "phase": "%mdc{phase}"
+                                }
+                            }
+                        </pattern>
+                    </pattern>
+
+                    <!-- Nested integration fields -->
+                    <pattern>
+                        <pattern>
+                            {
+                                "integration": {
+                                    "type": "%mdc{integrationType}",
+                                    "direction": "%mdc{integrationDirection}",
+                                    "target": "%mdc{requestPath}",
+                                    "method": "%mdc{httpMethod}",
+                                    "status_code": "%mdc{statusCode}",
+                                    "duration_ms": "%mdc{duration}"
+                                }
+                            }
+                        </pattern>
+                    </pattern>
+
+                    <!-- Nested user fields -->
+                    <pattern>
+                        <pattern>
+                            {
+                                "user": {
+                                    "id": "%mdc{userId}",
+                                    "username": "%mdc{username}",
+                                    "ip": "%mdc{clientIp}",
+                                    "user_agent": "%mdc{userAgent}"
+                                }
+                            }
+                        </pattern>
+                    </pattern>
+
+                    <!-- Nested domain fields (gateway-specific) -->
+                    <pattern>
+                        <pattern>
+                            {
+                                "domain": {
+                                    "route_id": "%mdc{routeId}",
+                                    "target_uri": "%mdc{targetUri}",
+                                    "circuit_breaker_state": "%mdc{circuitBreakerState}",
+                                    "retry_count": "%mdc{retryCount}"
+                                }
+                            }
+                        </pattern>
+                    </pattern>
+
+                    <!-- Stack trace -->
+                    <stackTrace>
+                        <throwableConverter class="net.logstash.logback.stacktrace.ShortenedThrowableConverter">
+                            <maxDepthPerThrowable>30</maxDepthPerThrowable>
+                            <maxLength>2048</maxLength>
+                            <shortenedClassNameLength>20</shortenedClassNameLength>
+                            <exclude>sun\.reflect\..*</exclude>
+                            <exclude>net\.sf\.cglib\..*</exclude>
+                            <exclude>org\.springframework\.aop\..*</exclude>
+                            <rootCauseFirst>true</rootCauseFirst>
+                        </throwableConverter>
+                    </stackTrace>
+                </providers>
+            </encoder>
+        </appender>
+
+        <!-- Package-specific loggers for production -->
+        <logger name="com.tiqmo.monitoring.gateway" level="INFO"/>
+        <logger name="org.springframework.cloud.gateway" level="INFO"/>
+        <logger name="org.springframework.web.reactive" level="WARN"/>
+        <logger name="reactor.netty" level="INFO"/>
+        <logger name="io.github.resilience4j" level="INFO"/>
+        <logger name="reactor.core" level="WARN"/>
+
+        <root level="INFO">
+            <appender-ref ref="CONSOLE_JSON"/>
+        </root>
+    </springProfile>
+
+    <!-- ============================================ -->
+    <!-- Common Logger Configurations (All Profiles) -->
+    <!-- ============================================ -->
+
+    <!-- Reduce noise from Spring framework -->
     <logger name="org.springframework.boot.autoconfigure" level="WARN"/>
     <logger name="org.springframework.boot.actuator" level="INFO"/>
-    <logger name="io.github.resilience4j" level="INFO"/>
-    <logger name="reactor.core" level="WARN"/>
-    
-    <root level="${LOG_LEVEL}">
-        <appender-ref ref="CONSOLE_JSON"/>
-    </root>
+
+    <!-- Gateway-specific loggers -->
+    <logger name="com.tiqmo.monitoring.gateway.filter" level="INFO"/>
+
 </configuration>

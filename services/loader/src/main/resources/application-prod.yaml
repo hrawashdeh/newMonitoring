@@ -12,6 +12,14 @@ spring:
     password: ${SPRING_DATASOURCE_PASSWORD}
     driver-class-name: org.postgresql.Driver
 
+  # Redis for centralized API configuration
+  data:
+    redis:
+      host: ${REDIS_HOST:redis-master.monitoring-infra.svc.cluster.local}
+      port: ${REDIS_PORT:6379}
+      password: ${REDIS_PASSWORD:}
+      timeout: 5000
+
   jpa:
     hibernate:
       # IMPORTANT: Schema created by DDL scripts, not Hibernate
@@ -45,6 +53,13 @@ logging:
     org.hibernate: WARN
     org.springframework: WARN
     com.zaxxer.hikari: WARN
+
+# API Configuration
+api:
+  config:
+    service-id: ldr
+  gateway:
+    base-url: ${API_GATEWAY_URL:http://gateway.monitoring-app.svc.cluster.local:8080}
 
 # MySQL source pool configuration (can be overridden via env vars)
 sources:

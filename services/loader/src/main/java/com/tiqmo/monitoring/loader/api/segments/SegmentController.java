@@ -2,6 +2,7 @@ package com.tiqmo.monitoring.loader.api.segments;
 
 import com.tiqmo.monitoring.loader.domain.loader.entity.SegmentDictionary;
 import com.tiqmo.monitoring.loader.domain.signals.entity.SegmentCombination;
+import com.tiqmo.monitoring.loader.infra.config.ApiKey;
 import com.tiqmo.monitoring.loader.service.segments.SegmentService;
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
@@ -33,7 +34,7 @@ import java.util.Map;
  * @since 1.0.0
  */
 @RestController
-@RequestMapping("/api/ldr/seg")
+@RequestMapping("/api/v1/ldr/seg")
 @RequiredArgsConstructor
 @Slf4j
 public class SegmentController {
@@ -67,6 +68,7 @@ public class SegmentController {
      * @throws IllegalArgumentException if loaderCode is null or blank (handled by GlobalExceptionHandler)
      */
     @GetMapping("/dictionary")
+    @ApiKey(value = "ldr.segments.dictionary", description = "Get segment dictionary for loader")
     public ResponseEntity<Map<String, Object>> getDictionary(@RequestParam String loaderCode) {
         log.info("Fetching segment dictionary for loader: {}", loaderCode);
 
@@ -116,6 +118,7 @@ public class SegmentController {
      * @throws IllegalArgumentException if loaderCode is null or blank (handled by GlobalExceptionHandler)
      */
     @GetMapping("/combinations")
+    @ApiKey(value = "ldr.segments.combinations", description = "Get segment combinations for loader")
     public ResponseEntity<Map<String, Object>> getCombinations(@RequestParam String loaderCode) {
         log.info("Fetching segment combinations for loader: {}", loaderCode);
 
