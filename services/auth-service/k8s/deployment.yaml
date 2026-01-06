@@ -51,6 +51,17 @@ spec:
             - name: JWT_EXPIRATION_MS
               value: "86400000"  # 24 hours
 
+            # Redis configuration
+            - name: SPRING_DATA_REDIS_HOST
+              value: "redis-master.monitoring-infra.svc.cluster.local"
+            - name: SPRING_DATA_REDIS_PORT
+              value: "6379"
+            - name: SPRING_DATA_REDIS_PASSWORD
+              valueFrom:
+                secretKeyRef:
+                  name: app-secrets
+                  key: REDIS_PASSWORD
+
             # OpenTelemetry configuration
             - name: OTEL_SERVICE_NAME
               value: "auth-service"

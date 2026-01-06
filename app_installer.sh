@@ -38,6 +38,7 @@ TOTAL_MODULES=${#MODULE_NAMES[@]}
 
 # Track which modules to run (space-separated list)
 RUN_MODULES=""
+AUTO_YES=false
 
 # ===================== Module Selection =====================
 show_usage() {
@@ -81,6 +82,11 @@ show_module_menu() {
 }
 
 prompt_module_selection() {
+    # Skip in auto-yes mode (modules already set)
+    if [ "$AUTO_YES" = true ]; then
+        return 0
+    fi
+
     show_module_menu
     printf "${GREEN}Enter module numbers (space-separated) or -1 for all: ${NC}"
     read -r MODULE_INPUT < /dev/tty
@@ -128,10 +134,11 @@ parse_module_args() {
         exit 0
     fi
 
-    # Check for -1 (all modules, non-interactive)
-    if [[ "$1" == "-1" ]]; then
+    # Check for -1, -y, or --yes (all modules, non-interactive with auto-accept)
+    if [[ "$1" == "-1" || "$1" == "-y" || "$1" == "--yes" ]]; then
         RUN_MODULES=$(seq 1 $TOTAL_MODULES | tr '\n' ' ')
         INTERACTIVE_MODE=false
+        AUTO_YES=true
         return
     fi
 
@@ -190,6 +197,13 @@ prompt_choice() {
   IFS='/' read -ra OPTIONS <<< "$options_str"
 
   local DEFAULT="${OPTIONS[0]}"
+
+  # Auto-accept in non-interactive mode
+  if [ "$AUTO_YES" = true ]; then
+    CONFIRM="$DEFAULT"
+    log_info "Auto-accepting: $message -> $CONFIRM"
+    return 0
+  fi
 
   while true; do
     printf "${GREEN}%s (%s): ${NC}" "$message" "$options_str"
@@ -544,7 +558,21 @@ else
 	log_success "Build completed: etl-initializer:${VERSION} (also tagged 0.0.1-SNAPSHOT)"
 fi
 
-if ! kubectl apply -f "./k8s_manifist/etl-initializer-deployment.yaml" -n "${A_NAMESPACE}"; then
+# Generate deployment YAML from template with unique image tag
+log_info "Generating deployment YAML from template with image: etl-initializer:${VERSION}"
+K8S_TEMPLATE="./k8s_manifist/etl-initializer-deployment.yaml.template"
+K8S_MANIFEST="./k8s_manifist/etl-initializer-deployment.yaml"
+
+if [ ! -f "$K8S_TEMPLATE" ]; then
+    exit_error "Template file not found: $K8S_TEMPLATE"
+fi
+
+rm -f "$K8S_MANIFEST" "${K8S_MANIFEST}".bak*
+cp "$K8S_TEMPLATE" "$K8S_MANIFEST"
+sed -i '' "s|__IMAGE_TAG__|etl-initializer:${VERSION}|g" "$K8S_MANIFEST"
+log_success "Deployment YAML generated from template"
+
+if ! kubectl apply -f "$K8S_MANIFEST" -n "${A_NAMESPACE}"; then
 	log_error "Deployment manifest failed"
 	exit 1
 else
@@ -711,7 +739,21 @@ else
 	log_success "Build completed: auth-service:${VERSION} (also tagged latest)"
 fi
 
-if ! kubectl apply -f "./k8s/deployment.yaml" -n "${A_NAMESPACE}"; then
+# Generate deployment YAML from template with unique image tag
+log_info "Generating deployment YAML from template with image: auth-service:${VERSION}"
+K8S_TEMPLATE="./k8s/deployment.yaml.template"
+K8S_MANIFEST="./k8s/deployment.yaml"
+
+if [ ! -f "$K8S_TEMPLATE" ]; then
+    exit_error "Template file not found: $K8S_TEMPLATE"
+fi
+
+rm -f "$K8S_MANIFEST" "${K8S_MANIFEST}".bak*
+cp "$K8S_TEMPLATE" "$K8S_MANIFEST"
+sed -i '' "s|__IMAGE_TAG__|auth-service:${VERSION}|g" "$K8S_MANIFEST"
+log_success "Deployment YAML generated from template"
+
+if ! kubectl apply -f "$K8S_MANIFEST" -n "${A_NAMESPACE}"; then
 	log_error "Deployment manifest failed"
 	exit 1
 else
@@ -769,9 +811,23 @@ else
 	log_success "Build completed: gateway-service:${VERSION} (also tagged latest)"
 fi
 
+# Generate deployment YAML from template with unique image tag
+log_info "Generating deployment YAML from template with image: gateway-service:${VERSION}"
+K8S_TEMPLATE="./k8s_manifist/gateway-deployment.yaml.template"
+K8S_MANIFEST="./k8s_manifist/gateway-deployment.yaml"
+
+if [ ! -f "$K8S_TEMPLATE" ]; then
+    exit_error "Template file not found: $K8S_TEMPLATE"
+fi
+
+rm -f "$K8S_MANIFEST" "${K8S_MANIFEST}".bak*
+cp "$K8S_TEMPLATE" "$K8S_MANIFEST"
+sed -i '' "s|__IMAGE_TAG__|gateway-service:${VERSION}|g" "$K8S_MANIFEST"
+log_success "Deployment YAML generated from template"
+
 log_info "Deploying gateway service to Kubernetes..."
 
-if ! kubectl apply -f "./k8s_manifist/gateway-deployment.yaml" -n "${A_NAMESPACE}"; then
+if ! kubectl apply -f "$K8S_MANIFEST" -n "${A_NAMESPACE}"; then
 	log_error "Deployment manifest failed"
 	exit 1
 else
@@ -842,7 +898,21 @@ else
 	log_success "Build completed: data-generator:${VERSION} (also tagged 0.0.1-SNAPSHOT)"
 fi
 
-if ! kubectl apply -f "./k8s_manifist/data-generator-deployment.yaml" -n $A_NAMESPACE; then
+# Generate deployment YAML from template with unique image tag
+log_info "Generating deployment YAML from template with image: data-generator:${VERSION}"
+K8S_TEMPLATE="./k8s_manifist/data-generator-deployment.yaml.template"
+K8S_MANIFEST="./k8s_manifist/data-generator-deployment.yaml"
+
+if [ ! -f "$K8S_TEMPLATE" ]; then
+    exit_error "Template file not found: $K8S_TEMPLATE"
+fi
+
+rm -f "$K8S_MANIFEST" "${K8S_MANIFEST}".bak*
+cp "$K8S_TEMPLATE" "$K8S_MANIFEST"
+sed -i '' "s|__IMAGE_TAG__|data-generator:${VERSION}|g" "$K8S_MANIFEST"
+log_success "Deployment YAML generated from template"
+
+if ! kubectl apply -f "$K8S_MANIFEST" -n $A_NAMESPACE; then
 	log_error "Deployment manifest failed"
 	exit 1
 else
@@ -850,10 +920,7 @@ else
 fi
 
 # Monitor health
-
 monitor_pod_health "$SERVICE_NAME" "$A_NAMESPACE" 60
-
-
 
 # check pod status
 POD_STATUS=$(get_pod_status "$SERVICE_NAME" "$A_NAMESPACE")
@@ -919,18 +986,29 @@ else
 	log_success "Build completed: signal-loader:${VERSION} (also tagged 0.0.1-SNAPSHOT)"
 fi
 
-if ! kubectl apply -f "./k8s_manifist/loader-deployment.yaml" -n "${A_NAMESPACE}"; then
+# Generate deployment YAML from template with unique image tag
+log_info "Generating deployment YAML from template with image: signal-loader:${VERSION}"
+K8S_TEMPLATE="./k8s_manifist/loader-deployment.yaml.template"
+K8S_MANIFEST="./k8s_manifist/loader-deployment.yaml"
+
+if [ ! -f "$K8S_TEMPLATE" ]; then
+    exit_error "Template file not found: $K8S_TEMPLATE"
+fi
+
+rm -f "$K8S_MANIFEST" "${K8S_MANIFEST}".bak*
+cp "$K8S_TEMPLATE" "$K8S_MANIFEST"
+sed -i '' "s|__IMAGE_TAG__|signal-loader:${VERSION}|g" "$K8S_MANIFEST"
+log_success "Deployment YAML generated from template"
+
+if ! kubectl apply -f "$K8S_MANIFEST" -n "${A_NAMESPACE}"; then
 	log_error "Deployment manifest failed"
 	exit 1
 else
 	log_success "Deployment manifest applied"
 fi
 
-
-# check pos sttaus
-
+# Monitor health
 monitor_pod_health "$SERVICE_NAME" "$A_NAMESPACE" 120
-
 
 # check pod status
 POD_STATUS=$(get_pod_status "$SERVICE_NAME" "$A_NAMESPACE")
@@ -988,9 +1066,23 @@ else
 	log_success "PVC and ConfigMap created successfully"
 fi
 
+# Generate deployment YAML from template with unique image tag
+log_info "Generating deployment YAML from template with image: import-export-service:${VERSION}"
+K8S_TEMPLATE="./k8s_manifist/import-export-deployment.yaml.template"
+K8S_MANIFEST="./k8s_manifist/import-export-deployment.yaml"
+
+if [ ! -f "$K8S_TEMPLATE" ]; then
+    exit_error "Template file not found: $K8S_TEMPLATE"
+fi
+
+rm -f "$K8S_MANIFEST" "${K8S_MANIFEST}".bak*
+cp "$K8S_TEMPLATE" "$K8S_MANIFEST"
+sed -i '' "s|__IMAGE_TAG__|import-export-service:${VERSION}|g" "$K8S_MANIFEST"
+log_success "Deployment YAML generated from template"
+
 log_info "Deploying import-export-service to Kubernetes..."
 
-if ! kubectl apply -f "./k8s_manifist/import-export-deployment.yaml" -n "${A_NAMESPACE}"; then
+if ! kubectl apply -f "$K8S_MANIFEST" -n "${A_NAMESPACE}"; then
 	log_error "Deployment manifest failed"
 	exit 1
 else

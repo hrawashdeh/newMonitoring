@@ -77,17 +77,18 @@ spec:
         - name: REDIS_PORT
           value: "6379"
 
-        # JVM settings
+        # JVM settings - optimized for dev with room for growth
+        # Core service: generous max heap (1GB) for handling load spikes
         - name: JAVA_OPTS
-          value: "-Xms512m -Xmx2304m -XX:+UseG1GC"
+          value: "-Xms256m -Xmx1024m -XX:+UseG1GC -XX:MaxGCPauseMillis=100 -XX:+UseStringDeduplication"
 
         resources:
           requests:
-            cpu: "500m"
-            memory: "1Gi"
+            cpu: "200m"
+            memory: "512Mi"
           limits:
-            cpu: "2000m"
-            memory: "3Gi"
+            cpu: "1000m"
+            memory: "1536Mi"
 
         livenessProbe:
           httpGet:

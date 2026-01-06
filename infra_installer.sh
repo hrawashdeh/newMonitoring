@@ -25,6 +25,13 @@ prompt_choice() {
   IFS='/' read -ra OPTIONS <<< "$options_str"
   local DEFAULT="${OPTIONS[0]}"
 
+  # Auto-accept in non-interactive mode
+  if [ "$AUTO_YES" = true ]; then
+    CONFIRM="$DEFAULT"
+    log_info "Auto-accepting: $message -> $CONFIRM"
+    return 0
+  fi
+
   while true; do
     printf "${GREEN}%s (%s): ${NC}" "$message" "$options_str"
     read -r CONFIRM < /dev/tty
@@ -62,12 +69,14 @@ MODULE_NAMES=(
 TOTAL_MODULES=${#MODULE_NAMES[@]}
 RUN_MODULES=""
 INTERACTIVE_MODE=false
+AUTO_YES=false
 
 # Parse command line arguments
 if [ $# -eq 0 ]; then
     INTERACTIVE_MODE=true
-elif [ "$1" = "-1" ]; then
-    # -1 means run all modules
+elif [ "$1" = "-1" ] || [ "$1" = "-y" ] || [ "$1" = "--yes" ]; then
+    # -1, -y, or --yes means run all modules with auto-accept
+    AUTO_YES=true
     for i in $(seq 1 $TOTAL_MODULES); do
         RUN_MODULES="$RUN_MODULES $i"
     done
@@ -123,6 +132,11 @@ show_module_menu() {
 
 # Prompt for module selection
 prompt_module_selection() {
+    # Skip in auto-yes mode (modules already set)
+    if [ "$AUTO_YES" = true ]; then
+        return 0
+    fi
+
     show_module_menu
     printf "${GREEN}Enter module numbers (space-separated) or -1 for all: ${NC}"
     read -r selection < /dev/tty

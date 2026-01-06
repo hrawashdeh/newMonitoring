@@ -41,7 +41,7 @@ public class LoaderService {
 
     private final LoaderRepository repo;
     private final SourceDatabaseRepository sourceDbRepo;
-    private final ApprovaanlAuditLogRepository auditLogRepo;
+    private final ApprovalAuditLogRepository auditLogRepo;
     private final ApprovalService approvalService;
     private final ObjectMapper objectMapper;
 

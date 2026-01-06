@@ -5,6 +5,7 @@ import com.tiqmo.monitoring.auth.infra.logging.Logged;
 import com.tiqmo.monitoring.auth.service.MenuService;
 import io.jsonwebtoken.Claims;
 import io.jsonwebtoken.Jwts;
+import io.jsonwebtoken.security.Keys;
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
 import org.springframework.beans.factory.annotation.Value;
@@ -81,11 +82,11 @@ public class MenuController {
 
         try {
             String token = authHeader.substring(7);
-            Claims claims = Jwts.parserBuilder()
-                    .setSigningKey(jwtSecret.getBytes())
+            Claims claims = Jwts.parser()
+                    .verifyWith(Keys.hmacShaKeyFor(jwtSecret.getBytes()))
                     .build()
-                    .parseClaimsJws(token)
-                    .getBody();
+                    .parseSignedClaims(token)
+                    .getPayload();
 
             Object rolesObj = claims.get("roles");
             if (rolesObj instanceof List) {
