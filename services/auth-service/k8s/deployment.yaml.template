@@ -1,0 +1,124 @@
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  name: auth-service
+  namespace: monitoring-app
+  labels:
+    app: auth-service
+    component: backend
+    tier: auth
+spec:
+  replicas: 1
+  selector:
+    matchLabels:
+      app: auth-service
+  template:
+    metadata:
+      labels:
+        app: auth-service
+    spec:
+      containers:
+        - name: auth-service
+          # Image version with timestamp to avoid caching issues
+          # Format: auth-service:<version>-<timestamp>
+          # This placeholder is replaced by app_installer.sh at build time
+          # Using unique tag ensures Kubernetes creates new pods even with IfNotPresent
+          image: __IMAGE_TAG__
+          imagePullPolicy: IfNotPresent  # Use local image if available (Docker Desktop)
+          ports:
+            - containerPort: 8081
+              name: http
+          env:
+            - name: SPRING_PROFILES_ACTIVE
+              value: "prod"
+            - name: POSTGRES_HOST
+              value: "postgres-postgresql.monitoring-infra.svc.cluster.local"
+            - name: POSTGRES_PORT
+              value: "5432"
+            - name: POSTGRES_DB
+              value: "alerts_db"
+            - name: POSTGRES_USER
+              value: "alerts_user"
+            - name: POSTGRES_PASSWORD
+              valueFrom:
+                secretKeyRef:
+                  name: app-secrets
+                  key: SPRING_DATASOURCE_PASSWORD
+            - name: JWT_SECRET
+              valueFrom:
+                secretKeyRef:
+                  name: app-secrets
+                  key: JWT_SECRET
+            - name: JWT_EXPIRATION_MS
+              value: "86400000"  # 24 hours
+
+            # Redis configuration
+            - name: SPRING_DATA_REDIS_HOST
+              value: "redis-master.monitoring-infra.svc.cluster.local"
+            - name: SPRING_DATA_REDIS_PORT
+              value: "6379"
+            - name: SPRING_DATA_REDIS_PASSWORD
+              valueFrom:
+                secretKeyRef:
+                  name: app-secrets
+                  key: REDIS_PASSWORD
+
+            # OpenTelemetry configuration
+            - name: OTEL_SERVICE_NAME
+              value: "auth-service"
+            - name: OTEL_EXPORTER_OTLP_ENDPOINT
+              value: "http://otel-collector.monitoring-infra.svc.cluster.local:4317"
+            - name: OTEL_RESOURCE_ATTRIBUTES
+              value: "deployment.environment=prod,service.namespace=monitoring-app"
+            - name: OTEL_TRACES_SAMPLER
+              value: "always_on"
+            - name: OTEL_METRICS_EXPORTER
+              value: "otlp"
+            - name: OTEL_LOGS_EXPORTER
+              value: "none"
+            - name: DEPLOYMENT_ENVIRONMENT
+              value: "prod"
+          resources:
+            requests:
+              memory: "512Mi"
+              cpu: "250m"
+            limits:
+              memory: "1Gi"
+              cpu: "1000m"
+          livenessProbe:
+            httpGet:
+              path: /actuator/health
+              port: 8081
+            initialDelaySeconds: 60
+            periodSeconds: 10
+            timeoutSeconds: 5
+            failureThreshold: 3
+          readinessProbe:
+            httpGet:
+              path: /actuator/health
+              port: 8081
+            initialDelaySeconds: 30
+            periodSeconds: 10
+            timeoutSeconds: 5
+            failureThreshold: 3
+      restartPolicy: Always
+---
+apiVersion: v1
+kind: Service
+metadata:
+  name: auth-service
+  namespace: monitoring-app
+  labels:
+    app: auth-service
+spec:
+  type: ClusterIP
+  ports:
+    - port: 8081
+      targetPort: 8081
+      protocol: TCP
+      name: http
+  selector:
+    app: auth-service
+# NodePort service removed - auth-service now only accessible via Gateway (gateway-service:8888)
+# For direct access during development/debugging, use port-forward:
+#   kubectl port-forward -n monitoring-app svc/auth-service 8081:8081

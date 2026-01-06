@@ -1,0 +1,79 @@
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  name: etl-initializer
+  namespace: monitoring-app
+  labels:
+    app: etl-initializer
+    component: initialization
+spec:
+  replicas: 1
+
+  selector:
+    matchLabels:
+      app: etl-initializer
+
+  template:
+    metadata:
+      labels:
+        app: etl-initializer
+        component: initialization
+    spec:
+      restartPolicy: Always
+
+      containers:
+      - name: etl-initializer
+        # Image version with timestamp to avoid caching issues
+        # Format: etl-initializer:<version>-<timestamp>
+        # This placeholder is replaced by app_installer.sh at build time
+        # Using unique tag ensures Kubernetes creates new pods even with IfNotPresent
+        image: __IMAGE_TAG__
+        imagePullPolicy: IfNotPresent  # Use local image if available
+
+        # Inject configuration from sealed secret
+        envFrom:
+        - secretRef:
+            name: app-secrets
+
+        # Additional env vars
+        env:
+        - name: SPRING_PROFILES_ACTIVE
+          value: "dev"
+
+        # Volume mounts for file processing
+        volumeMounts:
+        - name: etl-uploads
+          mountPath: /data/uploads
+        - name: etl-processed
+          mountPath: /data/processed
+        - name: etl-failed
+          mountPath: /data/failed
+
+        resources:
+          requests:
+            cpu: "100m"
+            memory: "256Mi"
+          limits:
+            cpu: "500m"
+            memory: "512Mi"
+
+        # Security context
+        securityContext:
+          runAsNonRoot: true
+          runAsUser: 1000
+          allowPrivilegeEscalation: false
+          capabilities:
+            drop:
+              - ALL
+          readOnlyRootFilesystem: false  # Spring Boot needs write for temp files
+
+      # Volumes for file storage
+      # Using emptyDir for development - data is lost on pod restart
+      # For production, use PersistentVolumeClaim
+      volumes:
+      - name: etl-uploads
+        emptyDir: {}
+      - name: etl-processed
+        emptyDir: {}
+      - name: etl-failed
+        emptyDir: {}

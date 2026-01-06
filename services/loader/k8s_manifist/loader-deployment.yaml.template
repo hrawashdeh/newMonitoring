@@ -1,0 +1,168 @@
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  name: signal-loader
+  namespace: monitoring-app
+  labels:
+    app: signal-loader
+    component: backend
+    tier: application
+spec:
+  replicas: 1  # Set to 1 until DDL mode changed from create-drop to validate
+  strategy:
+    type: RollingUpdate
+    rollingUpdate:
+      maxSurge: 1
+      maxUnavailable: 0  # Zero downtime
+  selector:
+    matchLabels:
+      app: signal-loader
+  template:
+    metadata:
+      labels:
+        app: signal-loader
+        component: backend
+        tier: application
+    spec:
+      containers:
+      - name: signal-loader
+        # Image version with timestamp to avoid caching issues
+        # Format: signal-loader:<version>-<timestamp>
+        # This placeholder is replaced by app_installer.sh at build time
+        # Using unique tag ensures Kubernetes creates new pods even with IfNotPresent
+        image: __IMAGE_TAG__
+        imagePullPolicy: IfNotPresent  # Use local image if available
+        ports:
+        - name: http
+          containerPort: 8080
+          protocol: TCP
+
+        # Inject ALL config from sealed secret (single source of truth)
+        envFrom:
+        - secretRef:
+            name: app-secrets
+
+        # Additional env vars (non-secret)
+        env:
+        # Set profile to prod for JSON logging (Elasticsearch-compatible)
+        # Schema is managed by etl_initializer (Flyway), not Hibernate
+        - name: SPRING_PROFILES_ACTIVE
+          value: "prod"
+
+        # Replica identification for distributed execution
+        - name: LOADER_REPLICA_NAME
+          valueFrom:
+            fieldRef:
+              fieldPath: metadata.name
+
+        # OpenTelemetry configuration
+        - name: OTEL_SERVICE_NAME
+          value: "signal-loader"
+        - name: OTEL_EXPORTER_OTLP_ENDPOINT
+          value: "http://otel-collector.monitoring-infra.svc.cluster.local:4317"
+        - name: OTEL_RESOURCE_ATTRIBUTES
+          value: "deployment.environment=dev,service.namespace=monitoring-app"
+        - name: OTEL_TRACES_SAMPLER
+          value: "always_on"  # 100% sampling for dev
+        - name: OTEL_METRICS_EXPORTER
+          value: "otlp"
+        - name: OTEL_LOGS_EXPORTER
+          value: "none"  # Logs go to stdout, collected by Filebeat
+        - name: DEPLOYMENT_ENVIRONMENT
+          value: "dev"
+
+        # Redis configuration for centralized API config
+        # REDIS_PASSWORD is injected from app-secrets via envFrom
+        - name: REDIS_HOST
+          value: "redis-master.monitoring-infra.svc.cluster.local"
+        - name: REDIS_PORT
+          value: "6379"
+
+        # JVM settings - optimized for dev with room for growth
+        # Core service: generous max heap (1GB) for handling load spikes
+        - name: JAVA_OPTS
+          value: "-Xms256m -Xmx1024m -XX:+UseG1GC -XX:MaxGCPauseMillis=100 -XX:+UseStringDeduplication"
+
+        resources:
+          requests:
+            cpu: "200m"
+            memory: "512Mi"
+          limits:
+            cpu: "1000m"
+            memory: "1536Mi"
+
+        livenessProbe:
+          httpGet:
+            path: /actuator/health/liveness
+            port: http
+          initialDelaySeconds: 60
+          periodSeconds: 10
+          timeoutSeconds: 5
+          failureThreshold: 3
+
+        readinessProbe:
+          httpGet:
+            path: /actuator/health/readiness
+            port: http
+          initialDelaySeconds: 30
+          periodSeconds: 5
+          timeoutSeconds: 3
+          failureThreshold: 3
+
+        # Graceful shutdown
+        lifecycle:
+          preStop:
+            exec:
+              command: ["/bin/sh", "-c", "sleep 10"]
+
+        # Security context
+        securityContext:
+          runAsNonRoot: true
+          runAsUser: 1000
+          allowPrivilegeEscalation: false
+          capabilities:
+            drop:
+              - ALL
+          readOnlyRootFilesystem: false  # Spring Boot needs write for temp files
+
+      # Service account
+      serviceAccountName: signal-loader-sa
+
+      # Pod anti-affinity for high availability
+      affinity:
+        podAntiAffinity:
+          preferredDuringSchedulingIgnoredDuringExecution:
+          - weight: 100
+            podAffinityTerm:
+              labelSelector:
+                matchExpressions:
+                - key: app
+                  operator: In
+                  values:
+                  - signal-loader
+              topologyKey: kubernetes.io/hostname
+
+---
+apiVersion: v1
+kind: Service
+metadata:
+  name: signal-loader
+  namespace: monitoring-app
+  labels:
+    app: signal-loader
+spec:
+  type: ClusterIP
+  ports:
+  - name: http
+    port: 8080
+    targetPort: http
+    protocol: TCP
+  selector:
+    app: signal-loader
+
+---
+apiVersion: v1
+kind: ServiceAccount
+metadata:
+  name: signal-loader-sa
+  namespace: monitoring-app
